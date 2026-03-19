@@ -1,0 +1,23 @@
+@utility heading1_bold {
+  font-family: var(--font-urbanist);
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 100%;
+}
+
+@utility heading2_bold {
+  font-family: var(--font-urbanist);
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 110%;
+}
+
+@utility heading3_bold {
+  font-family: var(--font-urbanist);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 110%;
+}

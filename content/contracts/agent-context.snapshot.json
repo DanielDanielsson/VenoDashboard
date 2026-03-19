@@ -1,0 +1,357 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-03-16T04:45:55.347Z",
+  "baseUrl": "https://api.your-domain.com",
+  "scope": "mixed",
+  "endpoints": [
+    {
+      "id": "health",
+      "method": "GET",
+      "path": "/api/health",
+      "summary": "Service health check",
+      "auth": "none",
+      "source": "mixed",
+      "tags": [
+        "Core"
+      ]
+    },
+    {
+      "id": "status-json",
+      "method": "GET",
+      "path": "/status",
+      "summary": "Operational status report in JSON",
+      "auth": "status_token",
+      "source": "mixed",
+      "tags": [
+        "Core"
+      ]
+    },
+    {
+      "id": "status-stream",
+      "method": "GET",
+      "path": "/status/stream",
+      "summary": "Realtime status stream (SSE)",
+      "auth": "status_token",
+      "source": "mixed",
+      "tags": [
+        "Core"
+      ]
+    },
+    {
+      "id": "glucose-latest",
+      "method": "GET",
+      "path": "/api/v1/glucose/latest",
+      "summary": "Latest official Dexcom glucose reading",
+      "auth": "api_key",
+      "source": "official",
+      "tags": [
+        "Glucose Official"
+      ]
+    },
+    {
+      "id": "glucose-history",
+      "method": "GET",
+      "path": "/api/v1/glucose/history",
+      "summary": "Official Dexcom glucose history",
+      "auth": "api_key",
+      "source": "official",
+      "tags": [
+        "Glucose Official"
+      ]
+    },
+    {
+      "id": "share-glucose-latest",
+      "method": "GET",
+      "path": "/api/v1/share/glucose/latest",
+      "summary": "Latest Dexcom Share glucose reading",
+      "auth": "api_key",
+      "source": "share",
+      "tags": [
+        "Glucose Share"
+      ]
+    },
+    {
+      "id": "share-glucose-history",
+      "method": "GET",
+      "path": "/api/v1/share/glucose/history",
+      "summary": "Dexcom Share glucose history",
+      "auth": "api_key",
+      "source": "share",
+      "tags": [
+        "Glucose Share"
+      ]
+    },
+    {
+      "id": "events-latest",
+      "method": "GET",
+      "path": "/api/v1/events/latest",
+      "summary": "Latest official Dexcom event",
+      "auth": "api_key",
+      "source": "official",
+      "tags": [
+        "Events"
+      ]
+    },
+    {
+      "id": "events-history",
+      "method": "GET",
+      "path": "/api/v1/events/history",
+      "summary": "Official Dexcom event history",
+      "auth": "api_key",
+      "source": "official",
+      "tags": [
+        "Events"
+      ]
+    },
+    {
+      "id": "notifications-publish",
+      "method": "POST",
+      "path": "/api/v1/notifications/publish",
+      "summary": "Publish cross app notification event",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Notifications"
+      ]
+    },
+    {
+      "id": "notifications-history",
+      "method": "GET",
+      "path": "/api/v1/notifications/history",
+      "summary": "Notification history",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Notifications"
+      ]
+    },
+    {
+      "id": "notifications-stream",
+      "method": "GET",
+      "path": "/api/v1/notifications/stream",
+      "summary": "Notification stream (SSE)",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Notifications"
+      ]
+    },
+    {
+      "id": "profile-content-get",
+      "method": "GET",
+      "path": "/api/v1/profile/content",
+      "summary": "Get shared consumer profile settings",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Profile and Settings"
+      ]
+    },
+    {
+      "id": "profile-content-put",
+      "method": "PUT",
+      "path": "/api/v1/profile/content",
+      "summary": "Update shared consumer profile settings",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Profile and Settings"
+      ]
+    },
+    {
+      "id": "glucose-stream",
+      "method": "GET",
+      "path": "/api/v1/stream/glucose",
+      "summary": "Glucose stream (SSE)",
+      "auth": "api_key",
+      "source": "official",
+      "tags": [
+        "Streams"
+      ]
+    },
+    {
+      "id": "auth-start",
+      "method": "GET",
+      "path": "/api/auth/start",
+      "summary": "Start Dexcom OAuth flow",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "auth-callback",
+      "method": "GET",
+      "path": "/api/auth/callback",
+      "summary": "Dexcom OAuth callback",
+      "auth": "none",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "admin-keys-index",
+      "method": "GET",
+      "path": "/api/admin/keys",
+      "summary": "List active API keys",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "admin-keys-create",
+      "method": "POST",
+      "path": "/api/admin/keys",
+      "summary": "Create API key",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "admin-keys-revoke",
+      "method": "POST",
+      "path": "/api/admin/keys/revoke",
+      "summary": "Revoke API key",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "admin-keys-list",
+      "method": "GET",
+      "path": "/api/admin/keys/list",
+      "summary": "Dashboard helper list endpoint",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "admin-keys-create-helper",
+      "method": "POST",
+      "path": "/api/admin/keys/create",
+      "summary": "Dashboard helper create endpoint",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "admin-settings-profile-get",
+      "method": "GET",
+      "path": "/api/admin/settings/profile",
+      "summary": "Read shared settings from admin UI",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "admin-settings-profile-put",
+      "method": "PUT",
+      "path": "/api/admin/settings/profile",
+      "summary": "Update shared settings from admin UI",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "cron-sync",
+      "method": "GET",
+      "path": "/api/cron/sync",
+      "summary": "Run official sync now",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "cron-share-sync",
+      "method": "GET",
+      "path": "/api/cron/share-sync",
+      "summary": "Run share sync now",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "cron-webhook-deliver",
+      "method": "GET",
+      "path": "/api/cron/webhook-deliver",
+      "summary": "Deliver queued webhooks now",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    }
+  ],
+  "errorCodes": [
+    {
+      "code": "missing_api_key",
+      "status": 401,
+      "message": "No Authorization bearer token was sent.",
+      "action": "Send Authorization: Bearer <apiKey> on consumer endpoints."
+    },
+    {
+      "code": "invalid_api_key",
+      "status": 403,
+      "message": "The provided API key hash was not found.",
+      "action": "Create a new key from admin keys endpoint and retry with the new key."
+    },
+    {
+      "code": "revoked_api_key",
+      "status": 403,
+      "message": "The key existed but was revoked or deleted.",
+      "action": "Issue a replacement key and update client configuration."
+    },
+    {
+      "code": "missing_admin_token",
+      "status": 401,
+      "message": "Admin endpoint was called without admin authentication.",
+      "action": "Send Authorization bearer token with ADMIN_BEARER_TOKEN."
+    },
+    {
+      "code": "invalid_admin_token",
+      "status": 403,
+      "message": "Admin bearer token did not match server configuration.",
+      "action": "Check ADMIN_BEARER_TOKEN and call endpoint again."
+    },
+    {
+      "code": "status_page_unauthorized",
+      "status": 401,
+      "message": "Status page token was required but missing or incorrect.",
+      "action": "Pass ?token=<STATUS_PAGE_TOKEN> or x-status-token header."
+    }
+  ],
+  "sourceGuidance": [
+    {
+      "source": "share",
+      "guidance": "Use share endpoints as primary source for near real time glucose updates."
+    },
+    {
+      "source": "official",
+      "guidance": "Use official endpoints for long term analysis, event history, and audit trail."
+    },
+    {
+      "source": "mixed",
+      "guidance": "Some operational and profile routes are source agnostic."
+    }
+  ]
+}

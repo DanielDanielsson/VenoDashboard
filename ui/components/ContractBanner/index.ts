@@ -1,0 +1,1 @@
+export { ContractBanner } from './ContractBanner';

@@ -1,0 +1,82 @@
+@custom-variant dark (.theme-dark);
+
+@layer theme {
+  :root {
+    --color-ui-primary: var(--color-base-ink);
+    --color-ui-secondary: var(--color-base-ink-muted);
+    --color-ui-background: var(--color-base-paper);
+
+    --bg: var(--color-base-paper);
+    --bg-elevated: rgb(255 255 255 / 0.82);
+    --bg-strong: rgb(241 245 249 / 0.96);
+    --surface: rgb(255 255 255 / 0.72);
+    --surface-strong: rgb(255 255 255 / 0.88);
+    --surface-muted: rgb(241 245 249 / 0.52);
+    --border: rgb(15 23 42 / 0.08);
+    --border-strong: rgb(15 23 42 / 0.14);
+    --border-hover: rgb(14 116 144 / 0.28);
+    --text: var(--color-base-ink);
+    --text-dim: var(--color-base-ink-muted);
+    --text-soft: var(--color-base-ink-soft);
+    --accent: var(--color-base-accent);
+    --accent-soft: rgb(8 145 178 / 0.1);
+    --accent-strong: var(--color-base-accent-strong);
+    --accent-glow: rgb(8 145 178 / 0.15);
+    --success: var(--color-base-success);
+    --success-soft: rgb(5 150 105 / 0.1);
+    --warning: var(--color-base-warning);
+    --warning-soft: rgb(217 119 6 / 0.1);
+    --error: var(--color-base-error);
+    --error-soft: rgb(225 29 72 / 0.08);
+    --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04);
+    --shadow: 0 4px 24px rgb(15 23 42 / 0.06), 0 1px 2px rgb(15 23 42 / 0.04);
+    --shadow-lg: 0 12px 48px rgb(15 23 42 / 0.08), 0 2px 8px rgb(15 23 42 / 0.04);
+    --grid-line: rgb(15 23 42 / 0.035);
+  }
+
+  .theme-dark {
+    --color-ui-primary: var(--color-base-white);
+    --color-ui-secondary: var(--color-base-ink-soft);
+    --color-ui-background: var(--color-base-night);
+
+    --bg: var(--color-base-night);
+    --bg-elevated: rgb(10 15 25 / 0.88);
+    --bg-strong: rgb(8 12 20 / 0.96);
+    --surface: rgb(15 23 40 / 0.5);
+    --surface-strong: rgb(15 25 45 / 0.72);
+    --surface-muted: rgb(15 23 42 / 0.36);
+    --border: rgb(148 163 184 / 0.1);
+    --border-strong: rgb(148 163 184 / 0.18);
+    --border-hover: rgb(34 211 238 / 0.28);
+    --text: #e8edf5;
+    --text-dim: var(--color-base-ink-soft);
+    --text-soft: #64748b;
+    --accent: var(--color-base-accent-bright);
+    --accent-soft: rgb(34 211 238 / 0.08);
+    --accent-strong: var(--color-base-accent-bright-strong);
+    --accent-glow: rgb(34 211 238 / 0.12);
+    --success: var(--color-base-success-dark);
+    --success-soft: rgb(52 211 153 / 0.1);
+    --warning: var(--color-base-warning-dark);
+    --warning-soft: rgb(251 191 36 / 0.1);
+    --error: var(--color-base-error-dark);
+    --error-soft: rgb(251 113 133 / 0.08);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.2);
+    --shadow: 0 4px 24px rgb(0 0 0 / 0.2), 0 1px 2px rgb(0 0 0 / 0.15);
+    --shadow-lg: 0 16px 64px rgb(0 0 0 / 0.3), 0 2px 8px rgb(0 0 0 / 0.2);
+    --grid-line: rgb(148 163 184 / 0.04);
+  }
+}
+
+@theme inline {
+  --color-ui-primary: var(--color-ui-primary);
+  --color-ui-secondary: var(--color-ui-secondary);
+  --color-ui-background: var(--color-ui-background);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-border-default: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+}

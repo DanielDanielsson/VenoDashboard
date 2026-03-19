@@ -1,0 +1,1 @@
+export { DashboardNotificationsBridge } from './DashboardNotificationsBridge';

@@ -1,0 +1,1376 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PulseGlucoseApi",
+    "version": "1.0.0",
+    "description": "Machine readable OpenAPI contract for PulseGlucoseApi consumer and operational endpoints.",
+    "x-generatedAt": "2026-03-16T04:45:55.431Z"
+  },
+  "servers": [
+    {
+      "url": "https://api.your-domain.com"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "health",
+        "summary": "Service health check",
+        "description": "Lightweight health endpoint used for uptime checks and deployment validation.",
+        "tags": [
+          "Core"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": true,
+                  "service": "pulse-glucose-api",
+                  "timestamp": "2026-02-16T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "none",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/status": {
+      "get": {
+        "operationId": "status-json",
+        "summary": "Operational status report in JSON",
+        "description": "Returns official and share pipeline health, latest sync state, and reading lag metrics.",
+        "tags": [
+          "Core"
+        ],
+        "security": [
+          {
+            "StatusTokenAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "Use json to return API payload instead of HTML page.",
+            "schema": {
+              "type": "string",
+              "example": "json"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "generatedAt": "2026-02-16T12:00:00.000Z",
+                  "official": {
+                    "connected": true,
+                    "stable": true,
+                    "reason": "ok",
+                    "latestReading": {
+                      "valueMmolL": 6.8,
+                      "valueMgDl": 122,
+                      "timestamp": "2026-02-16T12:00:00.000Z",
+                      "trend": "flat"
+                    }
+                  },
+                  "share": {
+                    "connected": true,
+                    "stable": true,
+                    "reason": "ok",
+                    "latestReading": {
+                      "valueMmolL": 6.9,
+                      "valueMgDl": 124,
+                      "timestamp": "2026-02-16T12:00:00.000Z",
+                      "trend": "flat"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "status_token",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/status/stream": {
+      "get": {
+        "operationId": "status-stream",
+        "summary": "Realtime status stream (SSE)",
+        "description": "Pushes status updates for dashboards and monitoring clients.",
+        "tags": [
+          "Core"
+        ],
+        "security": [
+          {
+            "StatusTokenAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "text/event-stream": {
+                "example": {
+                  "event": "status_updated",
+                  "data": {
+                    "generatedAt": "2026-02-16T12:00:00.000Z",
+                    "official": {
+                      "stable": true
+                    },
+                    "share": {
+                      "stable": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "status_token",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/v1/glucose/latest": {
+      "get": {
+        "operationId": "glucose-latest",
+        "summary": "Latest official Dexcom glucose reading",
+        "description": "Returns one official reading in mmol/L and mg/dL with trend and status.",
+        "tags": [
+          "Glucose Official"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "valueMmolL": 6.8,
+                  "valueMgDl": 122,
+                  "unit": "mmol/L",
+                  "transmitterId": "80PK5W",
+                  "transmitterGeneration": "g7",
+                  "trendRate": 0,
+                  "sourceStatus": "ok",
+                  "trend": "flat",
+                  "timestamp": "2026-02-16T12:00:00.000Z",
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "official"
+      }
+    },
+    "/api/v1/glucose/history": {
+      "get": {
+        "operationId": "glucose-history",
+        "summary": "Official Dexcom glucose history",
+        "description": "Returns a bounded history window with ordering metadata.",
+        "tags": [
+          "Glucose Official"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "description": "ISO start timestamp. Defaults to 24h lookback.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-15T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "ISO end timestamp. Defaults to now.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-16T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max points returned. Clamped by HISTORY_MAX_LIMIT.",
+            "schema": {
+              "type": "string",
+              "example": "288"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "valueMmolL": 6.8,
+                      "valueMgDl": 122,
+                      "unit": "mmol/L",
+                      "transmitterId": "80PK5W",
+                      "transmitterGeneration": "g7",
+                      "trendRate": 0,
+                      "sourceStatus": "ok",
+                      "trend": "flat",
+                      "timestamp": "2026-02-16T12:00:00.000Z",
+                      "status": "ok"
+                    }
+                  ],
+                  "meta": {
+                    "from": "2026-02-15T12:00:00.000Z",
+                    "to": "2026-02-16T12:00:00.000Z",
+                    "limit": 288,
+                    "returned": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "official"
+      }
+    },
+    "/api/v1/share/glucose/latest": {
+      "get": {
+        "operationId": "share-glucose-latest",
+        "summary": "Latest Dexcom Share glucose reading",
+        "description": "Primary low latency glucose endpoint for realtime consumer UIs.",
+        "tags": [
+          "Glucose Share"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "valueMmolL": 6.9,
+                  "valueMgDl": 124,
+                  "unit": "mmol/L",
+                  "trend": "flat",
+                  "trendRate": 0,
+                  "trendNumber": 4,
+                  "timestamp": "2026-02-16T12:00:00.000Z",
+                  "status": "ok",
+                  "source": "share_api"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "share"
+      }
+    },
+    "/api/v1/share/glucose/history": {
+      "get": {
+        "operationId": "share-glucose-history",
+        "summary": "Dexcom Share glucose history",
+        "description": "Share source history for recent monitoring windows and charting.",
+        "tags": [
+          "Glucose Share"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "description": "ISO start timestamp. Defaults to 24h lookback.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-15T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "ISO end timestamp. Defaults to now.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-16T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max points returned. Clamped by SHARE_HISTORY_MAX_LIMIT.",
+            "schema": {
+              "type": "string",
+              "example": "288"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "valueMmolL": 6.9,
+                      "valueMgDl": 124,
+                      "unit": "mmol/L",
+                      "trend": "flat",
+                      "trendRate": 0,
+                      "trendNumber": 4,
+                      "timestamp": "2026-02-16T12:00:00.000Z",
+                      "status": "ok",
+                      "source": "share_api"
+                    }
+                  ],
+                  "meta": {
+                    "from": "2026-02-15T12:00:00.000Z",
+                    "to": "2026-02-16T12:00:00.000Z",
+                    "limit": 288,
+                    "returned": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "share"
+      }
+    },
+    "/api/v1/events/latest": {
+      "get": {
+        "operationId": "events-latest",
+        "summary": "Latest official Dexcom event",
+        "description": "Returns latest non glucose official event payload mapped from Dexcom.",
+        "tags": [
+          "Events"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "item": {
+                    "recordId": "event-1",
+                    "systemTime": "2026-02-16T12:00:00.000Z",
+                    "displayTime": "2026-02-16T12:00:00.000Z",
+                    "recordedSystemTime": null,
+                    "recordedDisplayTime": null,
+                    "eventStatus": "created",
+                    "eventType": "calibration",
+                    "eventSubType": null,
+                    "valueText": "122",
+                    "valueNumeric": 122,
+                    "unit": "mg/dL",
+                    "transmitterId": "80PK5W",
+                    "transmitterGeneration": "g7",
+                    "displayDevice": "phone",
+                    "updatedAt": "2026-02-16T12:00:00.000Z",
+                    "source": "dexcom_official_api"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "official"
+      }
+    },
+    "/api/v1/events/history": {
+      "get": {
+        "operationId": "events-history",
+        "summary": "Official Dexcom event history",
+        "description": "Returns event stream history with date window and pagination limit.",
+        "tags": [
+          "Events"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "description": "ISO start timestamp. Defaults to 30 day lookback.",
+            "schema": {
+              "type": "string",
+              "example": "2026-01-17T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "ISO end timestamp. Defaults to now.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-16T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max events returned. Clamped by EVENTS_HISTORY_MAX_LIMIT.",
+            "schema": {
+              "type": "string",
+              "example": "200"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "recordId": "event-1",
+                      "systemTime": "2026-02-16T12:00:00.000Z",
+                      "displayTime": "2026-02-16T12:00:00.000Z",
+                      "recordedSystemTime": null,
+                      "recordedDisplayTime": null,
+                      "eventStatus": "created",
+                      "eventType": "calibration",
+                      "eventSubType": null,
+                      "valueText": "122",
+                      "valueNumeric": 122,
+                      "unit": "mg/dL",
+                      "transmitterId": "80PK5W",
+                      "transmitterGeneration": "g7",
+                      "displayDevice": "phone",
+                      "updatedAt": "2026-02-16T12:00:00.000Z",
+                      "source": "dexcom_official_api"
+                    }
+                  ],
+                  "meta": {
+                    "from": "2026-01-17T12:00:00.000Z",
+                    "to": "2026-02-16T12:00:00.000Z",
+                    "limit": 200,
+                    "returned": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "official"
+      }
+    },
+    "/api/v1/notifications/publish": {
+      "post": {
+        "operationId": "notifications-publish",
+        "summary": "Publish cross app notification event",
+        "description": "Creates a notification event consumed by all connected clients.",
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "type": "timer.done",
+                "title": "Time to eat",
+                "message": "15 minutes passed",
+                "payload": {
+                  "timerId": "meal-bolus-123"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "8b6c9a89-4d5f-4fd6-9e21-5d94b68c5b62",
+                  "seq": 42,
+                  "type": "timer.done",
+                  "title": "Time to eat",
+                  "message": "15 minutes passed",
+                  "payload": {
+                    "timerId": "meal-bolus-123"
+                  },
+                  "timestamp": "2026-02-16T12:00:00.000Z",
+                  "sender": {
+                    "apiKeyId": "8f0a15a7-5f13-43de-982d-9d2fd7d0d840",
+                    "apiKeyName": "menubar-app"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/v1/notifications/history": {
+      "get": {
+        "operationId": "notifications-history",
+        "summary": "Notification history",
+        "description": "Fetches notification events for replay and cursor bootstrap.",
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "description": "ISO timestamp lower bound for event filtering.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-16T00:00:00.000Z"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max events returned. Clamped by NOTIFICATIONS_HISTORY_MAX_LIMIT.",
+            "schema": {
+              "type": "string",
+              "example": "100"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "id": "8b6c9a89-4d5f-4fd6-9e21-5d94b68c5b62",
+                      "seq": 42,
+                      "type": "timer.done",
+                      "title": "Time to eat",
+                      "message": "15 minutes passed",
+                      "payload": {
+                        "timerId": "meal-bolus-123"
+                      },
+                      "timestamp": "2026-02-16T12:00:00.000Z",
+                      "sender": {
+                        "apiKeyId": "8f0a15a7-5f13-43de-982d-9d2fd7d0d840",
+                        "apiKeyName": "menubar-app"
+                      }
+                    }
+                  ],
+                  "meta": {
+                    "since": "2026-02-16T00:00:00.000Z",
+                    "limit": 100,
+                    "returned": 1,
+                    "latestSeq": 42
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/v1/notifications/stream": {
+      "get": {
+        "operationId": "notifications-stream",
+        "summary": "Notification stream (SSE)",
+        "description": "Realtime notification feed with optional sequence cursor.",
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "afterSeq",
+            "in": "query",
+            "required": false,
+            "description": "Start streaming events after this sequence number.",
+            "schema": {
+              "type": "string",
+              "example": "42"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "text/event-stream": {
+                "example": {
+                  "event": "notification",
+                  "data": {
+                    "id": "8b6c9a89-4d5f-4fd6-9e21-5d94b68c5b62",
+                    "seq": 43,
+                    "type": "settings.profile.updated",
+                    "title": "Shared settings updated",
+                    "message": "Profile settings were updated",
+                    "payload": {
+                      "updatedAt": "2026-02-16T12:00:00.000Z"
+                    },
+                    "timestamp": "2026-02-16T12:00:00.000Z",
+                    "sender": {
+                      "apiKeyId": null,
+                      "apiKeyName": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/v1/profile/content": {
+      "get": {
+        "operationId": "profile-content-get",
+        "summary": "Get shared consumer profile settings",
+        "description": "Returns global profile settings used by all consumer applications.",
+        "tags": [
+          "Profile and Settings"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "profile": {
+                    "firstName": "Daniel",
+                    "lastName": "Danielsson",
+                    "displayName": "Daniel Danielsson",
+                    "timezone": "Europe/Stockholm",
+                    "glucoseUnit": "mmol/L",
+                    "profileImageUrl": "https://cdn.example.com/avatar.png",
+                    "profileImageDataUrl": null,
+                    "alarmSounds": [
+                      {
+                        "id": "meal-ready",
+                        "name": "Meal Ready",
+                        "url": "https://cdn.example.com/sounds/meal-ready.mp3"
+                      }
+                    ],
+                    "defaultAlarmSoundId": "meal-ready",
+                    "updatedAt": "2026-02-16T12:00:00.000Z",
+                    "updatedBy": {
+                      "apiKeyId": "8f0a15a7-5f13-43de-982d-9d2fd7d0d840",
+                      "apiKeyName": "menubar-app"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
+      },
+      "put": {
+        "operationId": "profile-content-put",
+        "summary": "Update shared consumer profile settings",
+        "description": "Updates global profile settings and triggers settings.profile.updated notification.",
+        "tags": [
+          "Profile and Settings"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "firstName": "Daniel",
+                "lastName": "Danielsson",
+                "timezone": "Europe/Stockholm",
+                "glucoseUnit": "mg/dL",
+                "profileImageUrl": "https://cdn.example.com/avatar.png",
+                "profileImageDataUrl": null,
+                "alarmSounds": [
+                  {
+                    "id": "meal-ready",
+                    "name": "Meal Ready",
+                    "url": "https://cdn.example.com/sounds/meal-ready.mp3"
+                  }
+                ],
+                "defaultAlarmSoundId": "meal-ready"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "profile": {
+                    "firstName": "Daniel",
+                    "lastName": "Danielsson",
+                    "displayName": "Daniel Danielsson",
+                    "timezone": "Europe/Stockholm",
+                    "glucoseUnit": "mg/dL",
+                    "profileImageUrl": "https://cdn.example.com/avatar.png",
+                    "profileImageDataUrl": null,
+                    "alarmSounds": [
+                      {
+                        "id": "meal-ready",
+                        "name": "Meal Ready",
+                        "url": "https://cdn.example.com/sounds/meal-ready.mp3"
+                      }
+                    ],
+                    "defaultAlarmSoundId": "meal-ready",
+                    "updatedAt": "2026-02-16T12:00:00.000Z",
+                    "updatedBy": {
+                      "apiKeyId": "8f0a15a7-5f13-43de-982d-9d2fd7d0d840",
+                      "apiKeyName": "menubar-app"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/v1/stream/glucose": {
+      "get": {
+        "operationId": "glucose-stream",
+        "summary": "Glucose stream (SSE)",
+        "description": "Realtime glucose updates from official, share, or both sources.",
+        "tags": [
+          "Streams"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "description": "official, share, or both. Defaults to both.",
+            "schema": {
+              "type": "string",
+              "example": "share"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "text/event-stream": {
+                "example": {
+                  "event": "glucose_update",
+                  "data": {
+                    "source": "share_api",
+                    "reading": {
+                      "valueMmolL": 7.4,
+                      "valueMgDl": 133,
+                      "unit": "mmol/L",
+                      "trend": "flat",
+                      "trendRate": 0,
+                      "trendNumber": 4,
+                      "timestamp": "2026-02-16T12:00:00.000Z",
+                      "status": "ok",
+                      "source": "share_api"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "official"
+      }
+    },
+    "/api/auth/start": {
+      "get": {
+        "operationId": "auth-start",
+        "summary": "Start Dexcom OAuth flow",
+        "description": "Admin only endpoint that creates OAuth state and redirects to Dexcom consent.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/auth/callback": {
+      "get": {
+        "operationId": "auth-callback",
+        "summary": "Dexcom OAuth callback",
+        "description": "Validates state, exchanges code, stores encrypted tokens, and returns confirmation HTML.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "description": "OAuth authorization code from Dexcom.",
+            "schema": {
+              "type": "string",
+              "example": "<dexcom_code>"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "description": "OAuth state generated by /api/auth/start.",
+            "schema": {
+              "type": "string",
+              "example": "<oauth_state>"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "text/html": {
+                "example": "<html>...</html>"
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "none",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/admin/keys": {
+      "get": {
+        "operationId": "admin-keys-index",
+        "summary": "List active API keys",
+        "description": "Returns active API key metadata for admin management.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "id": "8f0a15a7-5f13-43de-982d-9d2fd7d0d840",
+                      "name": "menubar-app",
+                      "createdAt": "2026-02-16T12:00:00.000Z",
+                      "lastUsedAt": "2026-02-16T12:00:00.000Z",
+                      "revokedAt": null,
+                      "status": "active"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      },
+      "post": {
+        "operationId": "admin-keys-create",
+        "summary": "Create API key",
+        "description": "Creates new client API key. Secret is returned once in this response.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "name": "ios-app"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "8f0a15a7-5f13-43de-982d-9d2fd7d0d840",
+                  "name": "ios-app",
+                  "apiKey": "gk_live_********************************"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/admin/keys/revoke": {
+      "post": {
+        "operationId": "admin-keys-revoke",
+        "summary": "Revoke API key",
+        "description": "Permanently deletes API key by id.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "id": "8f0a15a7-5f13-43de-982d-9d2fd7d0d840"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": true
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/admin/keys/list": {
+      "get": {
+        "operationId": "admin-keys-list",
+        "summary": "Dashboard helper list endpoint",
+        "description": "Same list output as /api/admin/keys, used by admin dashboard page.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": []
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/admin/keys/create": {
+      "post": {
+        "operationId": "admin-keys-create-helper",
+        "summary": "Dashboard helper create endpoint",
+        "description": "Same create output as /api/admin/keys, used by admin dashboard page.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "name": "watch-app"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "8f0a15a7-5f13-43de-982d-9d2fd7d0d840",
+                  "name": "watch-app",
+                  "apiKey": "gk_live_********************************"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/admin/settings/profile": {
+      "get": {
+        "operationId": "admin-settings-profile-get",
+        "summary": "Read shared settings from admin UI",
+        "description": "Admin endpoint backing /settings page. Returns shared profile payload.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "profile": {
+                    "firstName": "Daniel",
+                    "lastName": "Danielsson",
+                    "displayName": "Daniel Danielsson",
+                    "timezone": "Europe/Stockholm",
+                    "glucoseUnit": "mmol/L",
+                    "profileImageUrl": null,
+                    "profileImageDataUrl": null,
+                    "alarmSounds": [],
+                    "defaultAlarmSoundId": null,
+                    "updatedAt": "2026-02-16T12:00:00.000Z",
+                    "updatedBy": {
+                      "apiKeyId": null,
+                      "apiKeyName": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      },
+      "put": {
+        "operationId": "admin-settings-profile-put",
+        "summary": "Update shared settings from admin UI",
+        "description": "Admin update endpoint. Persists table row and emits settings.profile.updated.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "firstName": "Daniel",
+                "lastName": "Danielsson",
+                "timezone": "Europe/Stockholm",
+                "glucoseUnit": "mg/dL"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "profile": {
+                    "firstName": "Daniel",
+                    "lastName": "Danielsson",
+                    "displayName": "Daniel Danielsson",
+                    "timezone": "Europe/Stockholm",
+                    "glucoseUnit": "mg/dL",
+                    "profileImageUrl": null,
+                    "profileImageDataUrl": null,
+                    "alarmSounds": [],
+                    "defaultAlarmSoundId": null,
+                    "updatedAt": "2026-02-16T12:00:00.000Z",
+                    "updatedBy": {
+                      "apiKeyId": null,
+                      "apiKeyName": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/cron/sync": {
+      "get": {
+        "operationId": "cron-sync",
+        "summary": "Run official sync now",
+        "description": "Runs Dexcom official sync, writes readings and events, and enqueues webhook deliveries.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": true,
+                  "inserted": 1,
+                  "pruned": 0,
+                  "eventsInserted": 2,
+                  "eventsUpdated": 0,
+                  "eventsPruned": 0,
+                  "eventDiagnostics": {
+                    "availability": "records_found",
+                    "recordsFetched": 2,
+                    "requestedStart": "2026-02-16T12:00:00.000Z",
+                    "requestedEnd": "2026-02-16T12:00:00.000Z",
+                    "eventRangeStart": null,
+                    "eventRangeEnd": null
+                  },
+                  "webhooks": {
+                    "attempted": 1,
+                    "delivered": 0,
+                    "failed": 0
+                  },
+                  "timestamp": "2026-02-16T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/cron/share-sync": {
+      "get": {
+        "operationId": "cron-share-sync",
+        "summary": "Run share sync now",
+        "description": "Runs Dexcom Share sync, writes readings, and enqueues share webhook deliveries.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": true,
+                  "inserted": 1,
+                  "pruned": 0,
+                  "webhooks": {
+                    "attempted": 1,
+                    "delivered": 0,
+                    "failed": 0
+                  },
+                  "timestamp": "2026-02-16T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/cron/webhook-deliver": {
+      "get": {
+        "operationId": "cron-webhook-deliver",
+        "summary": "Deliver queued webhooks now",
+        "description": "Claims pending webhook jobs, delivers them, retries failures with backoff, and updates sync run delivery stats.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": true,
+                  "claimed": 2,
+                  "delivered": 1,
+                  "failed": 0,
+                  "retried": 1,
+                  "timestamp": "2026-02-16T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "AdminBearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "StatusTokenAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-status-token"
+      }
+    }
+  }
+}

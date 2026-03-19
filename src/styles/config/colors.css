@@ -1,0 +1,27 @@
+@theme {
+  --color-current: currentColor;
+  --color-transparent: transparent;
+
+  --color-base-paper: #f7f9fc;
+  --color-base-paper-strong: #f1f5f9;
+  --color-base-night: #06090f;
+  --color-base-night-strong: #080c14;
+  --color-base-panel-dark: #0f1728;
+
+  --color-base-ink: #0c1222;
+  --color-base-ink-muted: #475569;
+  --color-base-ink-soft: #94a3b8;
+  --color-base-white: #ffffff;
+
+  --color-base-accent: #0891b2;
+  --color-base-accent-strong: #0e7490;
+  --color-base-accent-bright: #22d3ee;
+  --color-base-accent-bright-strong: #67e8f9;
+
+  --color-base-success: #059669;
+  --color-base-success-dark: #34d399;
+  --color-base-warning: #d97706;
+  --color-base-warning-dark: #fbbf24;
+  --color-base-error: #e11d48;
+  --color-base-error-dark: #fb7185;
+}

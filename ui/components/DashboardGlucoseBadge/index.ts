@@ -1,0 +1,1 @@
+export { DashboardGlucoseBadge } from './DashboardGlucoseBadge';
