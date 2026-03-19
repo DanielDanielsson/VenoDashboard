@@ -1,14 +1,14 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "PulseGlucoseApi",
+    "title": "VenoAPI",
     "version": "1.0.0",
-    "description": "Machine readable OpenAPI contract for PulseGlucoseApi consumer and operational endpoints.",
-    "x-generatedAt": "2026-03-16T04:45:55.431Z"
+    "description": "Machine readable OpenAPI contract for VenoAPI consumer and operational endpoints.",
+    "x-generatedAt": "2026-03-19T03:48:41.672Z"
   },
   "servers": [
     {
-      "url": "https://api.your-domain.com"
+      "url": "https://api.veno.local"
     }
   ],
   "paths": {
@@ -28,7 +28,7 @@
               "application/json": {
                 "example": {
                   "ok": true,
-                  "service": "pulse-glucose-api",
+                  "service": "veno-api",
                   "timestamp": "2026-02-16T12:00:00.000Z"
                 }
               }
@@ -52,18 +52,7 @@
             "StatusTokenAuth": []
           }
         ],
-        "parameters": [
-          {
-            "name": "format",
-            "in": "query",
-            "required": false,
-            "description": "Use json to return API payload instead of HTML page.",
-            "schema": {
-              "type": "string",
-              "example": "json"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -901,7 +890,7 @@
       "get": {
         "operationId": "auth-callback",
         "summary": "Dexcom OAuth callback",
-        "description": "Validates state, exchanges code, stores encrypted tokens, and returns confirmation HTML.",
+        "description": "Validates state, exchanges code, stores encrypted tokens, then redirects to dashboard or returns JSON success.",
         "tags": [
           "Admin and Ops"
         ],
@@ -931,8 +920,11 @@
           "200": {
             "description": "Successful response",
             "content": {
-              "text/html": {
-                "example": "<html>...</html>"
+              "application/json": {
+                "example": {
+                  "ok": true,
+                  "dexcom": "connected"
+                }
               }
             }
           }
@@ -1064,7 +1056,7 @@
       "get": {
         "operationId": "admin-keys-list",
         "summary": "Dashboard helper list endpoint",
-        "description": "Same list output as /api/admin/keys, used by admin dashboard page.",
+        "description": "Same list output as /api/admin/keys, used by dashboard clients.",
         "tags": [
           "Admin and Ops"
         ],
@@ -1094,7 +1086,7 @@
       "post": {
         "operationId": "admin-keys-create-helper",
         "summary": "Dashboard helper create endpoint",
-        "description": "Same create output as /api/admin/keys, used by admin dashboard page.",
+        "description": "Same create output as /api/admin/keys, used by dashboard clients.",
         "tags": [
           "Admin and Ops"
         ],
@@ -1135,8 +1127,8 @@
     "/api/admin/settings/profile": {
       "get": {
         "operationId": "admin-settings-profile-get",
-        "summary": "Read shared settings from admin UI",
-        "description": "Admin endpoint backing /settings page. Returns shared profile payload.",
+        "summary": "Read shared settings",
+        "description": "Admin endpoint returning shared profile payload for dashboard clients.",
         "tags": [
           "Admin and Ops"
         ],
@@ -1178,7 +1170,7 @@
       },
       "put": {
         "operationId": "admin-settings-profile-put",
-        "summary": "Update shared settings from admin UI",
+        "summary": "Update shared settings",
         "description": "Admin update endpoint. Persists table row and emits settings.profile.updated.",
         "tags": [
           "Admin and Ops"

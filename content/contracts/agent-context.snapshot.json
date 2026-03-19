@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-03-16T04:45:55.347Z",
-  "baseUrl": "https://api.your-domain.com",
+  "generatedAt": "2026-03-19T03:48:41.677Z",
+  "baseUrl": "https://api.veno.local",
   "scope": "mixed",
   "endpoints": [
     {
@@ -250,7 +250,7 @@
       "id": "admin-settings-profile-get",
       "method": "GET",
       "path": "/api/admin/settings/profile",
-      "summary": "Read shared settings from admin UI",
+      "summary": "Read shared settings",
       "auth": "admin",
       "source": "mixed",
       "tags": [
@@ -261,7 +261,7 @@
       "id": "admin-settings-profile-put",
       "method": "PUT",
       "path": "/api/admin/settings/profile",
-      "summary": "Update shared settings from admin UI",
+      "summary": "Update shared settings",
       "auth": "admin",
       "source": "mixed",
       "tags": [
