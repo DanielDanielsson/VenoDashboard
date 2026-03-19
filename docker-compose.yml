@@ -1,0 +1,23 @@
+services:
+  dashboard:
+    container_name: veno-dashboard
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - path: .env.example
+        required: true
+      - path: ../VenoAPI/.env
+        required: false
+    environment:
+      NEXT_PUBLIC_SITE_URL: http://localhost:3002
+      PULSE_API_BASE_URL: http://veno-api:3101
+    ports:
+      - "3002:3001"
+    networks:
+      - veno_shared
+    restart: unless-stopped
+
+networks:
+  veno_shared:
+    name: veno_shared
