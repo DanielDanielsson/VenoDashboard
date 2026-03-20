@@ -76,13 +76,17 @@ export function resolveHistoryWindow(params: {
   };
 }
 
-async function fetchOfficialChunked(from: string, to: string): Promise<PulseApiReading[]> {
+async function fetchChunkedHistory(
+  source: 'official' | 'share',
+  from: string,
+  to: string
+): Promise<PulseApiReading[]> {
   const fromMs = new Date(from).getTime();
   const toMs = new Date(to).getTime();
   const rangeMs = toMs - fromMs;
 
   if (rangeMs <= CHUNK_MS) {
-    const result = await fetchGlucoseHistory('official', from, to, API_MAX_LIMIT);
+    const result = await fetchGlucoseHistory(source, from, to, API_MAX_LIMIT);
     return result.items;
   }
 
@@ -100,7 +104,7 @@ async function fetchOfficialChunked(from: string, to: string): Promise<PulseApiR
 
   const results = await Promise.all(
     chunks.map((chunk) =>
-      fetchGlucoseHistory('official', chunk.from, chunk.to, API_MAX_LIMIT)
+      fetchGlucoseHistory(source, chunk.from, chunk.to, API_MAX_LIMIT)
         .then((result) => result.items)
         .catch(() => [] as PulseApiReading[])
     )
@@ -129,15 +133,11 @@ export async function fetchLatestDashboardReading(): Promise<LatestDashboardRead
 export async function fetchMergedGlucoseWindow(
   from: string,
   to: string,
-  now: Date = new Date()
+  _now: Date = new Date()
 ): Promise<MergedWindowResult> {
-  const shareWindowStart = new Date(
-    Math.max(new Date(from).getTime(), now.getTime() - 4 * 60 * 60 * 1000)
-  ).toISOString();
-
   const [officialItems, share] = await Promise.all([
-    fetchOfficialChunked(from, to).catch(() => [] as PulseApiReading[]),
-    fetchGlucoseHistory('share', shareWindowStart, to, 500).catch(() => ({ items: [] as PulseApiReading[] }))
+    fetchChunkedHistory('official', from, to).catch(() => [] as PulseApiReading[]),
+    fetchChunkedHistory('share', from, to).catch(() => [] as PulseApiReading[])
   ]);
   const [tandemBasal, tandemEvents] = await Promise.all([
     fetchTandemBasalHistory(from, to, API_MAX_LIMIT).catch(() => ({
@@ -151,9 +151,9 @@ export async function fetchMergedGlucoseWindow(
 
   return {
     officialItems,
-    shareItems: share.items,
+    shareItems: share,
     tandemBasalItems,
     tandemEventItems: tandemEvents.items,
-    merged: mergeGlucoseReadings(officialItems, share.items)
+    merged: mergeGlucoseReadings(officialItems, share)
   };
 }
