@@ -135,6 +135,8 @@ export async function fetchMergedGlucoseWindow(
   to: string,
   _now: Date = new Date()
 ): Promise<MergedWindowResult> {
+  void _now;
+
   const [officialItems, share] = await Promise.all([
     fetchChunkedHistory('official', from, to).catch(() => [] as PulseApiReading[]),
     fetchChunkedHistory('share', from, to).catch(() => [] as PulseApiReading[])
