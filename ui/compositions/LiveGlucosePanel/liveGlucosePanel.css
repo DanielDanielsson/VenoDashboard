@@ -1,0 +1,24 @@
+@custom-variant theme-live-glucose-panel-light (.theme-live-glucose-panel-light);
+@custom-variant theme-live-glucose-panel-dark (.theme-live-glucose-panel-dark);
+
+@layer theme {
+    :root {
+        --color-live-glucose-panel-age: var(--color-base-ink-muted);
+    }
+
+    .theme-dark {
+        --color-live-glucose-panel-age: var(--color-base-ink-soft);
+    }
+
+    .theme-live-glucose-panel-light {
+        --color-live-glucose-panel-age: var(--color-base-ink-muted);
+    }
+
+    .theme-live-glucose-panel-dark {
+        --color-live-glucose-panel-age: var(--color-base-ink-soft);
+    }
+}
+
+@theme inline {
+    --color-live-glucose-panel-age: var(--color-live-glucose-panel-age);
+}

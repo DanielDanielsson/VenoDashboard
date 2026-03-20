@@ -1,2 +1,2 @@
 export { NavigationLink } from './NavigationLink';
-export type { NavigationLinkProps } from './NavigationLink.types';
+export type { NavigationLinkProps, NavigationLinkTheme } from './NavigationLink.types';

@@ -24,7 +24,7 @@ export function DocsSidebar({ groups }: DocsSidebarProps) {
         <nav className="docs-nav-group mt-3">
           {CORE_DOC_LINKS.map((item) => (
             <Link key={item.href} href={item.href} className="docs-link">
-              {item.label}
+              {item.label} 
             </Link>
           ))}
         </nav>

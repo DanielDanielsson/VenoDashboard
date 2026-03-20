@@ -1,0 +1,39 @@
+@custom-variant theme-dashboard-panel-light (.theme-dashboard-panel-light);
+@custom-variant theme-dashboard-panel-dark (.theme-dashboard-panel-dark);
+
+@layer theme {
+    :root {
+        --color-dashboard-panel-bg: var(--color-base-paper-strong);
+        --color-dashboard-panel-header-bg: color-mix(in srgb, black 5%, var(--color-base-paper-strong));
+        --color-dashboard-panel-border: var(--color-base-ink);
+        --color-dashboard-panel-title: var(--color-base-ink-muted);
+    }
+
+    .theme-dark {
+        --color-dashboard-panel-bg: var(--color-base-panel-dark-bright);
+        --color-dashboard-panel-header-bg: color-mix(in srgb, white 7%, var(--color-base-panel-dark-bright));
+        --color-dashboard-panel-border: var(--color-base-ink-soft);
+        --color-dashboard-panel-title: var(--color-base-ink-soft);
+    }
+
+    .theme-dashboard-panel-light {
+        --color-dashboard-panel-bg: var(--color-base-paper-strong);
+        --color-dashboard-panel-header-bg: color-mix(in srgb, black 5%, var(--color-base-paper-strong));
+        --color-dashboard-panel-border: var(--color-base-ink);
+        --color-dashboard-panel-title: var(--color-base-ink-muted);
+    }
+
+    .theme-dashboard-panel-dark {
+        --color-dashboard-panel-bg: var(--color-base-panel-dark-bright);
+        --color-dashboard-panel-header-bg: color-mix(in srgb, white 7%, var(--color-base-panel-dark-bright));
+        --color-dashboard-panel-border: var(--color-base-ink-soft);
+        --color-dashboard-panel-title: var(--color-base-ink-soft);
+    }
+}
+
+@theme inline {
+    --color-dashboard-panel-bg: var(--color-dashboard-panel-bg);
+    --color-dashboard-panel-header-bg: var(--color-dashboard-panel-header-bg);
+    --color-dashboard-panel-border: var(--color-dashboard-panel-border);
+    --color-dashboard-panel-title: var(--color-dashboard-panel-title);
+}

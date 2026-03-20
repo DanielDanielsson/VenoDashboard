@@ -1,0 +1,49 @@
+@custom-variant theme-nav-link-light (.theme-nav-link-light);
+@custom-variant theme-nav-link-dark (.theme-nav-link-dark);
+
+@layer theme {
+    :root {
+        --color-nav-link-bg: var(--color-base-paper-strong);
+        --color-nav-link-bg-hover: var(--color-base-paper);
+        --color-nav-link-text: var(--color-base-ink-muted);
+        --color-nav-link-text-hover: var(--color-base-ink);
+        --color-nav-link-corner: var(--color-base-paper-strong);
+        --color-nav-link-corner-hover: var(--color-base-success);
+    }
+
+    .theme-dark {
+        --color-nav-link-bg: var(--color-base-panel-dark);
+        --color-nav-link-bg-hover: var(--color-base-night-strong);
+        --color-nav-link-text: var(--color-base-ink-soft);
+        --color-nav-link-text-hover: #e8edf5;
+        --color-nav-link-corner: var(--color-base-panel-dark);
+        --color-nav-link-corner-hover: var(--color-base-success-dark);
+    }
+
+    .theme-nav-link-light {
+        --color-nav-link-bg: var(--color-base-paper-strong);
+        --color-nav-link-bg-hover: var(--color-base-paper);
+        --color-nav-link-text: var(--color-base-ink-muted);
+        --color-nav-link-text-hover: var(--color-base-ink);
+        --color-nav-link-corner: var(--color-base-paper-strong);
+        --color-nav-link-corner-hover: var(--color-base-success);
+    }
+
+    .theme-nav-link-dark {
+        --color-nav-link-bg: var(--color-base-panel-dark);
+        --color-nav-link-bg-hover: var(--color-base-night-strong);
+        --color-nav-link-text: var(--color-base-ink-soft);
+        --color-nav-link-text-hover: #e8edf5;
+        --color-nav-link-corner: var(--color-base-panel-dark);
+        --color-nav-link-corner-hover: var(--color-base-success-dark);
+    }
+}
+
+@theme inline {
+    --color-nav-link-bg: var(--color-nav-link-bg);
+    --color-nav-link-bg-hover: var(--color-nav-link-bg-hover);
+    --color-nav-link-text: var(--color-nav-link-text);
+    --color-nav-link-text-hover: var(--color-nav-link-text-hover);
+    --color-nav-link-corner: var(--color-nav-link-corner);
+    --color-nav-link-corner-hover: var(--color-nav-link-corner-hover);
+}

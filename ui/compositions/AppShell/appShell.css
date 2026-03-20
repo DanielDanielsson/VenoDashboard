@@ -38,13 +38,8 @@
 
   .panel {
     border: 1px solid var(--border);
-    background: linear-gradient(
-      168deg,
-      var(--surface-strong) 0%,
-      var(--surface) 100%
-    );
+    background: var(--surface-strong);
     box-shadow: var(--shadow);
-    backdrop-filter: blur(20px) saturate(1.4);
   }
 
   .panel-muted {
@@ -545,7 +540,7 @@
   }
 
   a.inline-card:hover,
-  a > .inline-card:hover {
+  a>.inline-card:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow);
   }
@@ -947,6 +942,7 @@
       opacity: 0;
       transform: translateY(6px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -954,33 +950,46 @@
   }
 
   @keyframes skeleton-shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+    0% {
+      background-position: -200% 0;
+    }
+
+    100% {
+      background-position: 200% 0;
+    }
   }
 
   .glucose-chart-skeleton {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: linear-gradient(
-      90deg,
-      var(--surface-muted) 25%,
-      var(--surface-strong) 50%,
-      var(--surface-muted) 75%
-    );
+    background: linear-gradient(90deg,
+        var(--surface-muted) 25%,
+        var(--surface-strong) 50%,
+        var(--surface-muted) 75%);
     background-size: 200% 100%;
     animation: skeleton-shimmer 1.5s ease-in-out infinite;
   }
 
   @keyframes glucose-ring-pulse {
-    0%, 100% { opacity: 0; }
-    50% { opacity: 0.4; }
+
+    0%,
+    100% {
+      opacity: 0;
+    }
+
+    50% {
+      opacity: 0.4;
+    }
   }
 
   @keyframes pulse-glow {
-    0%, 100% {
+
+    0%,
+    100% {
       box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 40%, transparent);
     }
+
     50% {
       box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 60%, transparent);
     }
@@ -988,6 +997,7 @@
 
   /* Tablet / medium breakpoint */
   @media (max-width: 1120px) {
+
     .hero-grid,
     .docs-layout,
     .stats-grid,

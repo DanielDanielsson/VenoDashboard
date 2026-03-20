@@ -1,1 +1,8 @@
 /* Spacing scale */
+
+@theme inline {
+    /* Distance from top of viewport to match sidebar logo top */
+    --spacing-dashboard-top: 1rem;
+    /* Distance from top of viewport to match sidebar nav links top */
+    --spacing-dashboard-content-top: 8.75rem;
+}

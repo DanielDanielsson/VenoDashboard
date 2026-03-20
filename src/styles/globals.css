@@ -47,33 +47,6 @@
     font-family: var(--font-urbanist);
   }
 
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background-image:
-      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-    background-size: 80px 80px;
-    mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black 0%, transparent 100%);
-    z-index: 0;
-  }
-
-  body::after {
-    content: "";
-    position: fixed;
-    top: -40%;
-    left: 50%;
-    translate: -50% 0;
-    width: 140%;
-    height: 60%;
-    pointer-events: none;
-    background: radial-gradient(ellipse at center, var(--accent-glow), transparent 65%);
-    z-index: 0;
-    opacity: 0.7;
-  }
-
   .app-shell {
     position: relative;
     z-index: 1;
