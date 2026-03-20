@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
+import { DashboardPanel } from '@ui/components/DashboardPanel';
 import type {
   SharedTimer,
   SharedTimerMutationResponse,
@@ -116,6 +117,7 @@ function upsertTimer(items: SharedTimer[], timer: SharedTimer): SharedTimer[] {
 }
 
 export function SharedTimersPanel() {
+  const [showStartForm, setShowStartForm] = useState(false);
   const [selectedMinutes, setSelectedMinutes] = useState<number>(TIMER_PRESETS[0]);
   const [customValue, setCustomValue] = useState('');
   const [customError, setCustomError] = useState<string | null>(null);
@@ -275,6 +277,7 @@ export function SharedTimersPanel() {
       );
       setCustomValue('');
       setCustomError(null);
+      setShowStartForm(false);
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'Failed to start timer');
     } finally {
@@ -319,83 +322,92 @@ export function SharedTimersPanel() {
   const errorMessage = error instanceof Error ? error.message : actionError;
 
   return (
-    <section className="panel dashboard-section">
-      <div className="dashboard-section__header">
-        <div>
-          <p className="kicker">Shared timers</p>
-          <h2 className="dashboard-section__title">Timers</h2>
-          <p className="dashboard-section__meta">Starts here are shared with all connected consumer apps.</p>
-        </div>
-      </div>
-
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        {TIMER_PRESETS.map((minutes) => (
-          <button
-            key={minutes}
-            type="button"
-            className={selectedMinutes === minutes ? 'button-primary' : 'button-secondary'}
-            onClick={() => setSelectedMinutes(minutes)}
-          >
-            {minutes}m
-          </button>
-        ))}
-        <button
-          type="button"
-          className="button-primary"
-          disabled={isSubmitting}
-          onClick={() => void startTimer(selectedMinutes * 60)}
-        >
-          {isSubmitting ? 'Starting...' : `Start ${selectedMinutes}m`}
-        </button>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <input
-          value={customValue}
-          onChange={(event) => setCustomValue(event.target.value)}
-          placeholder="Custom (min, mm:ss, hh:mm:ss, 90s)"
-          className="min-w-[18rem] flex-1 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text)] outline-none"
-        />
-        <button type="button" className="button-secondary" disabled={isSubmitting} onClick={applyCustomStart}>
-          Start custom
-        </button>
-      </div>
-
-      {customError ? <p className="mt-3 text-sm text-rose-300">{customError}</p> : null}
-      {errorMessage ? <p className="mt-3 text-sm text-rose-300">{errorMessage}</p> : null}
-
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        {timers.length === 0 ? (
-          <div className="dashboard-stat-card md:col-span-2">
-            <p className="text-sm text-[var(--text-dim)]">No active shared timers.</p>
-          </div>
+    <DashboardPanel
+      title="Timers"
+      headerRight={
+        <span className="text-xs text-(--text-dim)">{timers.length} total</span>
+      }
+    >
+      <div className="flex flex-1 flex-col">
+        {timers.length === 0 && !showStartForm ? (
+          <p className="text-sm text-(--text-dim)">No active timers</p>
         ) : (
-          timers.map((timer) => {
-            const remaining = Math.max(0, new Date(timer.fireAt).getTime() - nowMs);
-            const isDone = remaining <= 0;
+          <div className="flex flex-col gap-2">
+            {timers.map((timer) => {
+              const remaining = Math.max(0, new Date(timer.fireAt).getTime() - nowMs);
+              const isDone = remaining <= 0;
 
-            return (
-              <article key={timer.id} className="dashboard-stat-card">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-dim)]">Shared timer</p>
-                    <h3 className="mt-3 text-xl font-semibold text-[var(--text)]">{formatDurationLabel(timer.durationSeconds)}</h3>
-                    <p className="mt-2 text-sm text-[var(--text-dim)]">
-                      Started {new Date(timer.createdAt).toLocaleTimeString()}
-                    </p>
-                    <p className={`mt-3 text-lg font-semibold ${isDone ? 'text-amber-200' : 'text-[var(--text)]'}`}>
+              return (
+                <div key={timer.id} className="flex items-center justify-between gap-3 rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-xs text-(--text-dim)">{formatDurationLabel(timer.durationSeconds)}</p>
+                    <p className={`text-base font-semibold tabular-nums ${isDone ? 'text-amber-200' : 'text-(--text)'}`}>
                       {isDone ? 'Done' : formatCountdown(timer.fireAt, nowMs)}
                     </p>
                   </div>
-                  <button type="button" className="button-secondary" onClick={() => void removeTimer(timer.id)}>
+                  <button
+                    type="button"
+                    className="button-ghost shrink-0 text-xs"
+                    onClick={() => void removeTimer(timer.id)}
+                  >
                     Remove
                   </button>
                 </div>
-              </article>
-            );
-          })
+              );
+            })}
+          </div>
+        )}
+
+        {showStartForm ? (
+          <div className="mt-4 flex flex-col gap-3">
+            <div className="flex flex-wrap gap-2">
+              {TIMER_PRESETS.map((minutes) => (
+                <button
+                  key={minutes}
+                  type="button"
+                  className={selectedMinutes === minutes ? 'button-primary' : 'button-secondary'}
+                  onClick={() => setSelectedMinutes(minutes)}
+                >
+                  {minutes}m
+                </button>
+              ))}
+            </div>
+            <input
+              value={customValue}
+              onChange={(event) => setCustomValue(event.target.value)}
+              placeholder="Custom (5, mm:ss, 90s)"
+              className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm text-(--text) outline-none placeholder:text-(--text-dim) focus:border-(--border-focus, var(--border))"
+            />
+            {customError && <p className="text-xs text-rose-300">{customError}</p>}
+            {errorMessage && <p className="text-xs text-rose-300">{errorMessage}</p>}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="button-primary flex-1"
+                disabled={isSubmitting}
+                onClick={() => customValue ? applyCustomStart() : void startTimer(selectedMinutes * 60)}
+              >
+                {isSubmitting ? 'Starting…' : `Start ${customValue ? 'custom' : `${selectedMinutes}m`}`}
+              </button>
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => { setShowStartForm(false); setCustomValue(''); setCustomError(null); }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="mt-4 w-full rounded-lg border border-dashed border-(--border) py-3 text-sm text-(--text-dim) transition-colors hover:border-(--text-soft) hover:text-(--text-soft)"
+            onClick={() => setShowStartForm(true)}
+          >
+            + Start Timer
+          </button>
         )}
       </div>
-    </section>
+    </DashboardPanel>
   );
 }

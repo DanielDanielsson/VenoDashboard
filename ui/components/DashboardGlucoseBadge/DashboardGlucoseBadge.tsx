@@ -101,6 +101,7 @@ export function DashboardGlucoseBadge() {
       trend={latest.trend}
       timestamp={latest.timestamp}
       size="lg"
+      showAge={false}
     />
   );
 }
