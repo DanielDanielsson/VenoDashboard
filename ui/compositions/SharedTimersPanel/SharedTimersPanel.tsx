@@ -418,7 +418,7 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
             disabled={readOnly}
             onClick={() => setShowStartForm(true)}
           >
-            {readOnly ? 'Owner sign in to start timers' : '+ Start Timer'}
+            {readOnly ? 'Admin sign in to start timers' : '+ Start Timer'}
           </button>
         )}
       </div>

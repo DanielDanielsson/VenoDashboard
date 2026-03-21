@@ -18,9 +18,9 @@ Private dashboard frontend for Veno ecosystem.
 Copy `.env.example` to `.env.local`:
 
 ```bash
-AUTH_POC_EMAIL=owner@veno.local
-OWNER_LOGIN_USERNAME=owner
-OWNER_LOGIN_PASSWORD=change_me_owner_password
+AUTH_POC_EMAIL=admin@veno.local
+OWNER_LOGIN_USERNAME=admin
+OWNER_LOGIN_PASSWORD=change_me_admin_password
 NEXT_PUBLIC_SITE_URL=http://localhost:3001
 PULSE_API_BASE_URL=http://localhost:3101
 DEXCOM_GATEWAY_BASE_URL=http://localhost:3101
@@ -36,7 +36,7 @@ Public demo routes:
 - `/dashboard`
 - `/dashboard/statistics`
 
-Owner sign in is still required for settings, integrations, API keys, and timer mutations.
+Admin sign in is still required for settings, integrations, API keys, and timer mutations.
 
 - Source of truth is VenoAPI.
 - Contract fetch targets:

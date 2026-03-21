@@ -40,7 +40,7 @@ export const SideBarNavigation = ({ isOwner = false }: { isOwner?: boolean }) =>
               <div className="relative flex items-center gap-3 rounded-lg bg-nav-link-bg/45 px-3 py-2.5 text-sm font-medium text-nav-link-text/45">
                 <Icon icon={link.icon} twStyles="h-5 w-5" />
                 <span className="flex-1">{link.label}</span>
-                <span className="text-[10px] uppercase tracking-[0.16em] text-nav-link-text/35">Owner</span>
+                <span className="text-[10px] uppercase tracking-[0.16em] text-nav-link-text/35">Admin</span>
               </div>
             </li>
           );
@@ -49,10 +49,10 @@ export const SideBarNavigation = ({ isOwner = false }: { isOwner?: boolean }) =>
 
       <div className="mt-auto px-1 pb-2">
         {isOwner ? (
-          <p className="text-xs text-(--text-dim)">Owner mode enabled</p>
+          <p className="text-xs text-(--text-dim)">Admin mode enabled</p>
         ) : (
           <Link href="/login" className="button-secondary w-full justify-center">
-            Owner sign in
+            Admin sign in
           </Link>
         )}
       </div>

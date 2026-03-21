@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
   if (!hasOwnerCredentialsConfigured()) {
     return NextResponse.json(
-      { error: { message: 'Owner credentials are not configured.' } },
+      { error: { message: 'Admin credentials are not configured.' } },
       { status: 500 }
     );
   }

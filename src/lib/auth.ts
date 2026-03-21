@@ -9,11 +9,11 @@ export interface OwnerSession {
 }
 
 function ownerEmail(): string {
-  return process.env.AUTH_POC_EMAIL?.trim() || 'owner@pulseglucose.local';
+  return `${ownerLoginUsername()}@pulseglucose.local`;
 }
 
-function ownerLoginUsername(): string | null {
-  return process.env.OWNER_LOGIN_USERNAME?.trim() || null;
+function ownerLoginUsername(): string {
+  return process.env.OWNER_LOGIN_USERNAME?.trim() || 'admin';
 }
 
 function ownerLoginPassword(): string | null {
@@ -21,13 +21,13 @@ function ownerLoginPassword(): string | null {
 }
 
 export function hasOwnerCredentialsConfigured(): boolean {
-  return Boolean(ownerLoginUsername() && ownerLoginPassword());
+  return Boolean(ownerLoginPassword());
 }
 
 export function validateOwnerCredentials(username: string, password: string): boolean {
   const expectedUsername = ownerLoginUsername();
   const expectedPassword = ownerLoginPassword();
-  if (!expectedUsername || !expectedPassword) {
+  if (!expectedPassword) {
     return false;
   }
 
@@ -61,7 +61,7 @@ export async function requireOwnerSession(): Promise<OwnerSession> {
 export function ownerSessionCookieValue(): string {
   const username = ownerLoginUsername();
   const password = ownerLoginPassword();
-  if (!username || !password) {
+  if (!password) {
     return '';
   }
 
