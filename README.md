@@ -21,7 +21,9 @@ Copy `.env.example` to `.env.local`:
 AUTH_POC_EMAIL=owner@veno.local
 NEXT_PUBLIC_SITE_URL=http://localhost:3001
 PULSE_API_BASE_URL=http://localhost:3101
+DEXCOM_GATEWAY_BASE_URL=http://localhost:3101
 PULSE_API_ADMIN_TOKEN=replace_with_existing_api_admin_bearer_token
+DEXCOM_GATEWAY_ADMIN_TOKEN=replace_with_existing_gateway_admin_bearer_token
 PULSE_API_STATUS_TOKEN=optional_existing_status_page_token
 ```
 

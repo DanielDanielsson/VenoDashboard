@@ -10,7 +10,13 @@ import type {
   SharedTimerMutationResponse,
   SharedTimerListResponse
 } from '@/lib/pulse-api/types';
-import { getAdminApiToken, getApiBaseUrl, getStatusToken } from '@/lib/pulse-api/env';
+import {
+  getApiBaseUrl,
+  getAdminApiToken,
+  getDexcomGatewayAdminToken,
+  getDexcomGatewayBaseUrl,
+  getStatusToken
+} from '@/lib/pulse-api/env';
 import { fetchWithApiAuth } from '@/lib/pulse-api/auth-fetch';
 
 export class PulseApiClientError extends Error {
@@ -25,6 +31,10 @@ export class PulseApiClientError extends Error {
 
 function resolveUrl(path: string): string {
   return new URL(path, getApiBaseUrl()).toString();
+}
+
+function resolveGatewayUrl(path: string): string {
+  return new URL(path, getDexcomGatewayBaseUrl()).toString();
 }
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -55,7 +65,9 @@ async function parseError(response: Response): Promise<never> {
 
 function createAdminHeaders(extraHeaders: HeadersInit = {}): Headers {
   const headers = new Headers(extraHeaders);
-  headers.set('Authorization', `Bearer ${getAdminApiToken()}`);
+  if (!headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${getAdminApiToken()}`);
+  }
   return headers;
 }
 
@@ -165,9 +177,12 @@ export async function revokeApiKey(id: string): Promise<void> {
 }
 
 export async function fetchDexcomConnectLocation(): Promise<string> {
-  const response = await fetch(resolveUrl('/api/auth/start'), {
+  const gatewayBaseUrl = getDexcomGatewayBaseUrl();
+  const response = await fetch(resolveGatewayUrl('/api/auth/start'), {
     method: 'GET',
-    headers: createAdminHeaders(),
+    headers: createAdminHeaders({
+      Authorization: `Bearer ${getDexcomGatewayAdminToken()}`
+    }),
     cache: 'no-store',
     redirect: 'manual'
   });
@@ -181,7 +196,7 @@ export async function fetchDexcomConnectLocation(): Promise<string> {
     throw new PulseApiClientError(502, 'Pulse API did not return a Dexcom redirect location');
   }
 
-  return location.startsWith('http') ? location : new URL(location, getApiBaseUrl()).toString();
+  return location.startsWith('http') ? location : new URL(location, gatewayBaseUrl).toString();
 }
 
 export async function fetchSharedTimers(): Promise<SharedTimerListResponse> {

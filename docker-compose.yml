@@ -12,6 +12,8 @@ services:
     environment:
       NEXT_PUBLIC_SITE_URL: http://localhost:3002
       PULSE_API_BASE_URL: http://veno-api:3101
+      DEXCOM_GATEWAY_BASE_URL: http://veno-api:3101
+      DEXCOM_GATEWAY_ADMIN_TOKEN: replace_with_existing_gateway_admin_bearer_token
     ports:
       - "3002:3001"
     networks:

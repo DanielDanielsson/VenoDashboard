@@ -3,6 +3,8 @@ import {
   getAdminApiToken,
   getApiAuthTokenCandidates,
   getApiBaseUrl,
+  getDexcomGatewayAdminToken,
+  getDexcomGatewayBaseUrl,
   getConsumerOrAdminApiToken,
   getStatusToken
 } from '@/lib/pulse-api/env';
@@ -26,6 +28,13 @@ describe('pulse api env helpers', () => {
     expect(getAdminApiToken()).toBe('api-admin-bearer');
   });
 
+  test('uses dexcom gateway admin token when configured', () => {
+    vi.stubEnv('PULSE_API_ADMIN_TOKEN', 'api-admin-bearer');
+    vi.stubEnv('DEXCOM_GATEWAY_ADMIN_TOKEN', 'gateway-admin-bearer');
+
+    expect(getDexcomGatewayAdminToken()).toBe('gateway-admin-bearer');
+  });
+
   test('returns consumer then admin token when both are configured', () => {
     vi.stubEnv('PULSE_API_CONSUMER_KEY', 'consumer-token');
     vi.stubEnv('ADMIN_BEARER_TOKEN', 'admin-token');
@@ -43,5 +52,24 @@ describe('pulse api env helpers', () => {
     vi.stubEnv('PULSE_API_BASE_URL', 'http://localhost:3101');
 
     expect(getApiBaseUrl()).toBe('http://localhost:3101');
+  });
+
+  test('uses dexcom gateway base url when configured', () => {
+    vi.stubEnv('PULSE_API_BASE_URL', 'http://localhost:3101');
+    vi.stubEnv('DEXCOM_GATEWAY_BASE_URL', 'https://glucose-nu.vercel.app');
+
+    expect(getDexcomGatewayBaseUrl()).toBe('https://glucose-nu.vercel.app');
+  });
+
+  test('falls back to api base url when dexcom gateway base url is unset', () => {
+    vi.stubEnv('PULSE_API_BASE_URL', 'http://localhost:3101');
+
+    expect(getDexcomGatewayBaseUrl()).toBe('http://localhost:3101');
+  });
+
+  test('falls back to api admin token when dexcom gateway admin token is unset', () => {
+    vi.stubEnv('PULSE_API_ADMIN_TOKEN', 'api-admin-bearer');
+
+    expect(getDexcomGatewayAdminToken()).toBe('api-admin-bearer');
   });
 });

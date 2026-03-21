@@ -73,7 +73,7 @@ export default async function DashboardIntegrationsPage({ searchParams }: Integr
           <div className="dashboard-link-card">
             <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-dim)]">Connect action</p>
             <p className="mt-3 text-sm text-[var(--text-dim)]">
-              This uses the existing PulseGlucose API admin flow, then returns here when complete.
+              This uses the Dexcom gateway flow, then returns here when complete.
             </p>
             <Link href="/api/dashboard/dexcom/connect" className="button-primary mt-6 inline-flex">
               Connect Dexcom

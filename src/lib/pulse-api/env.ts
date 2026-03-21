@@ -27,6 +27,10 @@ export function getApiBaseUrl(): string {
   return getRequiredEnv('PULSE_API_BASE_URL');
 }
 
+export function getDexcomGatewayBaseUrl(): string {
+  return readEnv('DEXCOM_GATEWAY_BASE_URL') || getApiBaseUrl();
+}
+
 export function getAdminApiToken(): string {
   const token = readEnv('PULSE_API_ADMIN_TOKEN') || readEnv('ADMIN_BEARER_TOKEN');
   if (!token) {
@@ -36,6 +40,10 @@ export function getAdminApiToken(): string {
   }
 
   return token;
+}
+
+export function getDexcomGatewayAdminToken(): string {
+  return readEnv('DEXCOM_GATEWAY_ADMIN_TOKEN') || getAdminApiToken();
 }
 
 export function getConsumerApiToken(): string | undefined {

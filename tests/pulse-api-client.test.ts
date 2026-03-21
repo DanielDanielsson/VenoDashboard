@@ -35,6 +35,32 @@ describe('pulse api client', () => {
     expect(report.official.stable).toBe(true);
   });
 
+  test('starts dexcom connect through dedicated gateway base url when configured', async () => {
+    vi.stubEnv('PULSE_API_BASE_URL', 'https://api.example.com');
+    vi.stubEnv('DEXCOM_GATEWAY_BASE_URL', 'https://glucose-nu.vercel.app');
+    vi.stubEnv('PULSE_API_ADMIN_TOKEN', 'api-admin-token');
+    vi.stubEnv('DEXCOM_GATEWAY_ADMIN_TOKEN', 'gateway-admin-token');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL, init?: RequestInit) => {
+        expect(input.toString()).toBe('https://glucose-nu.vercel.app/api/auth/start');
+        expect((init?.headers as Headers).get('Authorization')).toBe('Bearer gateway-admin-token');
+
+        return new Response(null, {
+          status: 302,
+          headers: {
+            location: '/v3/oauth2/login?client_id=test'
+          }
+        });
+      })
+    );
+
+    const { fetchDexcomConnectLocation } = await import('@/lib/pulse-api/client');
+    const location = await fetchDexcomConnectLocation();
+
+    expect(location).toBe('https://glucose-nu.vercel.app/v3/oauth2/login?client_id=test');
+  });
+
   test('compressTandemBasalHistory collapses repeated basal deliveries with the same rate', () => {
     expect(
       compressTandemBasalHistory([
