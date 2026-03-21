@@ -5,8 +5,18 @@ import {
   parseLimit,
   resolveHistoryWindow
 } from '@/lib/glucose/dashboard-data';
+import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 
 export async function GET(request: NextRequest) {
+  const rateLimit = applyRateLimit({
+    key: `glucose-history:${getClientIp(request)}`,
+    limit: 120,
+    windowMs: 60 * 1000
+  });
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit, 'Too many glucose history requests. Try again soon.');
+  }
+
   const params = request.nextUrl.searchParams;
   const requestedLimit = parseLimit(params.get('limit'));
   const now = new Date();

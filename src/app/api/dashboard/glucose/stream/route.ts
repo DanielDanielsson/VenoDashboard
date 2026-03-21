@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getApiAuthTokenCandidates, getApiBaseUrl } from '@/lib/pulse-api/env';
+import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +49,15 @@ async function connectGlucoseStream(
 }
 
 export async function GET(request: Request) {
+  const rateLimit = applyRateLimit({
+    key: `glucose-stream:${getClientIp(request)}`,
+    limit: 12,
+    windowMs: 60 * 1000
+  });
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit, 'Too many glucose stream connections. Try again soon.');
+  }
+
   const controller = new AbortController();
   request.signal.addEventListener('abort', () => controller.abort(), { once: true });
 

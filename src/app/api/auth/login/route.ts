@@ -5,6 +5,7 @@ import {
   ownerSessionCookieValue,
   validateOwnerCredentials
 } from '@/lib/auth';
+import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 
 interface LoginPayload {
   callbackUrl?: string;
@@ -22,6 +23,15 @@ function safeCallbackUrl(request: NextRequest, value: string | undefined): strin
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimit = applyRateLimit({
+    key: `login:${getClientIp(request)}`,
+    limit: 10,
+    windowMs: 5 * 60 * 1000
+  });
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit, 'Too many login attempts. Try again in a few minutes.');
+  }
+
   const payload = (await request.json().catch(() => ({}))) as LoginPayload;
   const callbackUrl = safeCallbackUrl(request, payload.callbackUrl);
   const username = payload.username?.trim() || '';

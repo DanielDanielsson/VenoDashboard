@@ -1,7 +1,17 @@
 import { NextResponse } from 'next/server';
 import { PulseApiClientError, fetchApiStatus } from '@/lib/pulse-api/client';
+import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const rateLimit = applyRateLimit({
+    key: `status:${getClientIp(request)}`,
+    limit: 60,
+    windowMs: 60 * 1000
+  });
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit, 'Too many status requests. Try again soon.');
+  }
+
   try {
     const report = await fetchApiStatus();
     return NextResponse.json(report, { status: 200 });

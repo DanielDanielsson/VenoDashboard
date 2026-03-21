@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchLatestDashboardReading, fetchMergedGlucoseWindow } from '@/lib/glucose/dashboard-data';
+import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 
 export async function GET(request: NextRequest) {
+  const rateLimit = applyRateLimit({
+    key: `glucose-updates:${getClientIp(request)}`,
+    limit: 60,
+    windowMs: 60 * 1000
+  });
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit, 'Too many glucose update requests. Try again soon.');
+  }
+
   const params = request.nextUrl.searchParams;
   const since = params.get('since');
 

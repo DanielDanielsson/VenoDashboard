@@ -6,8 +6,18 @@ import {
   PulseApiClientError
 } from '@/lib/pulse-api/client';
 import type { CreateSharedTimerPayload } from '@/lib/pulse-api/types';
+import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const rateLimit = applyRateLimit({
+    key: `timers:${getClientIp(request)}`,
+    limit: 60,
+    windowMs: 60 * 1000
+  });
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit, 'Too many timer requests. Try again soon.');
+  }
+
   try {
     const response = await fetchSharedTimers();
     return NextResponse.json(response, { status: 200 });
