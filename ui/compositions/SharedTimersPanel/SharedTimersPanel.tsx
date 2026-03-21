@@ -144,6 +144,10 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
   }, [serverOffsetMs]);
 
   useEffect(() => {
+    if (readOnly) {
+      return;
+    }
+
     let eventSource: EventSource | null = null;
     let reconnectTimer: number | null = null;
     let closed = false;
@@ -245,7 +249,7 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
       clearReconnectTimer();
       eventSource?.close();
     };
-  }, [mutate]);
+  }, [mutate, readOnly]);
 
   const timers = useMemo(() => sortTimers(data?.items || []), [data?.items]);
 
