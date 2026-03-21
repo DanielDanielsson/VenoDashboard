@@ -6,7 +6,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '',
     '/login',
     '/dashboard',
-    '/dashboard/glucose',
+    '/dashboard/statistics',
     '/dashboard/settings',
     '/dashboard/integrations',
     '/dashboard/api-keys'

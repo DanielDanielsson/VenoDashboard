@@ -21,7 +21,11 @@ export async function middleware(request: NextRequest) {
 }
 
 function isProtectedPath(pathname: string): boolean {
-  return pathname.startsWith('/dashboard') || pathname.startsWith('/api/dashboard');
+  if (!pathname.startsWith('/dashboard')) {
+    return false;
+  }
+
+  return pathname !== '/dashboard' && pathname !== '/dashboard/statistics';
 }
 
 function isAllowedPath(pathname: string): boolean {

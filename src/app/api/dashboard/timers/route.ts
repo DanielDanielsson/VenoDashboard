@@ -8,11 +8,6 @@ import {
 import type { CreateSharedTimerPayload } from '@/lib/pulse-api/types';
 
 export async function GET() {
-  const session = await getOwnerSession();
-  if (!session) {
-    return NextResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 });
-  }
-
   try {
     const response = await fetchSharedTimers();
     return NextResponse.json(response, { status: 200 });

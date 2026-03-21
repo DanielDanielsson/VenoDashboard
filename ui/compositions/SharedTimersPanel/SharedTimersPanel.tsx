@@ -116,7 +116,7 @@ function upsertTimer(items: SharedTimer[], timer: SharedTimer): SharedTimer[] {
   return sortTimers(nextItems);
 }
 
-export function SharedTimersPanel() {
+export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) {
   const [showStartForm, setShowStartForm] = useState(false);
   const [selectedMinutes, setSelectedMinutes] = useState<number>(TIMER_PRESETS[0]);
   const [customValue, setCustomValue] = useState('');
@@ -250,6 +250,10 @@ export function SharedTimersPanel() {
   const timers = useMemo(() => sortTimers(data?.items || []), [data?.items]);
 
   async function startTimer(durationSeconds: number) {
+    if (readOnly) {
+      return;
+    }
+
     setIsSubmitting(true);
     setActionError(null);
 
@@ -286,6 +290,10 @@ export function SharedTimersPanel() {
   }
 
   async function removeTimer(timerId: string) {
+    if (readOnly) {
+      return;
+    }
+
     setActionError(null);
 
     const response = await fetch(`/api/dashboard/timers/${timerId}`, {
@@ -347,7 +355,8 @@ export function SharedTimersPanel() {
                   </div>
                   <button
                     type="button"
-                    className="button-ghost shrink-0 text-xs"
+                    className="button-ghost shrink-0 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={readOnly}
                     onClick={() => void removeTimer(timer.id)}
                   >
                     Remove
@@ -358,7 +367,7 @@ export function SharedTimersPanel() {
           </div>
         )}
 
-        {showStartForm ? (
+        {showStartForm && !readOnly ? (
           <div className="mt-4 flex flex-col gap-3">
             <div className="flex flex-wrap gap-2">
               {TIMER_PRESETS.map((minutes) => (
@@ -401,10 +410,11 @@ export function SharedTimersPanel() {
         ) : (
           <button
             type="button"
-            className="mt-4 w-full rounded-lg border border-dashed border-(--border) py-3 text-sm text-(--text-dim) transition-colors hover:border-(--text-soft) hover:text-(--text-soft)"
+            className="mt-4 w-full rounded-lg border border-dashed border-(--border) py-3 text-sm text-(--text-dim) transition-colors hover:border-(--text-soft) hover:text-(--text-soft) disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-(--border) disabled:hover:text-(--text-dim)"
+            disabled={readOnly}
             onClick={() => setShowStartForm(true)}
           >
-            + Start Timer
+            {readOnly ? 'Owner sign in to start timers' : '+ Start Timer'}
           </button>
         )}
       </div>

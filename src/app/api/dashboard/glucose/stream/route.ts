@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getOwnerSession } from '@/lib/auth';
 import { getApiAuthTokenCandidates, getApiBaseUrl } from '@/lib/pulse-api/env';
 
 export const dynamic = 'force-dynamic';
@@ -49,11 +48,6 @@ async function connectGlucoseStream(
 }
 
 export async function GET(request: Request) {
-  const session = await getOwnerSession();
-  if (!session) {
-    return NextResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 });
-  }
-
   const controller = new AbortController();
   request.signal.addEventListener('abort', () => controller.abort(), { once: true });
 

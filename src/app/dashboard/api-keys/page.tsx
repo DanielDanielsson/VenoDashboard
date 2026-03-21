@@ -1,9 +1,11 @@
 import { DashboardErrorState } from '@ui/components/DashboardErrorState/DashboardErrorState';
 import { ApiKeysManager } from '@ui/compositions/ApiKeysManager/ApiKeysManager';
+import { requireOwnerSession } from '@/lib/auth';
 import { PulseApiClientError, listApiKeys } from '@/lib/pulse-api/client';
 import { isSystemApiKeyName } from '@/lib/pulse-api/key-visibility';
 
 export default async function DashboardApiKeysPage() {
+  await requireOwnerSession();
   let items = null;
   let message: string | null = null;
 

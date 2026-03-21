@@ -3,6 +3,7 @@ import { DashboardPanel } from '@ui/components/DashboardPanel';
 import { LiveGlucosePanel } from '@ui/compositions/LiveGlucosePanel';
 import { SharedTimersPanel } from '@ui/compositions/SharedTimersPanel/SharedTimersPanel';
 import { TimeInRangePanel } from '@ui/compositions/TimeInRangePanel';
+import { getOwnerSession } from '@/lib/auth';
 import type { PulseApiStatusReport } from '@/lib/pulse-api/types';
 import { PulseApiClientError, fetchApiStatus, fetchConsumerProfile } from '@/lib/pulse-api/client';
 
@@ -15,17 +16,20 @@ function formatLag(value: number | null | undefined): string {
 }
 
 export default async function DashboardPage() {
+  const session = await getOwnerSession();
   let report: PulseApiStatusReport | null = null;
   let message: string | null = null;
   let greetingName: string | null = null;
 
-  try {
-    const { profile } = await fetchConsumerProfile();
-    const firstName = profile.firstName.trim();
-    const displayName = profile.displayName.trim();
-    greetingName = firstName || displayName.split(/\s+/)[0] || null;
-  } catch {
-    greetingName = null;
+  if (session) {
+    try {
+      const { profile } = await fetchConsumerProfile();
+      const firstName = profile.firstName.trim();
+      const displayName = profile.displayName.trim();
+      greetingName = firstName || displayName.split(/\s+/)[0] || null;
+    } catch {
+      greetingName = null;
+    }
   }
 
   try {
@@ -74,7 +78,7 @@ export default async function DashboardPage() {
           latestReadingTimestamp={latestSource?.latestReading?.timestamp}
         />
 
-        <SharedTimersPanel />
+        <SharedTimersPanel readOnly={!session} />
 
         <TimeInRangePanel />
 

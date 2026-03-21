@@ -9,7 +9,7 @@ const TOP_RESET_THRESHOLD = 24;
 
 export function SiteHeaderShell({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = usePathname();
-  const isGlucosePage = pathname === '/dashboard/glucose';
+  const isGlucosePage = pathname === '/dashboard/statistics';
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollYRef = useRef(0);
   const toggleAnchorYRef = useRef(0);

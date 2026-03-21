@@ -19,6 +19,8 @@ Copy `.env.example` to `.env.local`:
 
 ```bash
 AUTH_POC_EMAIL=owner@veno.local
+OWNER_LOGIN_USERNAME=owner
+OWNER_LOGIN_PASSWORD=change_me_owner_password
 NEXT_PUBLIC_SITE_URL=http://localhost:3001
 PULSE_API_BASE_URL=http://localhost:3101
 DEXCOM_GATEWAY_BASE_URL=http://localhost:3101
@@ -28,6 +30,13 @@ PULSE_API_STATUS_TOKEN=optional_existing_status_page_token
 ```
 
 ## Contracts
+
+Public demo routes:
+
+- `/dashboard`
+- `/dashboard/statistics`
+
+Owner sign in is still required for settings, integrations, API keys, and timer mutations.
 
 - Source of truth is VenoAPI.
 - Contract fetch targets:

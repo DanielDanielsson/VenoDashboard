@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 export const OWNER_SESSION_COOKIE = 'pulse-owner-session';
-const OWNER_SESSION_VALUE = 'poc-owner';
 
 export interface OwnerSession {
   user: {
@@ -13,10 +12,33 @@ function ownerEmail(): string {
   return process.env.AUTH_POC_EMAIL?.trim() || 'owner@pulseglucose.local';
 }
 
+function ownerLoginUsername(): string | null {
+  return process.env.OWNER_LOGIN_USERNAME?.trim() || null;
+}
+
+function ownerLoginPassword(): string | null {
+  return process.env.OWNER_LOGIN_PASSWORD?.trim() || null;
+}
+
+export function hasOwnerCredentialsConfigured(): boolean {
+  return Boolean(ownerLoginUsername() && ownerLoginPassword());
+}
+
+export function validateOwnerCredentials(username: string, password: string): boolean {
+  const expectedUsername = ownerLoginUsername();
+  const expectedPassword = ownerLoginPassword();
+  if (!expectedUsername || !expectedPassword) {
+    return false;
+  }
+
+  return username.trim() === expectedUsername && password === expectedPassword;
+}
+
 export async function getOwnerSession(): Promise<OwnerSession | null> {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(OWNER_SESSION_COOKIE)?.value;
-  if (sessionCookie !== OWNER_SESSION_VALUE) {
+  const sessionValue = ownerSessionCookieValue();
+  if (!sessionValue || sessionCookie !== sessionValue) {
     return null;
   }
 
@@ -37,5 +59,11 @@ export async function requireOwnerSession(): Promise<OwnerSession> {
 }
 
 export function ownerSessionCookieValue(): string {
-  return OWNER_SESSION_VALUE;
+  const username = ownerLoginUsername();
+  const password = ownerLoginPassword();
+  if (!username || !password) {
+    return '';
+  }
+
+  return `owner-session:${encodeURIComponent(username)}`;
 }

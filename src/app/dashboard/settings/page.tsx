@@ -1,8 +1,10 @@
 import { DashboardErrorState } from '@ui/components/DashboardErrorState/DashboardErrorState';
 import { SettingsForm } from '@ui/compositions/SettingsForm/SettingsForm';
+import { requireOwnerSession } from '@/lib/auth';
 import { PulseApiClientError, fetchConsumerProfile } from '@/lib/pulse-api/client';
 
 export default async function DashboardSettingsPage() {
+  await requireOwnerSession();
   let profile = null;
   let message: string | null = null;
 

@@ -1,5 +1,6 @@
 import { DashboardErrorState } from '@ui/components/DashboardErrorState/DashboardErrorState';
 import Link from 'next/link';
+import { requireOwnerSession } from '@/lib/auth';
 import { PulseApiClientError, fetchApiStatus } from '@/lib/pulse-api/client';
 
 interface IntegrationsPageProps {
@@ -15,6 +16,7 @@ function readParam(value: string | string[] | undefined): string {
 }
 
 export default async function DashboardIntegrationsPage({ searchParams }: IntegrationsPageProps) {
+  await requireOwnerSession();
   const params = searchParams ? await searchParams : {};
   const dexcomState = readParam(params.dexcom);
   const dexcomError = readParam(params.error);

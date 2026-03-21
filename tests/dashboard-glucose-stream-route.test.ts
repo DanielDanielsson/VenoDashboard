@@ -1,16 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-const getOwnerSession = vi.fn();
-
-vi.mock('@/lib/auth', () => ({
-  getOwnerSession
-}));
-
 describe('dashboard glucose stream route', () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
-    getOwnerSession.mockResolvedValue({ user: { email: 'owner@example.com' } });
     vi.stubGlobal('fetch', fetchMock);
     process.env.PULSE_API_BASE_URL = 'https://glucose.example';
     process.env.PULSE_API_CONSUMER_KEY = 'consumer-token';
@@ -22,16 +15,16 @@ describe('dashboard glucose stream route', () => {
     vi.clearAllMocks();
   });
 
-  test('rejects unauthorized requests', async () => {
-    getOwnerSession.mockResolvedValue(null);
+  test('returns 502 when upstream stream cannot be established', async () => {
+    fetchMock.mockResolvedValue(new Response('upstream failed', { status: 401 }));
 
     const { GET } = await import('@/app/api/dashboard/glucose/stream/route');
     const response = await GET(new Request('http://localhost/api/dashboard/glucose/stream'));
     const json = await response.json();
 
-    expect(response.status).toBe(401);
-    expect(json.error.message).toContain('Unauthorized');
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(response.status).toBe(502);
+    expect(json.error.message).toContain('Glucose stream failed');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   test('proxies the share SSE endpoint with bearer auth', async () => {

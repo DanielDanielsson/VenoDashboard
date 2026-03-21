@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOwnerSession } from '@/lib/auth';
 import { fetchLatestDashboardReading, fetchMergedGlucoseWindow } from '@/lib/glucose/dashboard-data';
 
 export async function GET(request: NextRequest) {
-  const session = await getOwnerSession();
-  if (!session) {
-    return NextResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 });
-  }
-
   const params = request.nextUrl.searchParams;
   const since = params.get('since');
 
