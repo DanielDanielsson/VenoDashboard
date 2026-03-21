@@ -1,0 +1,44 @@
+@custom-variant theme-secondary-button-light (.theme-secondary-button-light);
+@custom-variant theme-secondary-button-dark (.theme-secondary-button-dark);
+
+@layer theme {
+    :root {
+        --color-secondary-button-active-bg: var(--color-base-ink);
+        --color-secondary-button-active-border: var(--color-base-ink);
+        --color-secondary-button-active-text: var(--color-base-paper);
+        --color-secondary-button-inactive-border: rgba(148, 163, 184, 0.3);
+        --color-secondary-button-inactive-text: var(--color-base-ink-soft);
+    }
+
+    .theme-dark {
+        --color-secondary-button-active-bg: #e8edf5;
+        --color-secondary-button-active-border: #e8edf5;
+        --color-secondary-button-active-text: var(--color-base-night);
+        --color-secondary-button-inactive-border: rgba(148, 163, 184, 0.3);
+        --color-secondary-button-inactive-text: #64748b;
+    }
+
+    .theme-secondary-button-light {
+        --color-secondary-button-active-bg: var(--color-base-ink);
+        --color-secondary-button-active-border: var(--color-base-ink);
+        --color-secondary-button-active-text: var(--color-base-paper);
+        --color-secondary-button-inactive-border: rgba(148, 163, 184, 0.3);
+        --color-secondary-button-inactive-text: var(--color-base-ink-soft);
+    }
+
+    .theme-secondary-button-dark {
+        --color-secondary-button-active-bg: #e8edf5;
+        --color-secondary-button-active-border: #e8edf5;
+        --color-secondary-button-active-text: var(--color-base-night);
+        --color-secondary-button-inactive-border: rgba(148, 163, 184, 0.3);
+        --color-secondary-button-inactive-text: #64748b;
+    }
+}
+
+@theme inline {
+    --color-secondary-button-active-bg: var(--color-secondary-button-active-bg);
+    --color-secondary-button-active-border: var(--color-secondary-button-active-border);
+    --color-secondary-button-active-text: var(--color-secondary-button-active-text);
+    --color-secondary-button-inactive-border: var(--color-secondary-button-inactive-border);
+    --color-secondary-button-inactive-text: var(--color-secondary-button-inactive-text);
+}
