@@ -49,7 +49,7 @@ export default async function DashboardPage() {
   }
 
   const connections = [
-    { name: 'Dexcom G7', type: 'CGM', connected: report.official.connected, age: formatLag(report.official.latestReadingAgeMinutes) },
+    { name: 'Gateway API', type: 'Official Dexcom', connected: report.official.connected, age: formatLag(report.official.latestReadingAgeMinutes) },
     { name: 'Dexcom Share', type: 'Share', connected: report.share.connected, age: formatLag(report.share.latestReadingAgeMinutes) },
     { name: 'Tandem', type: 'Pump', connected: report.tandem.connected, age: formatLag(report.tandem.latestReadingAgeMinutes) },
   ];
