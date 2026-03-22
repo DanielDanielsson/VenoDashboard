@@ -34,7 +34,7 @@ jobs:
       - name: Validate contracts
         run: npm run contracts:validate
         env:
-          PULSE_API_BASE_URL: ${{ vars.VENO_API_BASE_URL }}
+          PULSE_API_BASE_URL: ${{ vars.VENO_API_BASE_URL || 'https://api.venoplatform.com' }}
 
       - name: Broken links
         run: npm run test:links
