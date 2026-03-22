@@ -67,9 +67,15 @@ export default async function DashboardPage() {
       <header className="min-h-[calc(var(--spacing-dashboard-content-top)-var(--spacing-dashboard-top)-1.25rem)] flex flex-col justify-center">
         <div>
         <h1 className="text-3xl font-bold tracking-tight text-(--text)">
-          {greetingName ? `Hi, ${greetingName}!` : 'Hi!'}
+          {session
+            ? greetingName ? `Hi, ${greetingName}!` : 'Hi!'
+            : 'Welcome, visitor!'}
         </h1>
-        <p className="mt-1 text-sm text-(--text-dim)">Here&apos;s your glucose overview for today</p>
+        <p className="mt-1 text-sm text-(--text-dim)">
+          {session
+            ? "Here\u0027s your glucose overview for today!"
+            : "Here\u0027s Daniel\u0027s glucose overview for today!"}
+        </p>
         </div>
       </header>
 

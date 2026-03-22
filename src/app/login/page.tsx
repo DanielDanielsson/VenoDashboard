@@ -17,10 +17,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const callbackUrl = readParam(params.callbackUrl) || '/dashboard';
 
   return (
-    <main className="page-frame">
-      <div className="shell-container section-stack">
-        <SignInButton callbackUrl={callbackUrl} />
-      </div>
+    <main className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <SignInButton callbackUrl={callbackUrl} />
     </main>
   );
 }
