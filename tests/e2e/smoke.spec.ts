@@ -2,8 +2,9 @@ import { expect, test } from '@playwright/test';
 
 test('dashboard renders', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /^Hi/i })).toBeVisible();
-  await expect(page.getByText(/Current Glucose/i)).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByText(/Overview/i)).toBeVisible();
+  await expect(page.getByText(/Statistics/i)).toBeVisible();
 });
 
 test('statistics page renders', async ({ page }) => {
