@@ -56,6 +56,15 @@ function getSelectionTargetWindow(
   return buildPresetWindow(sourceData.meta.to, selection.range);
 }
 
+function getStoredChartColorMode(): GlucoseColorMode {
+  try {
+    const stored = globalThis.localStorage?.getItem(GLUCOSE_CHART_COLOR_MODE_STORAGE_KEY);
+    return stored === 'threeColors' || stored === 'gradient' ? stored : 'threeColors';
+  } catch {
+    return 'threeColors';
+  }
+}
+
 export function GlucoseAnalysisView() {
   const [selection, setSelection] = useState<HistorySelection>({
     kind: 'preset',
@@ -65,7 +74,7 @@ export function GlucoseAnalysisView() {
     globalThis.window !== undefined && globalThis.window.innerWidth < 640 ? 340 : 500
   );
   const [chartYMaxInput, setChartYMaxInput] = useState('25');
-  const [chartColorMode, setChartColorMode] = useState<GlucoseColorMode>('threeColors');
+  const [chartColorMode, setChartColorMode] = useState<GlucoseColorMode>(getStoredChartColorMode);
   const isApplyingUpdatesRef = useRef(false);
   const { cache, mutate: globalMutate } = useSWRConfig();
 
@@ -110,15 +119,6 @@ export function GlucoseAnalysisView() {
       revalidateOnReconnect: false
     }
   );
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(GLUCOSE_CHART_COLOR_MODE_STORAGE_KEY);
-      if (stored === 'threeColors' || stored === 'gradient') {
-        setChartColorMode(stored);
-      }
-    } catch { /* empty */ }
-  }, []);
 
   useEffect(() => {
     if (data?.latest) {
