@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { SecondaryButton } from '@ui/components/SecondaryButton';
 
 interface DateRangeValue {
   from: string;
@@ -242,19 +243,17 @@ export function GlucoseDateRangePicker({ value, onApply }: GlucoseDateRangePicke
 
   return (
     <div ref={rootRef} style={{ position: 'relative' }}>
-      <button
-        type="button"
+      <SecondaryButton
+        isActive={isOpen || !!value}
         onClick={() => {
           if (!isOpen) {
             initializeDraft();
           }
           setIsOpen((open) => !open);
         }}
-        className={isOpen || value ? 'button-primary' : 'button-ghost'}
-        style={{ minHeight: '2rem', padding: '0 0.8rem', fontSize: '0.78rem' }}
       >
         {formatTriggerLabel(value)}
-      </button>
+      </SecondaryButton>
 
       {isOpen && (
         <div

@@ -1,11 +1,11 @@
 export type GlucoseColorMode = 'threeColors' | 'gradient';
 
 export const GLUCOSE_COLOR_MODES: ReadonlyArray<{
-  mode: GlucoseColorMode;
+  value: GlucoseColorMode;
   label: string;
 }> = [
-  { mode: 'threeColors', label: '3 colors' },
-  { mode: 'gradient', label: 'Gradient' }
+  { value: 'threeColors', label: '3 colors' },
+  { value: 'gradient', label: 'Gradient' }
 ];
 
 const LOW_THRESHOLD_MMOL_L = 4.0;

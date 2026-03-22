@@ -1,11 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { GlucoseChart } from '@ui/components/GlucoseChart/GlucoseChart';
 import { GlucoseAgpChart } from '@ui/components/GlucoseAgpChart/GlucoseAgpChart';
 import { GlucoseDateRangePicker } from '@ui/components/GlucoseDateRangePicker/GlucoseDateRangePicker';
 import { GlucoseStatRing } from '@ui/components/GlucoseStatRing/GlucoseStatRing';
+import { DashboardPanel } from '@ui/components/DashboardPanel';
+import { NumberInput } from '@ui/components/NumberInput';
+import { SegmentedControl } from '@ui/components/SegmentedControl';
 import { GLUCOSE_COLOR_MODES, type GlucoseColorMode } from '@/lib/glucose/tints';
 import {
   buildPresetWindow,
@@ -18,6 +21,7 @@ import {
 } from '@/lib/glucose/history-cache';
 import { computeGlucoseStats } from '@/lib/glucose/metrics';
 import { GLUCOSE_TIME_RANGES } from '@/lib/glucose/time-ranges';
+import { SecondaryButton } from '@ui/components/SecondaryButton';
 import type { GlucoseApiResponse, GlucoseUpdatesResponse } from '@/lib/glucose/types';
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -35,42 +39,6 @@ const GLUCOSE_CHART_COLOR_MODE_STORAGE_KEY = 'pulse-glucose-chart-color-mode';
 
 function getUpdatesKey(timestamp: string): string {
   return `/api/dashboard/glucose/updates?since=${encodeURIComponent(timestamp)}`;
-}
-
-function StatValue({
-  label,
-  value,
-  color,
-  size = 'sm'
-}: {
-  label: string;
-  value: string;
-  color?: string;
-  size?: 'sm' | 'lg';
-}) {
-  return (
-    <div style={{ display: 'grid', gap: size === 'lg' ? 5 : 3, alignContent: 'start' }}>
-      <span style={{
-        fontSize: 10,
-        color: 'var(--text-soft)',
-        textTransform: 'uppercase',
-        letterSpacing: '0.12em',
-        fontWeight: 600,
-        lineHeight: 1
-      }}>
-        {label}
-      </span>
-      <span style={{
-        fontSize: size === 'lg' ? 30 : 14,
-        fontWeight: size === 'lg' ? 700 : 600,
-        fontFamily: 'var(--font-plex-mono), monospace',
-        color: color || 'var(--text)',
-        lineHeight: 1
-      }}>
-        {value}
-      </span>
-    </div>
-  );
 }
 
 function getSelectionTargetWindow(
@@ -93,10 +61,12 @@ export function GlucoseAnalysisView() {
     kind: 'preset',
     range: '24h'
   });
-  const [chartHeight, setChartHeight] = useState(500);
+  const [chartHeight] = useState(() =>
+    globalThis.window !== undefined && globalThis.window.innerWidth < 640 ? 340 : 500
+  );
   const [chartYMaxInput, setChartYMaxInput] = useState('25');
   const [chartColorMode, setChartColorMode] = useState<GlucoseColorMode>('threeColors');
-  const [isApplyingUpdates, setIsApplyingUpdates] = useState(false);
+  const isApplyingUpdatesRef = useRef(false);
   const { cache, mutate: globalMutate } = useSWRConfig();
 
   const loadedSourceKey = pickBestLoadedSourceKey(cache, selection);
@@ -115,13 +85,17 @@ export function GlucoseAnalysisView() {
   } = useSWR<GlucoseApiResponse>(sourceKey, fetchJson, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
-    revalidateIfStale: false
+    revalidateIfStale: false,
+    keepPreviousData: true
   });
 
   const targetWindow = getSelectionTargetWindow(selection, sourceData);
   const data = sourceData && targetWindow
     ? sliceHistoryResponseToWindow(sourceData, targetWindow)
     : sourceData;
+
+  const isTransitioning = isValidating || isLoading;
+  const isFirstLoad = !data && isLoading;
 
   const displayedLatestTimestamp = selection.kind === 'preset' ? data?.latest?.timestamp ?? null : null;
   const {
@@ -138,40 +112,24 @@ export function GlucoseAnalysisView() {
   );
 
   useEffect(() => {
-    setChartHeight(window.innerWidth < 640 ? 340 : 500);
-  }, []);
-
-  useEffect(() => {
     try {
-      const storedValue = localStorage.getItem(GLUCOSE_CHART_COLOR_MODE_STORAGE_KEY);
-      if (storedValue === 'threeColors' || storedValue === 'gradient') {
-        setChartColorMode(storedValue);
+      const stored = localStorage.getItem(GLUCOSE_CHART_COLOR_MODE_STORAGE_KEY);
+      if (stored === 'threeColors' || stored === 'gradient') {
+        setChartColorMode(stored);
       }
-    } catch {
-      setChartColorMode('threeColors');
-    }
+    } catch { /* empty */ }
   }, []);
 
   useEffect(() => {
     if (data?.latest) {
-      window.dispatchEvent(new CustomEvent('pulse-glucose-latest', { detail: data.latest }));
+      globalThis.dispatchEvent(new CustomEvent('pulse-glucose-latest', { detail: data.latest }));
     }
   }, [data?.latest]);
 
   const stats = computeGlucoseStats(data?.items ?? []);
   const newUpdatesCount = updates?.meta.newCount ?? 0;
-  const showLoadingOverlay = !data && isLoading;
   const parsedChartYMax = Number(chartYMaxInput);
   const chartYMax = Number.isFinite(parsedChartYMax) ? Math.max(12, parsedChartYMax) : 25;
-
-  async function applyUpdates() {
-    setIsApplyingUpdates(true);
-    try {
-      await globalMutate(sourceKey);
-    } finally {
-      setIsApplyingUpdates(false);
-    }
-  }
 
   const activePreset = selection.kind === 'preset' ? selection.range : null;
   const customValue = selection.kind === 'custom' ? selection.window : null;
@@ -191,18 +149,17 @@ export function GlucoseAnalysisView() {
       return;
     }
 
-    if (!displayedLatestTimestamp || newUpdatesCount <= 0 || isApplyingUpdates || isValidating) {
+    if (!displayedLatestTimestamp || newUpdatesCount <= 0 || isApplyingUpdatesRef.current || isValidating) {
       return;
     }
 
-    setIsApplyingUpdates(true);
+    isApplyingUpdatesRef.current = true;
     void globalMutate(sourceKey).finally(() => {
-      setIsApplyingUpdates(false);
+      isApplyingUpdatesRef.current = false;
     });
   }, [
     displayedLatestTimestamp,
     globalMutate,
-    isApplyingUpdates,
     isValidating,
     newUpdatesCount,
     selection.kind,
@@ -211,228 +168,133 @@ export function GlucoseAnalysisView() {
 
   const avgColor = stats.avg < 4 ? '#fb7185' : stats.avg > 10 ? '#fbbf24' : '#34d399';
 
+  const hasData = !error && data && data.items.length > 0;
+
   return (
-    <div className="glucose-analysis-fullwidth">
-      <section
-        className="panel"
-        style={{
-          position: 'sticky',
-          top: '0',
-          zIndex: 30,
-          borderRadius: 'var(--radius-2xl)',
-          padding: '0.75rem 1.25rem',
-          display: 'grid',
-          gap: '0.625rem'
-        }}
-      >
-        {/* Row 1: time controls */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.5rem 1rem',
-          flexWrap: 'wrap'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.25rem',
-            overflowX: 'auto',
-            scrollbarWidth: 'none',
-            flexShrink: 1,
-            minWidth: 0,
-            flex: '1 1 auto'
-          }}>
-            {GLUCOSE_TIME_RANGES.map((timeRange) => (
-              <button
-                key={timeRange.key}
-                type="button"
-                onClick={() => setSelection({ kind: 'preset', range: timeRange.key })}
-                className={activePreset === timeRange.key ? 'button-primary' : 'button-ghost'}
-                style={{ minHeight: '1.875rem', padding: '0 0.625rem', fontSize: '0.775rem', flexShrink: 0 }}
-              >
-                {timeRange.label}
-              </button>
-            ))}
-            <GlucoseDateRangePicker
-              value={customValue}
-              onApply={(window) => {
-                setSelection({ kind: 'custom', window });
-              }}
-            />
-            {newUpdatesCount > 0 && (
-              <button
-                type="button"
-                onClick={applyUpdates}
-                className="button-primary"
-                disabled={isApplyingUpdates}
-                style={{ minHeight: '1.875rem', padding: '0 0.75rem', fontSize: '0.775rem', marginLeft: 4, flexShrink: 0 }}
-              >
-                {isApplyingUpdates
-                  ? 'Loading...'
-                  : `Load ${newUpdatesCount} new`}
-              </button>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-            <label style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 11,
-              color: 'var(--text-soft)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em'
-            }}>
-              <span>Top</span>
-              <input
-                type="number"
-                min={12}
-                step={1}
-                inputMode="numeric"
-                value={chartYMaxInput}
-                onChange={(event) => setChartYMaxInput(event.target.value)}
-                style={{
-                  width: 64,
-                  minHeight: '1.875rem',
-                  padding: '0 0.625rem',
-                  borderRadius: '999px',
-                  border: '1px solid var(--border-strong)',
-                  background: 'var(--surface)',
-                  color: 'var(--text)',
-                  fontSize: 13,
-                  fontFamily: 'var(--font-plex-mono), monospace'
-                }}
-                aria-label="Chart top value in mmol/L"
-              />
-            </label>
-            {data && !showLoadingOverlay && (
-              <span style={{ fontSize: 11, color: 'var(--text-soft)', whiteSpace: 'nowrap' }}>
-                {data.meta.mergedCount.toLocaleString()} readings
-                {data.meta.tandemBasalCount > 0 ? ` · ${data.meta.tandemBasalCount.toLocaleString()} basal changes` : ''}
-                {data.meta.tandemEventCount > 0 ? ` · ${data.meta.tandemEventCount.toLocaleString()} tandem events` : ''}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Row 2: stats */}
-        {!showLoadingOverlay && !error && data && data.items.length > 0 && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.5rem 1.5rem',
-            flexWrap: 'wrap',
-            paddingTop: '0.375rem',
-            borderTop: '1px solid var(--border)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.25rem', flexWrap: 'wrap' }}>
-              <StatValue label="Avg" value={stats.avg.toFixed(1)} color={avgColor} size="lg" />
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.875rem', paddingBottom: 2 }}>
-                <StatValue label="Min" value={stats.min.toFixed(1)} color={stats.min < 4 ? '#fb7185' : 'var(--text-dim)'} />
-                <StatValue label="Max" value={stats.max.toFixed(1)} color={stats.max > 10 ? '#fbbf24' : 'var(--text-dim)'} />
-                {updatesError && <StatValue label="Updates" value="stale" color="#fb7185" />}
+    <div className="section-stack glucose-analysis-fullwidth">
+      {/* Stats Grid — always rendered to prevent layout shift */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <DashboardPanel
+          title="Average Glucose"
+          twStyles="flex flex-col [&>div:last-child]:flex-1 [&>div:last-child]:flex [&>div:last-child]:items-center [&>div:last-child]:justify-center"
+          headerRight={
+            updatesError
+              ? <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-base-error-dark">Stale</span>
+              : undefined
+          }
+        >
+          {hasData ? (
+            <div className="flex items-end justify-center gap-6" style={{ opacity: isTransitioning ? 0.45 : 1, transition: 'opacity 200ms ease' }}>
+              <div className="grid gap-4 justify-items-center pb-0.5">
+                <span className="font-mono text-xl font-semibold leading-none" style={{ color: stats.min < 4 ? '#fb7185' : 'var(--text-dim)' }}>{stats.min.toFixed(1)}</span>
+                <span className="text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-(--text-soft)">Min</span>
+              </div>
+              <div className="grid gap-4 justify-items-center">
+                <span className="font-mono text-5xl font-bold leading-none" style={{ color: avgColor }}>{stats.avg.toFixed(1)}</span>
+                <span className="text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-(--text-soft)">Avg</span>
+              </div>
+              <div className="grid gap-4 justify-items-center pb-0.5">
+                <span className="font-mono text-xl font-semibold leading-none" style={{ color: stats.max > 10 ? '#fbbf24' : 'var(--text-dim)' }}>{stats.max.toFixed(1)}</span>
+                <span className="text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-(--text-soft)">Max</span>
               </div>
             </div>
+          ) : (
+            <div className="flex items-end justify-center gap-6">
+              <div className="grid gap-4 justify-items-center pb-0.5">
+                <div className="glucose-skeleton-bar" style={{ width: 32, height: 20 }} />
+                <div className="glucose-skeleton-bar" style={{ width: 24, height: 10 }} />
+              </div>
+              <div className="grid gap-4 justify-items-center">
+                <div className="glucose-skeleton-bar" style={{ width: 64, height: 48 }} />
+                <div className="glucose-skeleton-bar" style={{ width: 24, height: 10 }} />
+              </div>
+              <div className="grid gap-4 justify-items-center pb-0.5">
+                <div className="glucose-skeleton-bar" style={{ width: 32, height: 20 }} />
+                <div className="glucose-skeleton-bar" style={{ width: 24, height: 10 }} />
+              </div>
+            </div>
+          )}
+        </DashboardPanel>
 
-            <div style={{ overflow: 'hidden', minWidth: 0, flex: '1 1 auto' }}>
-              <div style={{
-                display: 'flex',
-                gap: '0.625rem',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-                overflowX: 'auto',
-                scrollbarWidth: 'none',
-                paddingBottom: 2
-              }}>
-                <GlucoseStatRing label="Very low" percentage={stats.veryLow.percentage} color="#e11d48" />
-                <GlucoseStatRing label="Low" percentage={stats.low.percentage} color="#fb7185" />
-                <GlucoseStatRing label="In range" percentage={stats.inRange.percentage} color="#34d399" />
-                <GlucoseStatRing label="High" percentage={stats.high.percentage} color="#fbbf24" />
-                <GlucoseStatRing label="Very high" percentage={stats.veryHigh.percentage} color="#f97316" />
+        <DashboardPanel title="Settings" twStyles="overflow-visible">
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-(--text-soft)">Time Range</span>
+              <div className="flex flex-wrap items-center gap-1">
+                {GLUCOSE_TIME_RANGES.map((timeRange) => (
+                  <SecondaryButton
+                    key={timeRange.key}
+                    isActive={activePreset === timeRange.key}
+                    onClick={() => setSelection({ kind: 'preset', range: timeRange.key })}
+                  >
+                    {timeRange.label}
+                  </SecondaryButton>
+                ))}
+                <GlucoseDateRangePicker
+                  value={customValue}
+                  onApply={(window) => {
+                    setSelection({ kind: 'custom', window });
+                  }}
+                />
+              </div>
+            </div>
+            <div className="flex items-end gap-4">
+              <div className="grid gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-(--text-soft)">Color Mode</span>
+                <SegmentedControl
+                  options={GLUCOSE_COLOR_MODES}
+                  value={chartColorMode}
+                  onChange={updateChartColorMode}
+                />
+              </div>
+              <div className="grid gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-(--text-soft)">Y-Axis Max</span>
+                <NumberInput
+                  label="Top"
+                  value={chartYMaxInput}
+                  min={12}
+                  onChange={setChartYMaxInput}
+                  ariaLabel="Chart top value in mmol/L"
+                />
               </div>
             </div>
           </div>
-        )}
-      </section>
+        </DashboardPanel>
 
-      <section className="panel" style={{
-        marginTop: '0.75rem',
-        borderRadius: 'var(--radius-2xl)',
-        overflow: 'hidden',
-        padding: 0
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0.625rem 1rem 0',
-          gap: '0.75rem'
-        }}>
-          <span style={{
-            fontSize: 11,
-            color: 'var(--text-soft)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            flex: 1,
-            minWidth: 0
-          }}>
-            Drag to pan · Ctrl or Cmd + scroll to zoom
-          </span>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 3,
-            padding: 3,
-            borderRadius: '999px',
-            border: '1px solid var(--border-strong)',
-            background: 'var(--surface)'
-          }}>
-            {GLUCOSE_COLOR_MODES.map(({ mode, label }) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => updateChartColorMode(mode)}
-                className={chartColorMode === mode ? 'button-primary' : 'button-ghost'}
-                style={{ minHeight: '1.625rem', padding: '0 0.625rem', fontSize: '0.725rem' }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div style={{ position: 'relative', minHeight: chartHeight }}>
-          {showLoadingOverlay && (
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 12,
-              zIndex: 5
-            }}>
+        <DashboardPanel title="Time in Range" twStyles="flex flex-col [&>div:last-child]:flex-1 [&>div:last-child]:flex [&>div:last-child]:items-center [&>div:last-child]:justify-center">
+          {hasData ? (
+            <div className="flex items-end justify-center gap-3" style={{ opacity: isTransitioning ? 0.45 : 1, transition: 'opacity 200ms ease' }}>
+              <GlucoseStatRing label="Very low" percentage={stats.veryLow.percentage} color="#e11d48" size="sm" />
+              <GlucoseStatRing label="Low" percentage={stats.low.percentage} color="#fb7185" size="md" />
+              <GlucoseStatRing label="In range" percentage={stats.inRange.percentage} color="#34d399" size="lg" />
+              <GlucoseStatRing label="High" percentage={stats.high.percentage} color="#fbbf24" size="md" />
+              <GlucoseStatRing label="Very high" percentage={stats.veryHigh.percentage} color="#f97316" size="sm" />
+            </div>
+          ) : (
+            <div className="flex items-end justify-center gap-3">
+              <div className="glucose-skeleton-circle" style={{ width: 44, height: 44 }} />
+              <div className="glucose-skeleton-circle" style={{ width: 62, height: 62 }} />
+              <div className="glucose-skeleton-circle" style={{ width: 90, height: 90 }} />
+              <div className="glucose-skeleton-circle" style={{ width: 62, height: 62 }} />
+              <div className="glucose-skeleton-circle" style={{ width: 44, height: 44 }} />
+            </div>
+          )}
+        </DashboardPanel>
+      </div>
+
+      {/* Glucose Chart */}
+      <DashboardPanel title="Glucose Timeline">
+        <div style={{ position: 'relative', minHeight: chartHeight, margin: '-1.5rem' }}>
+          {isFirstLoad && (
+            <div className="absolute inset-0 z-5 flex flex-col items-center justify-center gap-3">
               <div className="glucose-chart-skeleton" />
-              <p style={{ fontSize: 13, color: 'var(--text-soft)' }}>Loading glucose data...</p>
+              <p className="text-[13px] text-(--text-soft)">Loading glucose data...</p>
             </div>
           )}
 
-          {error && !showLoadingOverlay && (
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 12,
-              zIndex: 5
-            }}>
-              <p style={{ fontSize: 13, color: '#fb7185' }}>{error.message}</p>
+          {error && !isLoading && (
+            <div className="absolute inset-0 z-5 flex flex-col items-center justify-center gap-3">
+              <p className="text-[13px] text-base-error-dark">{error.message}</p>
               <button
                 type="button"
                 onClick={() => mutate()}
@@ -444,39 +306,55 @@ export function GlucoseAnalysisView() {
             </div>
           )}
 
-          {!error && data && data.items.length === 0 && !showLoadingOverlay && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: chartHeight,
-              color: 'var(--text-soft)',
-              fontSize: 14
-            }}>
+          {!error && data && data.items.length === 0 && !isLoading && (
+            <div className="flex items-center justify-center text-sm text-(--text-soft)" style={{ height: chartHeight }}>
               No glucose data available for this time range.
             </div>
           )}
 
-          {!error && data && data.items.length > 0 && (
-            <div style={{ opacity: isValidating || isApplyingUpdates ? 0.55 : 1, transition: 'opacity 200ms ease' }}>
-              <GlucoseChart
-                data={data.items}
-                basalData={data.basalItems}
-                eventData={data.eventItems}
-                height={chartHeight}
-                yMax={chartYMax}
-                colorMode={chartColorMode}
-              />
+          {hasData && (
+            <div style={{ position: 'relative' }}>
+              {isTransitioning && (
+                <div className="absolute inset-0 z-5 flex items-center justify-center">
+                  <div className="glucose-spinner" />
+                </div>
+              )}
+              <div style={{ opacity: isTransitioning ? 0.35 : 1, transition: 'opacity 200ms ease' }}>
+                <GlucoseChart
+                  data={data.items}
+                  basalData={data.basalItems}
+                  eventData={data.eventItems}
+                  height={chartHeight}
+                  yMax={chartYMax}
+                  colorMode={chartColorMode}
+                />
+              </div>
             </div>
           )}
         </div>
-      </section>
+      </DashboardPanel>
 
-      {!showLoadingOverlay && !error && data && data.items.length > 0 && (
-        <section className="panel" style={{ marginTop: '1rem', borderRadius: 'var(--radius-2xl)', overflow: 'hidden' }}>
-          <GlucoseAgpChart data={data.items} height={chartHeight} yMax={chartYMax} />
-        </section>
-      )}
+      {/* AGP Chart */}
+      <DashboardPanel title="Ambulatory Glucose Profile">
+        <div style={{ margin: '-1.5rem' }}>
+          {hasData ? (
+            <div style={{ position: 'relative' }}>
+              {isTransitioning && (
+                <div className="absolute inset-0 z-5 flex items-center justify-center">
+                  <div className="glucose-spinner" />
+                </div>
+              )}
+              <div style={{ opacity: isTransitioning ? 0.35 : 1, transition: 'opacity 200ms ease' }}>
+                <GlucoseAgpChart data={data.items} height={chartHeight} yMax={chartYMax} />
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center text-sm text-(--text-soft)" style={{ height: chartHeight }}>
+              {isFirstLoad ? '' : 'No data available.'}
+            </div>
+          )}
+        </div>
+      </DashboardPanel>
     </div>
   );
 }
