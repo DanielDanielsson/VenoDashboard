@@ -6,7 +6,9 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (!isAllowedPath(pathname)) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    const response = NextResponse.redirect(new URL('/dashboard', request.url));
+    applyNoIndexHeaders(response);
+    return response;
   }
 
   const callbackUrl = `${request.nextUrl.pathname}${request.nextUrl.search}`;
@@ -15,10 +17,18 @@ export async function middleware(request: NextRequest) {
 
   const expectedSession = await ownerSessionCookieValue();
   if (isProtectedPath(pathname) && request.cookies.get(OWNER_SESSION_COOKIE)?.value !== expectedSession) {
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    applyNoIndexHeaders(response);
+    return response;
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  applyNoIndexHeaders(response);
+  return response;
+}
+
+function applyNoIndexHeaders(response: NextResponse): void {
+  response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noimageindex');
 }
 
 function isProtectedPath(pathname: string): boolean {

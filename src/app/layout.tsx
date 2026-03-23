@@ -24,6 +24,19 @@ export const metadata: Metadata = {
     template: '%s | VenoDashboard'
   },
   description: 'Private dashboard for Veno API operations, glucose monitoring, and app key management.',
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+      'max-image-preview': 'none',
+      'max-snippet': -1,
+      'max-video-preview': -1
+    }
+  },
   openGraph: {
     title: 'VenoDashboard',
     description: 'Private dashboard for Veno API operations and glucose monitoring.',
