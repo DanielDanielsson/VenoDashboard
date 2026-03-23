@@ -61,4 +61,45 @@ describe('dashboard data', () => {
       1000
     );
   });
+
+  test('fetchMergedGlucoseWindow chunks tandem history for long ranges', async () => {
+    fetchGlucoseHistory.mockResolvedValue({ items: [] });
+    fetchTandemBasalHistory.mockResolvedValue({ items: [] });
+    fetchTandemEventHistory.mockResolvedValue({ items: [] });
+
+    const { fetchMergedGlucoseWindow } = await import('@/lib/glucose/dashboard-data');
+
+    await fetchMergedGlucoseWindow(
+      '2026-03-01T00:00:00.000Z',
+      '2026-03-04T00:00:00.000Z',
+      new Date('2026-03-20T00:00:00.000Z')
+    );
+
+    expect(fetchTandemBasalHistory).toHaveBeenCalledTimes(3);
+    expect(fetchTandemEventHistory).toHaveBeenCalledTimes(3);
+    expect(fetchTandemBasalHistory).toHaveBeenNthCalledWith(
+      1,
+      '2026-03-01T00:00:00.000Z',
+      '2026-03-02T00:00:00.000Z',
+      1000
+    );
+    expect(fetchTandemBasalHistory).toHaveBeenNthCalledWith(
+      3,
+      '2026-03-03T00:00:00.000Z',
+      '2026-03-04T00:00:00.000Z',
+      1000
+    );
+    expect(fetchTandemEventHistory).toHaveBeenNthCalledWith(
+      1,
+      '2026-03-01T00:00:00.000Z',
+      '2026-03-02T00:00:00.000Z',
+      1000
+    );
+    expect(fetchTandemEventHistory).toHaveBeenNthCalledWith(
+      3,
+      '2026-03-03T00:00:00.000Z',
+      '2026-03-04T00:00:00.000Z',
+      1000
+    );
+  });
 });

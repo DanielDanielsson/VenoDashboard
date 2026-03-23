@@ -18,6 +18,7 @@ import { getTimeRangeHours, type TimeRange } from './time-ranges';
 const API_MAX_LIMIT = 1000;
 const RESPONSE_MAX_LIMIT = 5000;
 const CHUNK_MS = 2.5 * 24 * 60 * 60 * 1000;
+const TANDEM_CHUNK_MS = 24 * 60 * 60 * 1000;
 
 export interface LatestDashboardReading extends PulseApiReading {
   source: 'official' | 'share';
@@ -116,6 +117,78 @@ async function fetchChunkedHistory(
   return results.flat();
 }
 
+async function fetchChunkedTandemBasalHistory(
+  from: string,
+  to: string
+): Promise<TandemBasalHistoryPoint[]> {
+  const fromMs = new Date(from).getTime();
+  const toMs = new Date(to).getTime();
+  const rangeMs = toMs - fromMs;
+
+  if (rangeMs <= TANDEM_CHUNK_MS) {
+    const result = await fetchTandemBasalHistory(from, to, API_MAX_LIMIT);
+    return result.items;
+  }
+
+  const chunks: { from: string; to: string }[] = [];
+  let cursor = fromMs;
+
+  while (cursor < toMs) {
+    const chunkEnd = Math.min(cursor + TANDEM_CHUNK_MS, toMs);
+    chunks.push({
+      from: new Date(cursor).toISOString(),
+      to: new Date(chunkEnd).toISOString()
+    });
+    cursor = chunkEnd;
+  }
+
+  const results = await Promise.all(
+    chunks.map((chunk) =>
+      fetchTandemBasalHistory(chunk.from, chunk.to, API_MAX_LIMIT)
+        .then((result) => result.items)
+        .catch(() => [] as TandemBasalHistoryPoint[])
+    )
+  );
+
+  return results.flat();
+}
+
+async function fetchChunkedTandemEventHistory(
+  from: string,
+  to: string
+): Promise<TandemEventHistoryPoint[]> {
+  const fromMs = new Date(from).getTime();
+  const toMs = new Date(to).getTime();
+  const rangeMs = toMs - fromMs;
+
+  if (rangeMs <= TANDEM_CHUNK_MS) {
+    const result = await fetchTandemEventHistory(from, to, API_MAX_LIMIT);
+    return result.items;
+  }
+
+  const chunks: { from: string; to: string }[] = [];
+  let cursor = fromMs;
+
+  while (cursor < toMs) {
+    const chunkEnd = Math.min(cursor + TANDEM_CHUNK_MS, toMs);
+    chunks.push({
+      from: new Date(cursor).toISOString(),
+      to: new Date(chunkEnd).toISOString()
+    });
+    cursor = chunkEnd;
+  }
+
+  const results = await Promise.all(
+    chunks.map((chunk) =>
+      fetchTandemEventHistory(chunk.from, chunk.to, API_MAX_LIMIT)
+        .then((result) => result.items)
+        .catch(() => [] as TandemEventHistoryPoint[])
+    )
+  );
+
+  return results.flat();
+}
+
 export async function fetchLatestDashboardReading(): Promise<LatestDashboardReading | null> {
   const [latestOfficial, latestShare] = await Promise.all([
     fetchGlucoseLatest('official').catch(() => null),
@@ -145,23 +218,19 @@ export async function fetchMergedGlucoseWindow(
     fetchChunkedHistory('share', from, to).catch(() => [] as PulseApiReading[])
   ]);
   const [tandemBasal, tandemEvents, healthSteps] = await Promise.all([
-    fetchTandemBasalHistory(from, to, API_MAX_LIMIT).catch(() => ({
-      items: [] as TandemBasalHistoryPoint[]
-    })),
-    fetchTandemEventHistory(from, to, API_MAX_LIMIT).catch(() => ({
-      items: [] as TandemEventHistoryPoint[]
-    })),
+    fetchChunkedTandemBasalHistory(from, to).catch(() => [] as TandemBasalHistoryPoint[]),
+    fetchChunkedTandemEventHistory(from, to).catch(() => [] as TandemEventHistoryPoint[]),
     fetchHealthStepHistory(from, to).catch(() => ({
       items: [] as HealthStepHistoryPoint[]
     }))
   ]);
-  const tandemBasalItems = compressTandemBasalHistory(tandemBasal.items);
+  const tandemBasalItems = compressTandemBasalHistory(tandemBasal);
 
   return {
     officialItems,
     shareItems: share,
     tandemBasalItems,
-    tandemEventItems: tandemEvents.items,
+    tandemEventItems: tandemEvents,
     healthStepItems: healthSteps.items,
     merged: mergeGlucoseReadings(officialItems, share)
   };
