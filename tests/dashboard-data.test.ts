@@ -4,6 +4,7 @@ const fetchGlucoseHistory = vi.fn();
 const fetchGlucoseLatest = vi.fn();
 const fetchTandemBasalHistory = vi.fn();
 const fetchTandemEventHistory = vi.fn();
+const fetchHealthStepHistory = vi.fn();
 const compressTandemBasalHistory = vi.fn((items) => items);
 const pickLatestGlucoseReading = vi.fn();
 const mergeGlucoseReadings = vi.fn((official, share) => [...official, ...share]);
@@ -13,6 +14,7 @@ vi.mock('@/lib/pulse-api/glucose', () => ({
   fetchGlucoseLatest,
   fetchTandemBasalHistory,
   fetchTandemEventHistory,
+  fetchHealthStepHistory,
   compressTandemBasalHistory,
   pickLatestGlucoseReading,
   mergeGlucoseReadings
@@ -24,6 +26,7 @@ describe('dashboard data', () => {
     fetchGlucoseLatest.mockResolvedValue(null);
     fetchTandemBasalHistory.mockResolvedValue({ items: [] });
     fetchTandemEventHistory.mockResolvedValue({ items: [] });
+    fetchHealthStepHistory.mockResolvedValue({ items: [] });
   });
 
   test('fetchMergedGlucoseWindow requests share history across the full requested range', async () => {

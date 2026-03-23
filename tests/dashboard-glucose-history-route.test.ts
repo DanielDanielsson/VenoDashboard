@@ -60,9 +60,11 @@ describe('dashboard glucose history route', () => {
     ]);
     expect(json.basalItems).toEqual([]);
     expect(json.eventItems).toEqual([]);
+    expect(json.stepItems).toEqual([]);
     expect(json.meta.mergedCount).toBe(1);
     expect(json.meta.tandemBasalCount).toBe(0);
     expect(json.meta.tandemEventCount).toBe(0);
+    expect(json.meta.healthStepCount).toBe(0);
   });
 
   test('returns sliced merged history and a resilient latest reading for ranged requests', async () => {
@@ -111,6 +113,14 @@ describe('dashboard glucose history route', () => {
           glucoseMmolL: null
         }
       ],
+      healthStepItems: [
+        {
+          bucketStart: '2026-03-07T09:50:00.000Z',
+          bucketEnd: '2026-03-07T09:55:00.000Z',
+          stepCount: 120,
+          source: 'apple_health'
+        }
+      ],
       merged
     });
 
@@ -128,10 +138,12 @@ describe('dashboard glucose history route', () => {
     expect(json.items).toEqual(merged.slice(-2));
     expect(json.basalItems).toHaveLength(1);
     expect(json.eventItems).toHaveLength(1);
+    expect(json.stepItems).toHaveLength(1);
     expect(json.meta.officialCount).toBe(2);
     expect(json.meta.shareCount).toBe(1);
     expect(json.meta.mergedCount).toBe(2);
     expect(json.meta.tandemBasalCount).toBe(1);
     expect(json.meta.tandemEventCount).toBe(1);
+    expect(json.meta.healthStepCount).toBe(1);
   });
 });
