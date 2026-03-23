@@ -21,7 +21,7 @@ const MIN_AGP_COVERAGE_MS = 24 * 60 * 60 * 1000;
 const Y_MIN = 2;
 const LOW_THRESHOLD = 4;
 const HIGH_THRESHOLD = 10;
-const PADDING = { top: 24, right: 28, bottom: 40, left: 52 };
+const PADDING = { top: 24, right: 28, bottom: 40, left: 84 };
 const X_TICKS = [0, 6 * 60, 12 * 60, 18 * 60, 24 * 60];
 
 interface PlotPoint {
@@ -383,11 +383,11 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
                 isActive={isActive}
                 onClick={() => setWeekdayFilter(option.key)}
                 disabled={isOptionDisabled}
-                twStyles="inline-flex flex-col items-start justify-center gap-px min-w-[3.75rem] px-2.5 py-1"
+                twStyles="inline-flex min-h-[3.5rem] min-w-[4.75rem] items-center justify-center p-2"
               >
-                <span className="ui_caption leading-none">{option.shortLabel}</span>
-                <span className="ui_caption leading-none opacity-70">
-                  {count}d
+                <span className="flex items-center gap-1.5">
+                  <span className="ui_caption">{option.shortLabel}</span>
+                  <span className="ui_caption opacity-70">{count}d</span>
                 </span>
               </SecondaryButton>
             </div>
@@ -441,18 +441,27 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
                 strokeWidth="1"
               />
               <text
+                className="ui_chart_axis_text"
                 x={PADDING.left - 10}
                 y={yForValue(tick)}
                 fill={tick === LOW_THRESHOLD || tick === HIGH_THRESHOLD ? 'rgba(255,255,255,0.6)' : 'var(--text-soft)'}
-                fontSize="11"
                 textAnchor="end"
                 dominantBaseline="middle"
-                style={{ fontFamily: 'var(--font-plex-mono), monospace' }}
               >
                 {tick}
               </text>
             </g>
           ))}
+
+          <text
+            className="ui_chart_axis_unit"
+            x="10"
+            y={PADDING.top - 6}
+            fill="var(--text-soft)"
+            textAnchor="start"
+          >
+            mmol/L
+          </text>
 
           <line
             x1={PADDING.left}
@@ -484,12 +493,11 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
                 strokeWidth="1.5"
               />
               <text
+                className="ui_chart_axis_text"
                 x={xForMinute(tick)}
                 y={height - 14}
                 fill="var(--text-soft)"
-                fontSize="11"
                 textAnchor="middle"
-                style={{ fontFamily: 'var(--font-plex-mono), monospace' }}
               >
                 {formatHourLabel(tick)}
               </text>

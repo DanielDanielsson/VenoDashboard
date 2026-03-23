@@ -26,8 +26,7 @@ const BASAL_BAND_GAP = 20;
 const BASAL_TICK_COUNT = 3;
 const STEP_BAND_HEIGHT = 120;
 const STEP_BAND_GAP = 20;
-const IOB_BAND_HEIGHT = 120;
-const IOB_BAND_GAP = 20;
+const IOB_MARKER_MIN_SPACING = 36;
 const EVENT_TRACK_HEIGHT = 120;
 const EVENT_TRACK_GAP = 20;
 const EVENT_LANE_COUNT = 3;
@@ -520,20 +519,16 @@ export function GlucoseChart({
   const iobPoints = eventData
     .filter((e) => e.iob !== null)
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-  const hasIobBand = iobPoints.length > 0;
   const basalBandHeight = hasBasalBand ? Math.min(BASAL_BAND_HEIGHT, Math.max(64, chartHeight * 0.4)) : 0;
   const basalGap = hasBasalBand ? BASAL_BAND_GAP : 0;
   const stepBandHeight = hasStepBand ? STEP_BAND_HEIGHT : 0;
   const stepGap = hasStepBand ? STEP_BAND_GAP : 0;
   const eventTrackHeight = hasEventTrack ? EVENT_TRACK_HEIGHT : 0;
   const eventGap = hasEventTrack ? EVENT_TRACK_GAP : 0;
-  const iobBandHeight = hasIobBand ? IOB_BAND_HEIGHT : 0;
-  const iobGap = hasIobBand ? IOB_BAND_GAP : 0;
   const glucosePlotHeight = 240;
   const eventTrackTop = PADDING.top + glucosePlotHeight + eventGap;
   const basalBandTop = eventTrackTop + eventTrackHeight + basalGap;
-  const iobBandTop = basalBandTop + basalBandHeight + iobGap;
-  const stepBandTop = iobBandTop + iobBandHeight + stepGap;
+  const stepBandTop = basalBandTop + basalBandHeight + stepGap;
   const fitAllPxPerMs = chartWidth > 0 ? chartWidth / totalDurationMs : 0;
   const minPxPerMs = fitAllPxPerMs > 0 ? fitAllPxPerMs : 0;
   const hoveredPoint = hoveredIndex === null ? null : data[hoveredIndex] ?? null;
@@ -758,7 +753,18 @@ export function GlucoseChart({
       const dynamicSpacing = detailedView ? 32 : 18;
       const laneLastX = Array.from({ length: EVENT_LANE_COUNT }, () => Number.NEGATIVE_INFINITY);
 
+      // Separate bolus events for clustering; draw others with lane logic
+      const bolusEvents: typeof visibleEventItems = [];
+      const otherEvents: typeof visibleEventItems = [];
       for (const event of visibleEventItems) {
+        if (event.eventName === 'BolusCompleted') {
+          bolusEvents.push(event);
+        } else {
+          otherEvents.push(event);
+        }
+      }
+
+      for (const event of otherEvents) {
         const timestampMs = new Date(event.timestamp).getTime();
         const x = snapFillCoord(xForTimestamp(timestampMs));
         let laneIndex = 0;
@@ -780,6 +786,30 @@ export function GlucoseChart({
         );
 
         drawTandemMarker(ctx, x, y, event.eventName, highlighted, eventVisibleDurationMs, event.insulinDelivered ?? null, isDark);
+      }
+
+      // Cluster nearby bolus events and sum their insulin delivered
+      if (bolusEvents.length > 0) {
+        const bolusClusters: { x: number; t: number; insulinSum: number }[] = [];
+        for (const event of bolusEvents) {
+          const t = new Date(event.timestamp).getTime();
+          const x = snapFillCoord(xForTimestamp(t));
+          const insulin = event.insulinDelivered ?? 0;
+          const last = bolusClusters[bolusClusters.length - 1];
+          if (last && x - last.x < IOB_MARKER_MIN_SPACING) {
+            last.insulinSum += insulin;
+          } else {
+            bolusClusters.push({ x, t, insulinSum: insulin });
+          }
+        }
+
+        for (const cluster of bolusClusters) {
+          const isHovered = hoveredEventItems.some(
+            (he) => he.eventName === 'BolusCompleted' &&
+              Math.abs(new Date(he.timestamp).getTime() - cluster.t) <= EVENT_HOVER_WINDOW_MS
+          );
+          drawTandemMarker(ctx, cluster.x, trackMidY, 'BolusCompleted', isHovered, eventVisibleDurationMs, cluster.insulinSum, isDark);
+        }
       }
     }
 
@@ -1007,85 +1037,59 @@ export function GlucoseChart({
       }
     }
 
-    if (hasIobBand && iobBandHeight > 0) {
+    // IOB markers (purple glucose drop icons in the event track)
+    if (iobPoints.length > 0 && hasEventTrack && eventTrackHeight > 0) {
       const visibleIob = iobPoints.filter((pt) => {
         const t = new Date(pt.timestamp).getTime();
-        return t >= visibleStartMs - 30 * 60 * 1000 && t <= visibleEndMs + 30 * 60 * 1000;
+        return t >= visibleStartMs && t <= visibleEndMs && (pt.iob as number) > 0;
       });
-      const iobValues = visibleIob.map((pt) => pt.iob as number);
-      const iobYMax = Math.max(1, ...iobValues) * 1.15;
 
-      const iobColor = isDark ? 'rgba(167, 139, 250, 0.9)' : 'rgba(109, 40, 217, 0.85)';
-      const iobFill  = isDark ? 'rgba(167, 139, 250, 0.07)' : 'rgba(109, 40, 217, 0.07)';
+      const iobFill   = isDark ? 'rgba(167, 139, 250, 0.9)' : 'rgba(109, 40, 217, 0.85)';
+      const eventVisibleDurationMs = visibleEndMs - visibleStartMs;
+      const detailed = eventVisibleDurationMs <= THREE_DAYS_MS;
+      const iobBaseSize = detailed ? 28 : 14;
+      const iobRow = eventTrackTop + eventTrackHeight - 28;
 
-      ctx.fillStyle = iobFill;
-      ctx.fillRect(PADDING.left, iobBandTop, chartWidth, iobBandHeight);
-
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(PADDING.left, iobBandTop);
-      ctx.lineTo(PADDING.left + chartWidth, iobBandTop);
-      ctx.stroke();
-
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.font = '10px var(--font-plex-mono), monospace';
-      ctx.fillStyle = textSoft;
-      ctx.fillText('IOB', 8, iobBandTop + 4);
-
-      const iobFloorY = iobBandTop + iobBandHeight - 4;
-
-      function yForIob(value: number): number {
-        return iobFloorY - (value / iobYMax) * (iobBandHeight - 8);
-      }
-
-      // Tick lines and labels
-      const iobTickCount = 3;
-      for (let i = 0; i <= iobTickCount; i++) {
-        const tickVal = (iobYMax * i) / iobTickCount;
-        const y = yForIob(tickVal);
-        ctx.strokeStyle = isDark ? 'rgba(167, 139, 250, 0.08)' : 'rgba(109, 40, 217, 0.1)';
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(PADDING.left, y);
-        ctx.lineTo(PADDING.left + chartWidth, y);
-        ctx.stroke();
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = iobColor;
-        ctx.fillText(tickVal.toFixed(1), PADDING.left - 8, y);
-      }
-
-      // IOB line
-      if (visibleIob.length > 1) {
-        ctx.strokeStyle = iobColor;
-        ctx.lineWidth = 2;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        let started = false;
-        for (const pt of visibleIob) {
-          const t = new Date(pt.timestamp).getTime();
-          const x = xForTimestamp(t);
-          const y = yForIob(pt.iob as number);
-          if (!started) {
-            ctx.moveTo(x, y);
-            started = true;
-          } else {
-            ctx.lineTo(x, y);
-          }
+      // Cluster nearby IOB points and sum their values
+      const iobClusters: { x: number; t: number; iobSum: number }[] = [];
+      for (const pt of visibleIob) {
+        const t = new Date(pt.timestamp).getTime();
+        const x = snapFillCoord(xForTimestamp(t));
+        const last = iobClusters[iobClusters.length - 1];
+        if (last && x - last.x < IOB_MARKER_MIN_SPACING) {
+          last.iobSum = pt.iob as number;
+        } else {
+          iobClusters.push({ x, t, iobSum: pt.iob as number });
         }
-        ctx.stroke();
+      }
 
-        // Dot at hovered position
-        if (hoveredIobValue !== null && hoveredTimestampMs !== null) {
-          const hx = xForTimestamp(hoveredTimestampMs);
-          const hy = yForIob(hoveredIobValue);
-          ctx.beginPath();
-          ctx.arc(hx, hy, 4, 0, Math.PI * 2);
-          ctx.fillStyle = iobColor;
-          ctx.fill();
+      for (const cluster of iobClusters) {
+        const isHovered = hoveredIobValue !== null && hoveredTimestampMs !== null &&
+          Math.abs(cluster.t - hoveredTimestampMs) <= EVENT_HOVER_WINDOW_MS;
+        const size = isHovered ? iobBaseSize + 4 : iobBaseSize;
+        const iconW = 184;
+        const iconH = 153;
+        const scale = size / iconW;
+
+        ctx.save();
+        ctx.translate(cluster.x, iobRow);
+        ctx.rotate(-Math.PI / 2);
+        ctx.translate(-(iconW * scale) / 2, -(iconH * scale) / 2);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = iobFill;
+        ctx.fill(new Path2D(GLUCOSE_ICON_PATH1));
+        ctx.fill(new Path2D(GLUCOSE_ICON_PATH2));
+        ctx.restore();
+
+        // Draw IOB value below the icon
+        if (size >= 20) {
+          const labelY = iobRow + 16 * scale;
+          const fontSize = Math.max(7, Math.round(size * 0.32));
+          ctx.font = `bold ${fontSize}px var(--font-plex-mono), monospace`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = iobFill;
+          ctx.fillText(cluster.iobSum.toFixed(1), cluster.x, labelY);
         }
       }
     }
@@ -1270,10 +1274,6 @@ export function GlucoseChart({
     yMax,
     isDark,
     iobPoints,
-    iobBandHeight,
-    iobBandTop,
-    iobGap,
-    hasIobBand,
     hoveredIobValue
   ]);
 

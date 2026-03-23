@@ -73,12 +73,28 @@ function getInitialIsDark(): boolean {
   }
 }
 
-function getInitialChartHeight(): number {
-  try {
-    return window.innerWidth < 640 ? 600 : 880;
-  } catch {
-    return 880;
+function getChartHeight(data: Pick<GlucoseApiResponse, 'basalItems' | 'eventItems' | 'stepItems'> | undefined): number {
+  const glucosePlotHeight = 240;
+  const paddingTop = 32;
+  const paddingBottom = 48;
+  const bandHeight = 120;
+  const bandGap = 20;
+
+  let totalHeight = paddingTop + glucosePlotHeight + paddingBottom;
+
+  if (data?.eventItems.length) {
+    totalHeight += bandGap + bandHeight;
   }
+
+  if (data?.basalItems.length) {
+    totalHeight += bandGap + bandHeight;
+  }
+
+  if (data?.stepItems.length) {
+    totalHeight += bandGap + bandHeight;
+  }
+
+  return totalHeight;
 }
 
 export function GlucoseAnalysisView() {
@@ -86,7 +102,6 @@ export function GlucoseAnalysisView() {
     kind: 'preset',
     range: '3d'
   });
-  const [chartHeight] = useState(getInitialChartHeight);
   const [isDark, setIsDark] = useState(getInitialIsDark);
 
   useEffect(() => {
@@ -129,6 +144,7 @@ export function GlucoseAnalysisView() {
   const data = sourceData && targetWindow
     ? sliceHistoryResponseToWindow(sourceData, targetWindow)
     : sourceData;
+  const chartHeight = getChartHeight(data);
 
   const isTransitioning = isValidating || isLoading;
   const isFirstLoad = !data && isLoading;
