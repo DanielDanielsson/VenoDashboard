@@ -49,27 +49,25 @@ export const SideBarNavigation = ({ isOwner = false }: { isOwner?: boolean }) =>
 
       <ul className="mt-3 flex flex-col gap-0.5 border-t border-(--border) pt-3 px-1">
         <li>
-          <Link href="/dashboard/about" className="ui_caption flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
+          <Link href="/dashboard/about" className="body_text flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
             About
           </Link>
         </li>
         <li>
-          <Link href="https://github.com/hf-pulse/VenoDashboard" target="_blank" rel="noopener noreferrer" className="ui_caption flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
+          <Link href="https://github.com/hf-pulse/VenoDashboard" target="_blank" rel="noopener noreferrer" className="body_text flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
             GitHub
           </Link>
         </li>
-        {isOwner ? (
-          <li className="ui_caption px-2 py-1.5 text-(--text-soft)">Admin mode enabled</li>
-        ) : (
+        {!isOwner ? (
           <li>
-            <Link href="/login" className="ui_caption flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
+            <Link href="/login" className="body_text flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
               Admin sign in
             </Link>
           </li>
-        )}
+        ) : null}
       </ul>
 
-      <div className="mt-auto px-1 pb-2">
+      <div className="px-1 pt-2">
         <ThemeToggle />
       </div>
     </nav>

@@ -327,56 +327,36 @@
   /* --- Theme toggle --- */
 
   .theme-toggle {
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
     border: 0;
+    border-radius: 0;
     background: transparent;
+    color: var(--text-dim);
     padding: 0;
     cursor: pointer;
-    transition: opacity 140ms ease;
+    transition:
+      color 140ms ease,
+      transform 140ms ease;
   }
 
   .theme-toggle:hover {
-    opacity: 0.8;
+    color: var(--accent);
+    transform: translateY(-1px);
   }
 
-  .theme-toggle__track {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 6.25rem;
-    justify-content: space-between;
-    border-radius: var(--radius);
-    border: 1px solid var(--border-strong);
-    background: var(--surface-muted);
-    padding: 0.3rem 0.3rem 0.3rem 0.75rem;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    font-size: 0.68rem;
-    font-weight: 700;
-    transition:
-      border-color 140ms ease,
-      background 140ms ease;
+  .theme-toggle:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+    outline-offset: 2px;
   }
 
-  .theme-toggle:hover .theme-toggle__track {
-    border-color: var(--border-hover);
-  }
-
-  .theme-toggle__label {
-    min-width: 2.5rem;
-  }
-
-  .theme-toggle__thumb {
+  .theme-toggle__icon {
     display: inline-grid;
     place-items: center;
-    width: 1.625rem;
-    height: 1.625rem;
-    border-radius: var(--radius-sm);
-    background: var(--accent-soft);
-    border: 1px solid var(--border);
-    color: var(--accent);
-    font-size: 0.875rem;
-    transition: background 140ms ease;
+    width: 1.25rem;
+    height: 1.25rem;
   }
 
   /* --- Site footer --- */

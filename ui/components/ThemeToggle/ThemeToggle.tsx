@@ -1,6 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { Icon } from '../../base/Icon';
 
 const STORAGE_KEY = 'pulse-theme';
 type Theme = 'light' | 'dark';
@@ -41,9 +42,9 @@ function subscribeToTheme(callback: () => void): () => void {
 
 export function ThemeToggle() {
   const theme = useSyncExternalStore(subscribeToTheme, readThemeSnapshot, () => 'dark');
+  const nextTheme: Theme = theme === 'dark' ? 'light' : 'dark';
 
   function toggleTheme() {
-    const nextTheme: Theme = theme === 'dark' ? 'light' : 'dark';
     applyTheme(nextTheme);
     localStorage.setItem(STORAGE_KEY, nextTheme);
     window.dispatchEvent(new Event(THEME_EVENT));
@@ -54,14 +55,13 @@ export function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       className="theme-toggle"
-      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+      aria-label={`Switch to ${nextTheme} theme`}
+      title={`Switch to ${nextTheme} theme`}
     >
-      <span className="theme-toggle__track">
-        <span className="theme-toggle__label">{theme}</span>
-        <span className="theme-toggle__thumb" aria-hidden="true">
-          {theme === 'dark' ? '◐' : '◑'}
-        </span>
+      <span className="theme-toggle__icon" aria-hidden="true">
+        <Icon icon={theme === 'dark' ? 'moon' : 'sun'} twStyles="h-[18px] w-[18px]" />
       </span>
+      <span className="sr-only">{theme} theme active</span>
     </button>
   );
 }

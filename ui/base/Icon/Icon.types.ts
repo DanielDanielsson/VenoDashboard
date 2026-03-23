@@ -6,6 +6,8 @@ export type IconName =
   | 'search'
   | 'menu'
   | 'menu-close'
+  | 'sun'
+  | 'moon'
   | 'home'
   | 'activity'
   | 'settings'
