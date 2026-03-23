@@ -1,4 +1,5 @@
 import type {
+  AdminHealthStepBucketsResponse,
   ApiKeyCreateResponse,
   ApiKeyListResponse,
   CreateSharedTimerPayload,
@@ -126,6 +127,26 @@ export async function fetchApiStatus(): Promise<PulseApiStatusReport> {
   }
 
   return parseJson<PulseApiStatusReport>(response);
+}
+
+export async function fetchAdminHealthSteps(
+  from: string,
+  to: string
+): Promise<AdminHealthStepBucketsResponse> {
+  const url = new URL(resolveUrl('/api/admin/health/steps'));
+  url.searchParams.set('from', from);
+  url.searchParams.set('to', to);
+
+  const response = await fetch(url.toString(), {
+    headers: createAdminHeaders(),
+    cache: 'no-store'
+  });
+
+  if (!response.ok) {
+    await parseError(response);
+  }
+
+  return parseJson<AdminHealthStepBucketsResponse>(response);
 }
 
 export async function fetchConsumerProfile(timezone?: string): Promise<ConsumerProfileResponse> {

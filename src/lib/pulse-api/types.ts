@@ -23,6 +23,17 @@ export interface PulseApiStatusReport {
   tandem: PulseApiSourceStatus;
 }
 
+export interface AdminHealthStepBucket {
+  bucketStart: string;
+  bucketEnd: string;
+  stepCount: number;
+  source: string;
+}
+
+export interface AdminHealthStepBucketsResponse {
+  items: AdminHealthStepBucket[];
+}
+
 export interface AlarmSound {
   id: string;
   name: string;
