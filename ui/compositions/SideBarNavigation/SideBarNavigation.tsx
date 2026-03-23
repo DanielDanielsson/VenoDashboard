@@ -54,7 +54,7 @@ export const SideBarNavigation = ({ isOwner = false }: { isOwner?: boolean }) =>
           </Link>
         </li>
         <li>
-          <Link href="https://github.com/hf-pulse/VenoDashboard" target="_blank" rel="noopener noreferrer" className="body_text flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
+          <Link href="https://github.com/DanielDanielsson/VenoDashboard" target="_blank" rel="noopener noreferrer" className="body_text flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
             GitHub
           </Link>
         </li>
