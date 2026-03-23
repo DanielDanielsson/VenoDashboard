@@ -13,7 +13,8 @@ export async function middleware(request: NextRequest) {
   const loginUrl = new URL('/login', request.url);
   loginUrl.searchParams.set('callbackUrl', callbackUrl);
 
-  if (isProtectedPath(pathname) && request.cookies.get(OWNER_SESSION_COOKIE)?.value !== ownerSessionCookieValue()) {
+  const expectedSession = await ownerSessionCookieValue();
+  if (isProtectedPath(pathname) && request.cookies.get(OWNER_SESSION_COOKIE)?.value !== expectedSession) {
     return NextResponse.redirect(loginUrl);
   }
 

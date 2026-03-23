@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
   const response = NextResponse.json({ callbackUrl }, { status: 200 });
   response.cookies.set({
     name: OWNER_SESSION_COOKIE,
-    value: ownerSessionCookieValue(),
+    value: await ownerSessionCookieValue(),
     httpOnly: true,
     sameSite: 'lax',
     path: '/',

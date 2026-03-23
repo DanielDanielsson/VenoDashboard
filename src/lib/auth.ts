@@ -37,7 +37,7 @@ export function validateOwnerCredentials(username: string, password: string): bo
 export async function getOwnerSession(): Promise<OwnerSession | null> {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(OWNER_SESSION_COOKIE)?.value;
-  const sessionValue = ownerSessionCookieValue();
+  const sessionValue = await ownerSessionCookieValue();
   if (!sessionValue || sessionCookie !== sessionValue) {
     return null;
   }
@@ -58,12 +58,16 @@ export async function requireOwnerSession(): Promise<OwnerSession> {
   return session;
 }
 
-export function ownerSessionCookieValue(): string {
-  const username = ownerLoginUsername();
+export async function ownerSessionCookieValue(): Promise<string> {
   const password = ownerLoginPassword();
   if (!password) {
     return '';
   }
 
-  return `owner-session:${encodeURIComponent(username)}`;
+  const data = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashHex = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  return `owner-session:${hashHex}`;
 }
