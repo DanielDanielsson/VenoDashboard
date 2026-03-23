@@ -1,62 +1,48 @@
-# VenoDashboard
+<p align="center">
+  <img src="./public/static_assets/veno-logo-readme.svg" alt="Veno logo" width="260" />
+</p>
 
-Private dashboard frontend for Veno ecosystem.
+<h1 align="center">VenoDashboard</h1>
 
-## Scope
+<p align="center">
+  Demo-first glucose dashboard for the Veno platform.
+</p>
 
-- `/login`
-- `/dashboard`
-- `/dashboard/glucose`
-- `/dashboard/settings`
-- `/dashboard/api-keys`
-- `/api/auth/*`
-- `/api/dashboard/*`
+<p align="center">
+  <a href="https://app.venoplatform.com/dashboard">Live demo</a>
+</p>
 
-## Environment
+## MVP Demo
 
-Copy `.env.example` to `.env.local`:
+The demo app is currently in MVP state and available here:
 
-```bash
-AUTH_POC_EMAIL=admin@veno.local
-OWNER_LOGIN_USERNAME=admin
-OWNER_LOGIN_PASSWORD=change_me_admin_password
-NEXT_PUBLIC_SITE_URL=http://localhost:3001
-PULSE_API_BASE_URL=http://localhost:3101
-DEXCOM_GATEWAY_BASE_URL=http://localhost:3101
-PULSE_API_ADMIN_TOKEN=replace_with_existing_api_admin_bearer_token
-DEXCOM_GATEWAY_ADMIN_TOKEN=replace_with_existing_gateway_admin_bearer_token
-PULSE_API_STATUS_TOKEN=optional_existing_status_page_token
-```
+**https://app.venoplatform.com/dashboard**
 
-## Contracts
+Right now the public experience is focused on the dashboard overview and statistics pages. Admin sign in is still required for settings, API keys, timers, and other operational actions.
 
-Public demo routes:
+## What This Is
 
-- `/dashboard`
-- `/dashboard/statistics`
+VenoDashboard is the frontend surface for the Veno ecosystem. It is built to visualize live glucose data, show trends over time, and act as a testing ground for new ideas around monitoring, health data UX, and product direction.
 
-Admin sign in is still required for settings, API keys, and timer mutations.
+This project is closely tied to the work happening in the API layer. The dashboard consumes VenoAPI data, presents it in a cleaner way, and helps validate how the broader platform should feel when real data is flowing through it.
 
-- Source of truth is VenoAPI.
-- Contract fetch targets:
-  - `${PULSE_API_BASE_URL}/docs/openapi.json`
-  - `${PULSE_API_BASE_URL}/docs/agent-context.json`
-- Fallback snapshots stay in `content/contracts/*.snapshot.json` when remote fetch fails.
-- CI contract validation should set repository variable `VENO_API_BASE_URL`.
+## Why It Exists
 
-## Scripts
+The project started as a practical way to summarize and visualize diabetes data in a way that feels more useful than the default tools. The data comes from a Dexcom sensor, a Tandem insulin pump, and step data from a phone, then gets shaped into a view that is easier to read and reason about.
 
-- `npm run dev`
-- `npm run build`
-- `npm run start`
-- `npm run lint`
-- `npm run typecheck`
-- `npm run test`
-- `npm run test:e2e`
-- `npm run test:links`
-- `npm run contracts:validate`
+It is also a side project built as a real product sandbox. The dashboard is where new visualizations, interaction patterns, and agent-assisted workflows can be tested quickly against actual use.
+
+## Current Scope
+
+- Public demo for overview and statistics
+- Admin sign in for protected actions
+- Glucose history and recent updates
+- Time-in-range and AGP style analysis
+- Connections and system status surfaces
+- API key and settings management for admin users
+
 
 ## Docker
 
-- Build image: `docker build -t veno-dashboard .`
-- Local compose: `docker compose up --build`
+- `docker build -t veno-dashboard .`
+- `docker compose up --build`
