@@ -51,42 +51,42 @@ export function SignInButton({ callbackUrl = '/dashboard' }: SignInButtonProps) 
       >
         ✕
       </button>
-      <p className="kicker">Admin access</p>
-      <h1 className="section-title mt-3 text-xl">Sign in to manage PulseGlucose.</h1>
-      <p className="section-copy mt-2 text-xs">
+      <p className="ui_micro_label text-(--text-soft)">Admin access</p>
+      <h1 className="section_title mt-3 text-(--text)">Sign in to manage PulseGlucose.</h1>
+      <p className="ui_helper_text mt-2 text-(--text-dim)">
         Demo visitors can browse the dashboard. Admin actions like settings, timers, and API keys
         require sign in.
       </p>
 
       <div className="mt-6 grid gap-4">
-        <label className="grid gap-1.5 text-sm">
-          <span className="text-(--text-dim) text-xs">Username</span>
+        <label className="grid gap-1.5">
+          <span className="ui_micro_label text-(--text-dim)">Username</span>
           <input
             value={username}
             onChange={(event) => setUsername(event.target.value)}
             autoComplete="username"
-            className="w-full rounded-[4px] border border-secondary-button-inactive-border bg-transparent px-3 py-2 text-sm text-(--text) outline-none placeholder:text-(--text-dim) focus:border-secondary-button-active-border"
+            className="ui_input_text w-full rounded-[4px] border border-secondary-button-inactive-border bg-transparent px-3 py-2 text-(--text) outline-none placeholder:text-(--text-dim) focus:border-secondary-button-active-border"
           />
         </label>
 
-        <label className="grid gap-1.5 text-sm">
-          <span className="text-(--text-dim) text-xs">Password</span>
+        <label className="grid gap-1.5">
+          <span className="ui_micro_label text-(--text-dim)">Password</span>
           <input
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"
-            className="w-full rounded-[4px] border border-secondary-button-inactive-border bg-transparent px-3 py-2 text-sm text-(--text) outline-none placeholder:text-(--text-dim) focus:border-secondary-button-active-border"
+            className="ui_input_text w-full rounded-[4px] border border-secondary-button-inactive-border bg-transparent px-3 py-2 text-(--text) outline-none placeholder:text-(--text-dim) focus:border-secondary-button-active-border"
           />
         </label>
 
-        {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+        {error ? <p className="body_text text-rose-300">{error}</p> : null}
 
         <SecondaryButton
           isActive
           onClick={() => void signIn()}
           disabled={isSubmitting || !username.trim() || !password}
-          twStyles="w-full justify-center py-2 text-sm"
+          twStyles="w-full justify-center py-2"
         >
           {isSubmitting ? 'Signing in...' : 'Sign in'}
         </SecondaryButton>

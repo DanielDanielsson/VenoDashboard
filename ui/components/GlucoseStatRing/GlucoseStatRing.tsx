@@ -9,10 +9,10 @@ interface GlucoseStatRingProps {
   size?: GlucoseStatRingSize;
 }
 
-const SIZE_CONFIG: Record<GlucoseStatRingSize, { diameter: number; stroke: number; fontSize: number; labelSize: number }> = {
-  sm: { diameter: 44, stroke: 4, fontSize: 10, labelSize: 8 },
-  md: { diameter: 62, stroke: 5, fontSize: 12, labelSize: 9 },
-  lg: { diameter: 90, stroke: 7, fontSize: 16, labelSize: 10 },
+const SIZE_CONFIG: Record<GlucoseStatRingSize, { diameter: number; stroke: number; valueClassName: string; labelClassName: string }> = {
+  sm: { diameter: 44, stroke: 4, valueClassName: 'ui_ring_value_sm', labelClassName: 'ui_ring_label' },
+  md: { diameter: 62, stroke: 5, valueClassName: 'ui_ring_value_md', labelClassName: 'ui_ring_label' },
+  lg: { diameter: 90, stroke: 7, valueClassName: 'ui_ring_value_lg', labelClassName: 'ui_ring_label' },
 };
 
 export function GlucoseStatRing({ label, percentage, color, size = 'md' }: GlucoseStatRingProps) {
@@ -36,7 +36,7 @@ export function GlucoseStatRing({ label, percentage, color, size = 'md' }: Gluco
             cy={center}
             r={radius}
             fill="none"
-            stroke="rgba(148, 163, 184, 0.14)"
+            stroke="var(--border-strong)"
             strokeWidth={config.stroke}
           />
           <circle
@@ -57,23 +57,13 @@ export function GlucoseStatRing({ label, percentage, color, size = 'md' }: Gluco
           inset: 0,
           display: 'grid',
           placeItems: 'center',
-          fontSize: config.fontSize,
-          fontWeight: 700,
-          fontFamily: 'var(--font-plex-mono), monospace',
           color: 'var(--text)'
-        }}>
+        }} className={config.valueClassName}>
           {normalized}%
         </div>
       </div>
       <div style={{ display: 'grid', justifyItems: 'center', gap: 2 }}>
-        <div style={{
-          fontSize: config.labelSize,
-          fontWeight: 700,
-          color: 'var(--text-soft)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.12em',
-          textAlign: 'center',
-        }}>
+        <div className={config.labelClassName} style={{ color: 'var(--text-soft)', textAlign: 'center' }}>
           {label}
         </div>
       </div>

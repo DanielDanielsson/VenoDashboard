@@ -27,7 +27,7 @@ export const NavigationLink = ({
       <Link
         href={href}
         {...rest}
-        twStyles={twMerge('relative flex items-center gap-3 rounded-lg bg-nav-link-bg px-3 py-2.5 text-sm font-medium text-nav-link-text transition-colors hover:bg-nav-link-bg-hover hover:text-nav-link-text-hover', active && 'bg-nav-link-bg-hover text-nav-link-text-hover')}
+        twStyles={twMerge('ui_nav_text relative flex items-center gap-3 rounded-lg bg-nav-link-bg px-3 py-2.5 text-nav-link-text transition-colors hover:bg-nav-link-bg-hover hover:text-nav-link-text-hover', active && 'bg-nav-link-bg-hover text-nav-link-text-hover')}
       >
         {icon && <Icon icon={icon} twStyles="h-5 w-5" />}
         {children}

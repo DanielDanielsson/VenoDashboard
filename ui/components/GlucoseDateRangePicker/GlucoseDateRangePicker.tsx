@@ -273,17 +273,10 @@ export function GlucoseDateRangePicker({ value, onApply }: GlucoseDateRangePicke
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div>
-              <p style={{
-                margin: 0,
-                fontSize: 11,
-                color: 'var(--text-soft)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.12em',
-                fontWeight: 700
-              }}>
+              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
                 Custom range
               </p>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-dim)' }}>
+              <p className="ui_helper_text" style={{ margin: '4px 0 0', color: 'var(--text-dim)' }}>
                 Pick start and end dates to filter the timeline.
               </p>
             </div>
@@ -325,10 +318,10 @@ export function GlucoseDateRangePicker({ value, onApply }: GlucoseDateRangePicke
               padding: '10px 12px',
               background: 'var(--surface)'
             }}>
-              <p style={{ margin: 0, fontSize: 10, color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
                 From
               </p>
-              <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--text)' }}>
+              <p className="body_text" style={{ margin: '6px 0 0', color: 'var(--text)' }}>
                 {formatFullDate(draftStart)}
               </p>
             </div>
@@ -338,10 +331,10 @@ export function GlucoseDateRangePicker({ value, onApply }: GlucoseDateRangePicke
               padding: '10px 12px',
               background: 'var(--surface)'
             }}>
-              <p style={{ margin: 0, fontSize: 10, color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
                 To
               </p>
-              <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--text)' }}>
+              <p className="body_text" style={{ margin: '6px 0 0', color: 'var(--text)' }}>
                 {formatFullDate(draftEnd)}
               </p>
             </div>
@@ -351,7 +344,7 @@ export function GlucoseDateRangePicker({ value, onApply }: GlucoseDateRangePicke
             <button
               type="button"
               className="button-ghost"
-              style={{ minHeight: '2.1rem', fontSize: '0.8rem' }}
+              style={{ minHeight: '2.1rem' }}
               onClick={() => {
                 setDraftStart(null);
                 setDraftEnd(null);
@@ -364,7 +357,7 @@ export function GlucoseDateRangePicker({ value, onApply }: GlucoseDateRangePicke
               <button
                 type="button"
                 className="button-ghost"
-                style={{ minHeight: '2.1rem', fontSize: '0.8rem' }}
+                style={{ minHeight: '2.1rem' }}
                 onClick={() => setIsOpen(false)}
               >
                 Cancel
@@ -372,7 +365,7 @@ export function GlucoseDateRangePicker({ value, onApply }: GlucoseDateRangePicke
               <button
                 type="button"
                 className="button-primary"
-                style={{ minHeight: '2.1rem', fontSize: '0.8rem' }}
+                style={{ minHeight: '2.1rem' }}
                 disabled={!draftStart || !draftEnd}
                 onClick={handleApply}
               >

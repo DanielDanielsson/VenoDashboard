@@ -28,20 +28,20 @@ const SIZE_CONFIG = {
   sm: {
     outer: 112,
     fontSize: 20,
-    unitSize: 11,
-    ageSize: 10
+    unitClassName: 'ui_mono_unit',
+    ageClassName: 'ui_caption'
   },
   md: {
     outer: 146,
     fontSize: 28,
-    unitSize: 12,
-    ageSize: 11
+    unitClassName: 'ui_mono_unit',
+    ageClassName: 'ui_caption'
   },
   lg: {
     outer: 184,
     fontSize: 40,
-    unitSize: 13,
-    ageSize: 12
+    unitClassName: 'ui_mono_unit',
+    ageClassName: 'ui_caption'
   }
 } as const;
 
@@ -156,17 +156,11 @@ export function GlucoseIndicator({
         </span>
       </div>
 
-      <span style={{
-        fontSize: cfg.unitSize,
-        color: 'var(--text-soft)',
-        fontWeight: 600,
-        letterSpacing: '0.14em',
-        textTransform: 'uppercase'
-      }}>
+      <span className={cfg.unitClassName} style={{ color: 'var(--text-soft)' }}>
         {unit}
       </span>
       {showAge && timestamp && (
-        <span style={{ fontSize: cfg.ageSize, color: 'var(--text-dim)' }}>
+        <span className={cfg.ageClassName} style={{ color: 'var(--text-dim)' }}>
           {formatAge(timestamp, nowMs)}
         </span>
       )}

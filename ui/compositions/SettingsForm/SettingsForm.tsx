@@ -308,30 +308,30 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
 
       <div className="mt-8 grid gap-5 md:grid-cols-2">
         <label className="block">
-          <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-[var(--text-dim)]">First name</span>
+          <span className="ui_micro_label mb-2 block text-[var(--text-dim)]">First name</span>
           <input
             value={profile.firstName}
             onChange={(event) => setField('firstName', event.target.value)}
-            className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text)] outline-none"
+            className="ui_input_text w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-[var(--text)] outline-none"
           />
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-[var(--text-dim)]">Last name</span>
+          <span className="ui_micro_label mb-2 block text-[var(--text-dim)]">Last name</span>
           <input
             value={profile.lastName}
             onChange={(event) => setField('lastName', event.target.value)}
-            className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text)] outline-none"
+            className="ui_input_text w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-[var(--text)] outline-none"
           />
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-[var(--text-dim)]">Timezone</span>
+          <span className="ui_micro_label mb-2 block text-[var(--text-dim)]">Timezone</span>
           <div className="flex gap-3">
             <input
               value={profile.timezone}
               onChange={(event) => setField('timezone', event.target.value)}
-              className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text)] outline-none"
+              className="ui_input_text w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-[var(--text)] outline-none"
             />
             <button
               type="button"
@@ -344,11 +344,11 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-[var(--text-dim)]">Glucose unit</span>
+          <span className="ui_micro_label mb-2 block text-[var(--text-dim)]">Glucose unit</span>
           <select
             value={profile.glucoseUnit}
             onChange={(event) => setField('glucoseUnit', event.target.value as ConsumerProfile['glucoseUnit'])}
-            className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text)] outline-none"
+            className="ui_input_text w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-[var(--text)] outline-none"
           >
             <option value="mmol/L">mmol/L</option>
             <option value="mg/dL">mg/dL</option>
@@ -360,8 +360,8 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
         <div className="dashboard-subpanel">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-dim)]">Alarm sounds</p>
-              <p className="mt-2 text-sm text-[var(--text-dim)]">Add or remove shared alarm sound presets.</p>
+              <p className="ui_micro_label text-[var(--text-dim)]">Alarm sounds</p>
+              <p className="ui_helper_text mt-2 text-[var(--text-dim)]">Add or remove shared alarm sound presets.</p>
             </div>
             <button type="button" onClick={addSound} className="button-secondary">
               Add sound
@@ -370,7 +370,7 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
 
           <div className="mt-5 space-y-4">
             {profile.alarmSounds.length === 0 ? (
-              <p className="text-sm text-[var(--text-dim)]">No alarm sounds configured.</p>
+              <p className="body_text text-[var(--text-dim)]">No alarm sounds configured.</p>
             ) : null}
 
             {profile.alarmSounds.map((sound, index) => (
@@ -380,20 +380,20 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
                     value={sound.id}
                     onChange={(event) => setSound(index, 'id', event.target.value)}
                     placeholder="sound-id"
-                    className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text)] outline-none"
+                    className="ui_input_text rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-[var(--text)] outline-none"
                   />
                   <input
                     value={sound.name}
                     onChange={(event) => setSound(index, 'name', event.target.value)}
                     placeholder="Display name"
-                    className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text)] outline-none"
+                    className="ui_input_text rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-[var(--text)] outline-none"
                   />
                   <div className="flex gap-3">
                     <input
                       value={sound.url}
                       onChange={(event) => setSound(index, 'url', event.target.value)}
                       placeholder="https://example.com/sound.mp3"
-                      className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text)] outline-none"
+                      className="ui_input_text w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-[var(--text)] outline-none"
                     />
                     <button type="button" onClick={() => removeSound(index)} className="button-secondary">
                       Remove
@@ -405,11 +405,11 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
           </div>
 
           <label className="mt-5 block">
-            <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-[var(--text-dim)]">Default alarm sound</span>
+            <span className="ui_micro_label mb-2 block text-[var(--text-dim)]">Default alarm sound</span>
             <select
               value={profile.defaultAlarmSoundId || ''}
               onChange={(event) => setField('defaultAlarmSoundId', event.target.value || null)}
-              className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text)] outline-none"
+              className="ui_input_text w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[var(--text)] outline-none"
             >
               <option value="">No default</option>
               {profile.alarmSounds
@@ -424,13 +424,13 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
         </div>
 
         <div className="dashboard-subpanel">
-          <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-dim)]">Profile image</p>
+          <p className="ui_micro_label text-[var(--text-dim)]">Profile image</p>
           <div className="mt-4 flex items-center gap-4">
             <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface)]">
               {previewSrc ? (
                 <img src={previewSrc} alt="Profile preview" className="h-full w-full object-cover" />
               ) : (
-                <span className="text-xs text-[var(--text-dim)]">No image</span>
+                <span className="ui_caption text-[var(--text-dim)]">No image</span>
               )}
             </div>
             <div className="space-y-3">
@@ -445,22 +445,22 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
                 className="hidden"
                 aria-label="Upload profile image"
               />
-              <p className="text-xs text-[var(--text-dim)]">
+              <p className="ui_caption text-[var(--text-dim)]">
                 {selectedImageName || 'No file selected'}
               </p>
             </div>
           </div>
 
-          <p className="mt-6 text-xs uppercase tracking-[0.2em] text-[var(--text-dim)]">Updated</p>
-          <p className="mt-2 text-sm text-[var(--text)]">{new Date(profile.updatedAt).toLocaleString()}</p>
-          <p className="mt-2 text-sm text-[var(--text-dim)]">
+          <p className="ui_micro_label mt-6 text-[var(--text-dim)]">Updated</p>
+          <p className="body_text mt-2 text-[var(--text)]">{new Date(profile.updatedAt).toLocaleString()}</p>
+          <p className="body_text mt-2 text-[var(--text-dim)]">
             Last updated by {profile.updatedBy.apiKeyName || 'admin dashboard'}
           </p>
         </div>
       </div>
 
       <p
-        className={`mt-6 rounded-xl border px-4 py-3 text-sm ${
+        className={`ui_helper_text mt-6 rounded-xl border px-4 py-3 ${
           messageTone === 'error'
             ? 'border-rose-400/30 bg-rose-500/10 text-rose-200'
             : messageTone === 'success'

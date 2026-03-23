@@ -37,10 +37,10 @@ export const SideBarNavigation = ({ isOwner = false }: { isOwner?: boolean }) =>
               key={link.href}
               className="relative rounded-lg rounded-tr-none before:absolute before:right-0 before:top-0 before:h-4 before:w-4 before:bg-nav-link-corner/35 before:content-['']"
             >
-              <div className="relative flex items-center gap-3 rounded-lg bg-nav-link-bg/45 px-3 py-2.5 text-sm font-medium text-nav-link-text/45">
+              <div className="ui_nav_text relative flex items-center gap-3 rounded-lg bg-nav-link-bg/45 px-3 py-2.5 text-nav-link-text/45">
                 <Icon icon={link.icon} twStyles="h-5 w-5" />
                 <span className="flex-1">{link.label}</span>
-                <span className="text-[10px] uppercase tracking-[0.16em] text-nav-link-text/35">Admin</span>
+                <span className="ui_micro_label text-nav-link-text/35">Admin</span>
               </div>
             </li>
           );
@@ -49,20 +49,20 @@ export const SideBarNavigation = ({ isOwner = false }: { isOwner?: boolean }) =>
 
       <ul className="mt-3 flex flex-col gap-0.5 border-t border-(--border) pt-3 px-1">
         <li>
-          <Link href="/dashboard/about" className="flex items-center rounded px-2 py-1.5 text-xs text-(--text-soft) transition-colors hover:text-(--text)">
+          <Link href="/dashboard/about" className="ui_caption flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
             About
           </Link>
         </li>
         <li>
-          <Link href="https://github.com/hf-pulse/VenoDashboard" target="_blank" rel="noopener noreferrer" className="flex items-center rounded px-2 py-1.5 text-xs text-(--text-soft) transition-colors hover:text-(--text)">
+          <Link href="https://github.com/hf-pulse/VenoDashboard" target="_blank" rel="noopener noreferrer" className="ui_caption flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
             GitHub
           </Link>
         </li>
         {isOwner ? (
-          <li className="px-2 py-1.5 text-xs text-(--text-soft)">Admin mode enabled</li>
+          <li className="ui_caption px-2 py-1.5 text-(--text-soft)">Admin mode enabled</li>
         ) : (
           <li>
-            <Link href="/login" className="flex items-center rounded px-2 py-1.5 text-xs text-(--text-soft) transition-colors hover:text-(--text)">
+            <Link href="/login" className="ui_caption flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
               Admin sign in
             </Link>
           </li>

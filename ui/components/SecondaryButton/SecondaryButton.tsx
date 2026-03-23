@@ -10,15 +10,15 @@ const THEME_CLASS: Record<SecondaryButtonTheme, string> = {
 
 export const SecondaryButton = ({
   isActive = false,
-  theme = 'dark',
+  theme,
   children,
   twStyles,
   ...rest
 }: SecondaryButtonProps): ReactElement => (
   <Button
     twStyles={twMerge(
-      'cursor-pointer rounded-[4px] border px-2 py-0.5 text-[11px] font-semibold leading-[1.6] tracking-[0.05em] transition-colors',
-      THEME_CLASS[theme],
+      'ui_caption_strong cursor-pointer rounded-[4px] border px-2 py-2 transition-colors',
+      theme && THEME_CLASS[theme],
       isActive
         ? 'border-[var(--color-secondary-button-active-border)] bg-[var(--color-secondary-button-active-bg)] text-[var(--color-secondary-button-active-text)]'
         : 'border-[var(--color-secondary-button-inactive-border)] bg-transparent text-[var(--color-secondary-button-inactive-text)]',

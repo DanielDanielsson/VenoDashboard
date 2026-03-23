@@ -39,7 +39,7 @@ export function DocsSidebar({ groups }: DocsSidebarProps) {
               <div className="docs-nav-group">
                 {group.endpoints.slice(0, 8).map((endpoint) => (
                   <Link key={endpoint.id} href={`/docs/endpoints/${endpoint.id}`} className="endpoint-link">
-                    <span className="font-[var(--font-plex-mono)] text-[0.8em] opacity-70">{endpoint.method}</span>{' '}
+                    <span className="ui_mono_text opacity-70">{endpoint.method}</span>{' '}
                     {endpoint.path}
                   </Link>
                 ))}

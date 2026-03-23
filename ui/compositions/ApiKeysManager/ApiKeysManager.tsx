@@ -138,7 +138,7 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
             <h1 className="dashboard-section__title">API Keys</h1>
             <p className="dashboard-section__meta">Create, revoke, and rotate consumer API keys without leaving the dashboard.</p>
           </div>
-          <div className="rounded-full border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-dim)]">
+          <div className="ui_caption rounded-full border border-[var(--border)] px-4 py-2 text-[var(--text-dim)]">
             {items.length} active
           </div>
         </div>
@@ -148,7 +148,7 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Client name"
-            className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text)] outline-none"
+            className="ui_input_text w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-[var(--text)] outline-none"
           />
           <button type="button" onClick={createKey} className="button-primary" disabled={busy}>
             {busy ? 'Working...' : 'Create key'}
@@ -156,27 +156,27 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
         </div>
 
         {secret ? (
-          <div className="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-5 text-sm text-emerald-100">
-            <p className="font-medium">Copy this now. The secret is shown once.</p>
-            <p className="mt-3">Name: {secret.name}</p>
+          <div className="ui_helper_text mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-5 text-emerald-100">
+            <p className="body_text_emphasis">Copy this now. The secret is shown once.</p>
+            <p className="body_text mt-3">Name: {secret.name}</p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <code className="rounded-lg bg-black/20 px-3 py-2 text-xs">{secret.id}</code>
+              <code className="ui_mono_text rounded-lg bg-black/20 px-3 py-2">{secret.id}</code>
               <button type="button" onClick={() => copySecret(secret.id, 'Key id')} className="button-secondary">
                 Copy ID
               </button>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <code className="rounded-lg bg-black/20 px-3 py-2 text-xs">{secret.apiKey}</code>
+              <code className="ui_mono_text rounded-lg bg-black/20 px-3 py-2">{secret.apiKey}</code>
               <button type="button" onClick={() => copySecret(secret.apiKey, 'API key')} className="button-secondary">
                 Copy API key
               </button>
             </div>
-            {secret.warning ? <p className="mt-3 text-amber-100">{secret.warning}</p> : null}
+            {secret.warning ? <p className="body_text mt-3 text-amber-100">{secret.warning}</p> : null}
           </div>
         ) : null}
 
         <p
-          className={`mt-6 rounded-xl border px-4 py-3 text-sm ${
+          className={`ui_helper_text mt-6 rounded-xl border px-4 py-3 ${
             messageTone === 'error'
               ? 'border-rose-400/30 bg-rose-500/10 text-rose-200'
               : messageTone === 'success'
@@ -190,8 +190,8 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
 
       <section className="panel dashboard-section overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-[var(--border)] text-xs uppercase tracking-[0.2em] text-[var(--text-dim)]">
+          <table className="ui_table_text min-w-full text-left">
+            <thead className="ui_table_heading border-b border-[var(--border)] text-[var(--text-dim)]">
               <tr>
                 <th className="px-4 py-4">Name</th>
                 <th className="px-4 py-4">ID</th>
@@ -204,7 +204,7 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
             <tbody className="divide-y divide-[var(--border)]">
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-[var(--text-dim)]">
+                  <td colSpan={6} className="body_text px-4 py-8 text-center text-[var(--text-dim)]">
                     No API keys created yet.
                   </td>
                 </tr>
@@ -212,11 +212,11 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
 
               {items.map((item) => (
                 <tr key={item.id}>
-                  <td className="px-4 py-4 text-[var(--text)]">{item.name}</td>
-                  <td className="px-4 py-4 font-[var(--font-plex-mono)] text-xs text-[var(--text-dim)]">{item.id}</td>
-                  <td className="px-4 py-4 text-emerald-300">{item.status}</td>
-                  <td className="px-4 py-4 text-[var(--text-dim)]">{new Date(item.createdAt).toLocaleString()}</td>
-                  <td className="px-4 py-4 text-[var(--text-dim)]">
+                  <td className="ui_table_text_strong px-4 py-4 text-[var(--text)]">{item.name}</td>
+                  <td className="ui_mono_text px-4 py-4 text-[var(--text-dim)]">{item.id}</td>
+                  <td className="ui_table_text px-4 py-4 text-emerald-300">{item.status}</td>
+                  <td className="ui_table_text px-4 py-4 text-[var(--text-dim)]">{new Date(item.createdAt).toLocaleString()}</td>
+                  <td className="ui_table_text px-4 py-4 text-[var(--text-dim)]">
                     {item.lastUsedAt ? new Date(item.lastUsedAt).toLocaleString() : 'Never'}
                   </td>
                   <td className="px-4 py-4">

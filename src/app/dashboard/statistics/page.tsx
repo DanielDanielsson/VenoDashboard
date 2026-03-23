@@ -12,10 +12,10 @@ export default function DashboardStatisticsPage() {
         style={{ minHeight: 'calc(var(--spacing-dashboard-content-top) - var(--spacing-dashboard-top) - 1.25rem)' }}
       >
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-(--text)">
+          <h1 className="page_title text-(--text)">
             Statistics
           </h1>
-          <p className="mt-1 text-sm text-(--text-dim)">Deep dive into your glucose data</p>
+          <p className="page_subtitle mt-1 text-(--text-dim)">Deep dive into your glucose data</p>
         </div>
       </header>
 

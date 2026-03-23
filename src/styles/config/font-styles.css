@@ -21,3 +21,233 @@
   letter-spacing: 0;
   line-height: 110%;
 }
+
+@utility page_title {
+  font-family: var(--font-urbanist);
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+@utility section_title {
+  font-family: var(--font-urbanist);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+@utility page_subtitle {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.45;
+}
+
+@utility panel_title {
+  font-family: var(--font-urbanist);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+@utility section_heading {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+@utility body_text {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+@utility body_text_strong {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+
+@utility body_text_emphasis {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+@utility body_text_relaxed {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.7;
+  letter-spacing: 0;
+}
+
+@utility ui_caption {
+  font-family: var(--font-urbanist);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+  letter-spacing: 0;
+}
+
+@utility ui_caption_strong {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1rem;
+  letter-spacing: 0.02em;
+}
+
+@utility ui_micro_label {
+  font-family: var(--font-urbanist);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@utility ui_input_text {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+@utility ui_nav_text {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+@utility ui_table_heading {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+@utility ui_table_text {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+@utility ui_table_text_strong {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+@utility ui_helper_text {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+
+@utility ui_mono_text {
+  font-family: var(--font-plex-mono);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+@utility ui_mono_text_strong {
+  font-family: var(--font-plex-mono);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+@utility ui_mono_value_md {
+  font-family: var(--font-plex-mono);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+@utility ui_mono_value_lg {
+  font-family: var(--font-plex-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+@utility ui_mono_value_display {
+  font-family: var(--font-plex-mono);
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+@utility ui_ring_value_sm {
+  font-family: var(--font-plex-mono);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+@utility ui_ring_value_md {
+  font-family: var(--font-plex-mono);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+@utility ui_ring_value_lg {
+  font-family: var(--font-plex-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+@utility ui_ring_label {
+  font-family: var(--font-urbanist);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@utility ui_mono_unit {
+  font-family: var(--font-urbanist);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}

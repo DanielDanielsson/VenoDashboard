@@ -6,11 +6,11 @@ interface ContractBannerProps {
 export function ContractBanner({ lastUpdated, stale }: ContractBannerProps) {
   return (
     <aside className="contract-banner" data-state={stale ? 'stale' : 'live'}>
-      <p className="kicker">Contract snapshot</p>
-      <p className="mt-2 text-sm font-medium">
-        Last updated: <span className="font-[var(--font-plex-mono)]">{new Date(lastUpdated).toISOString()}</span>
+      <p className="ui_micro_label text-(--text-soft)">Contract snapshot</p>
+      <p className="body_text_emphasis mt-2">
+        Last updated: <span className="ui_mono_text">{new Date(lastUpdated).toISOString()}</span>
       </p>
-      <p className="mt-1 text-sm text-[var(--text-dim)]">
+      <p className="ui_helper_text mt-1 text-[var(--text-dim)]">
         {stale
           ? 'Using bundled snapshot because remote contract fetch failed.'
           : 'Using live remote contracts with incremental revalidation.'}

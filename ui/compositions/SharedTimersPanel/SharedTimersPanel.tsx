@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { DashboardPanel } from '@ui/components/DashboardPanel';
+import { SecondaryButton } from '@ui/components/SecondaryButton';
 import type {
   SharedTimer,
   SharedTimerMutationResponse,
@@ -337,34 +338,32 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
     <DashboardPanel
       title="Timers"
       headerRight={
-        <span className="text-xs text-(--text-dim)">{timers.length} total</span>
+        <span className="ui_caption text-(--text-dim)">{timers.length} total</span>
       }
     >
       <div className="flex flex-1 flex-col">
         {timers.length === 0 && !showStartForm ? (
-          <p className="text-sm text-(--text-dim)">No active timers</p>
+          <p className="body_text text-(--text-dim)">No active timers</p>
         ) : (
           <div className="flex flex-col gap-2">
             {timers.map((timer) => {
               const remaining = Math.max(0, new Date(timer.fireAt).getTime() - nowMs);
               const isDone = remaining <= 0;
 
-              return (
-                <div key={timer.id} className="flex items-center justify-between gap-3 rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2.5">
-                  <div className="min-w-0">
-                    <p className="text-xs text-(--text-dim)">{formatDurationLabel(timer.durationSeconds)}</p>
-                    <p className={`text-base font-semibold tabular-nums ${isDone ? 'text-amber-200' : 'text-(--text)'}`}>
+                return (
+                  <div key={timer.id} className="flex items-center justify-between gap-3 rounded-[4px] border border-(--border) bg-(--surface-muted) px-3 py-2.5">
+                    <div className="min-w-0">
+                    <p className="ui_caption text-(--text-dim)">{formatDurationLabel(timer.durationSeconds)}</p>
+                    <p className={`ui_mono_text_strong tabular-nums ${isDone ? 'text-amber-200' : 'text-(--text)'}`}>
                       {isDone ? 'Done' : formatCountdown(timer.fireAt, nowMs)}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    className="button-ghost shrink-0 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                  <SecondaryButton
                     disabled={readOnly}
                     onClick={() => void removeTimer(timer.id)}
                   >
                     Remove
-                  </button>
+                  </SecondaryButton>
                 </div>
               );
             })}
@@ -375,51 +374,47 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
           <div className="mt-4 flex flex-col gap-3">
             <div className="flex flex-wrap gap-2">
               {TIMER_PRESETS.map((minutes) => (
-                <button
+                <SecondaryButton
                   key={minutes}
-                  type="button"
-                  className={selectedMinutes === minutes ? 'button-primary' : 'button-secondary'}
+                  isActive={selectedMinutes === minutes}
                   onClick={() => setSelectedMinutes(minutes)}
                 >
                   {minutes}m
-                </button>
+                </SecondaryButton>
               ))}
             </div>
             <input
               value={customValue}
               onChange={(event) => setCustomValue(event.target.value)}
               placeholder="Custom (5, mm:ss, 90s)"
-              className="w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-sm text-(--text) outline-none placeholder:text-(--text-dim) focus:border-(--border-focus, var(--border))"
+              className="ui_input_text w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-(--text) outline-none placeholder:text-(--text-dim) focus:border-(--border-focus, var(--border))"
             />
-            {customError && <p className="text-xs text-rose-300">{customError}</p>}
-            {errorMessage && <p className="text-xs text-rose-300">{errorMessage}</p>}
+            {customError && <p className="ui_caption text-rose-300">{customError}</p>}
+            {errorMessage && <p className="ui_caption text-rose-300">{errorMessage}</p>}
             <div className="flex gap-2">
-              <button
-                type="button"
-                className="button-primary flex-1"
+              <SecondaryButton
+                twStyles="flex-1 justify-center py-2.5"
+                isActive
                 disabled={isSubmitting}
                 onClick={() => customValue ? applyCustomStart() : void startTimer(selectedMinutes * 60)}
               >
                 {isSubmitting ? 'Starting…' : `Start ${customValue ? 'custom' : `${selectedMinutes}m`}`}
-              </button>
-              <button
-                type="button"
-                className="button-secondary"
+              </SecondaryButton>
+              <SecondaryButton
                 onClick={() => { setShowStartForm(false); setCustomValue(''); setCustomError(null); }}
               >
                 Cancel
-              </button>
+              </SecondaryButton>
             </div>
           </div>
         ) : (
-          <button
-            type="button"
-            className="mt-4 w-full rounded-lg border border-dashed border-(--border) py-3 text-sm text-(--text-dim) transition-colors hover:border-(--text-soft) hover:text-(--text-soft) disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-(--border) disabled:hover:text-(--text-dim)"
+          <SecondaryButton
+            twStyles="mt-4 w-full justify-center"
             disabled={readOnly}
             onClick={() => setShowStartForm(true)}
           >
             {readOnly ? 'Admin sign in to start timers' : '+ Start Timer'}
-          </button>
+          </SecondaryButton>
         )}
       </div>
     </DashboardPanel>

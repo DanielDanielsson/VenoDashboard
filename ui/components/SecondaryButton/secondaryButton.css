@@ -6,8 +6,8 @@
         --color-secondary-button-active-bg: var(--color-base-ink);
         --color-secondary-button-active-border: var(--color-base-ink);
         --color-secondary-button-active-text: var(--color-base-paper);
-        --color-secondary-button-inactive-border: rgba(148, 163, 184, 0.3);
-        --color-secondary-button-inactive-text: var(--color-base-ink-soft);
+        --color-secondary-button-inactive-border: rgb(90 70 50 / 0.25);
+        --color-secondary-button-inactive-text: #4a4038;
     }
 
     .theme-dark {
@@ -22,8 +22,8 @@
         --color-secondary-button-active-bg: var(--color-base-ink);
         --color-secondary-button-active-border: var(--color-base-ink);
         --color-secondary-button-active-text: var(--color-base-paper);
-        --color-secondary-button-inactive-border: rgba(148, 163, 184, 0.3);
-        --color-secondary-button-inactive-text: var(--color-base-ink-soft);
+        --color-secondary-button-inactive-border: rgb(90 70 50 / 0.25);
+        --color-secondary-button-inactive-text: #4a4038;
     }
 
     .theme-secondary-button-dark {
