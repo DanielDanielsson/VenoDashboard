@@ -12,7 +12,7 @@ export const DashboardPanel = ({
   children,
   headerRight,
   twStyles,
-  theme = 'dark',
+  theme,
 }: DashboardPanelProps): ReactElement => (
   <section
     className={twMerge(

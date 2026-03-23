@@ -13,12 +13,12 @@ const THEME_CLASS: Record<LiveGlucosePanelTheme, string> = {
 export const LiveGlucosePanel = ({
   latestReadingTimestamp,
   twStyles,
-  theme = 'dark',
+  theme,
 }: LiveGlucosePanelProps): ReactElement => (
   <DashboardPanel
     title="Current Glucose"
     theme={theme}
-    twStyles={twMerge(THEME_CLASS[theme], twStyles)}
+    twStyles={twMerge(theme && THEME_CLASS[theme], twStyles)}
     headerRight={latestReadingTimestamp ? <DataFreshnessLight key={latestReadingTimestamp} timestamp={latestReadingTimestamp} /> : undefined}
   >
     <div className="flex flex-1 flex-col items-center justify-center">

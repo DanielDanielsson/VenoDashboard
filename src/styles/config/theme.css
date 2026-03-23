@@ -7,31 +7,31 @@
     --color-ui-background: var(--color-base-paper);
 
     --bg: var(--color-base-paper);
-    --bg-elevated: rgb(255 255 255 / 0.82);
-    --bg-strong: rgb(241 245 249 / 0.96);
-    --surface: rgb(255 255 255 / 0.72);
-    --surface-strong: rgb(255 255 255 / 0.88);
-    --surface-muted: rgb(241 245 249 / 0.52);
-    --border: rgb(15 23 42 / 0.08);
-    --border-strong: rgb(15 23 42 / 0.14);
-    --border-hover: rgb(5 150 105 / 0.28);
+    --bg-elevated: rgb(246 241 234 / 0.85);
+    --bg-strong: rgb(234 228 219 / 0.96);
+    --surface: rgb(242 237 229 / 0.72);
+    --surface-strong: rgb(248 244 237 / 0.9);
+    --surface-muted: #e8e2d8;
+    --border: rgb(90 70 50 / 0.16);
+    --border-strong: rgb(90 70 50 / 0.28);
+    --border-hover: rgb(5 150 105 / 0.3);
     --text: var(--color-base-ink);
     --text-dim: var(--color-base-ink-muted);
-    --text-soft: var(--color-base-ink-soft);
+    --text-soft: #6b6055;
     --accent: var(--color-base-accent);
     --accent-soft: rgb(5 150 105 / 0.1);
     --accent-strong: var(--color-base-accent-strong);
     --accent-glow: rgb(5 150 105 / 0.15);
-    --success: var(--color-base-success);
-    --success-soft: rgb(97 197 148 / 0.1);
-    --warning: var(--color-base-warning);
-    --warning-soft: rgb(217 119 6 / 0.1);
-    --error: var(--color-base-error);
-    --error-soft: rgb(225 29 72 / 0.08);
-    --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04);
-    --shadow: 0 4px 24px rgb(15 23 42 / 0.06), 0 1px 2px rgb(15 23 42 / 0.04);
-    --shadow-lg: 0 12px 48px rgb(15 23 42 / 0.08), 0 2px 8px rgb(15 23 42 / 0.04);
-    --grid-line: rgb(15 23 42 / 0.035);
+    --success: #059669;
+    --success-soft: rgb(5 150 105 / 0.12);
+    --warning: #ca8a04;
+    --warning-soft: rgb(180 83 9 / 0.1);
+    --error: #be123c;
+    --error-soft: rgb(190 18 60 / 0.08);
+    --shadow-sm: 0 1px 2px rgb(70 50 30 / 0.06);
+    --shadow: 0 4px 24px rgb(70 50 30 / 0.09), 0 1px 2px rgb(70 50 30 / 0.06);
+    --shadow-lg: 0 12px 48px rgb(70 50 30 / 0.12), 0 2px 8px rgb(70 50 30 / 0.07);
+    --grid-line: rgb(70 50 30 / 0.04);
   }
 
   .theme-dark {

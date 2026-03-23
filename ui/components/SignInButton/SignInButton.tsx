@@ -54,7 +54,7 @@ export function SignInButton({ callbackUrl = '/dashboard' }: SignInButtonProps) 
       <p className="kicker">Admin access</p>
       <h1 className="section-title mt-3 text-xl">Sign in to manage PulseGlucose.</h1>
       <p className="section-copy mt-2 text-xs">
-        Demo visitors can browse the dashboard. Admin actions like settings, integrations, timers, and API keys
+        Demo visitors can browse the dashboard. Admin actions like settings, timers, and API keys
         require sign in.
       </p>
 

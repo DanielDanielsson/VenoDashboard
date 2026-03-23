@@ -8,7 +8,6 @@ Private dashboard frontend for Veno ecosystem.
 - `/dashboard`
 - `/dashboard/glucose`
 - `/dashboard/settings`
-- `/dashboard/integrations`
 - `/dashboard/api-keys`
 - `/api/auth/*`
 - `/api/dashboard/*`
@@ -36,7 +35,7 @@ Public demo routes:
 - `/dashboard`
 - `/dashboard/statistics`
 
-Admin sign in is still required for settings, integrations, API keys, and timer mutations.
+Admin sign in is still required for settings, API keys, and timer mutations.
 
 - Source of truth is VenoAPI.
 - Contract fetch targets:

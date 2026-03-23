@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { NavigationLink } from '../../components/NavigationLink';
 import { Icon } from '../../base/Icon';
 import type { IconName } from '../../base/Icon';
+import { ThemeToggle } from '../../components/ThemeToggle';
 
 const DASHBOARD_LINKS: ReadonlyArray<{
   href: string;
@@ -13,7 +14,6 @@ const DASHBOARD_LINKS: ReadonlyArray<{
   { href: '/dashboard', label: 'Overview', icon: 'home' },
   { href: '/dashboard/statistics', label: 'Statistics', icon: 'activity' },
   { href: '/dashboard/settings', label: 'Settings', icon: 'settings', ownerOnly: true },
-  { href: '/dashboard/integrations', label: 'Integrations', icon: 'plug', ownerOnly: true },
   { href: '/dashboard/api-keys', label: 'API Keys', icon: 'key', ownerOnly: true },
 ];
 
@@ -47,14 +47,30 @@ export const SideBarNavigation = ({ isOwner = false }: { isOwner?: boolean }) =>
         })}
       </ul>
 
-      <div className="mt-auto px-1 pb-2">
-        {isOwner ? (
-          <p className="text-xs text-(--text-dim)">Admin mode enabled</p>
-        ) : (
-          <Link href="/login" className="button-secondary w-full justify-center">
-            Admin sign in
+      <ul className="mt-3 flex flex-col gap-0.5 border-t border-(--border) pt-3 px-1">
+        <li>
+          <Link href="/dashboard/about" className="flex items-center rounded px-2 py-1.5 text-xs text-(--text-soft) transition-colors hover:text-(--text)">
+            About
           </Link>
+        </li>
+        <li>
+          <Link href="https://github.com/hf-pulse/VenoDashboard" target="_blank" rel="noopener noreferrer" className="flex items-center rounded px-2 py-1.5 text-xs text-(--text-soft) transition-colors hover:text-(--text)">
+            GitHub
+          </Link>
+        </li>
+        {isOwner ? (
+          <li className="px-2 py-1.5 text-xs text-(--text-soft)">Admin mode enabled</li>
+        ) : (
+          <li>
+            <Link href="/login" className="flex items-center rounded px-2 py-1.5 text-xs text-(--text-soft) transition-colors hover:text-(--text)">
+              Admin sign in
+            </Link>
+          </li>
         )}
+      </ul>
+
+      <div className="mt-auto px-1 pb-2">
+        <ThemeToggle />
       </div>
     </nav>
   ); 

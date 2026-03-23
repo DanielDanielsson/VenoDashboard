@@ -3,11 +3,11 @@
 
 @layer theme {
     :root {
-        --color-nav-link-bg: var(--color-base-paper-strong);
-        --color-nav-link-bg-hover: var(--color-base-paper);
-        --color-nav-link-text: var(--color-base-ink-muted);
-        --color-nav-link-text-hover: var(--color-base-ink);
-        --color-nav-link-corner: var(--color-base-paper-strong);
+        --color-nav-link-bg: #ddd6ca;
+        --color-nav-link-bg-hover: #ddd7cc;
+        --color-nav-link-text: #4a4038;
+        --color-nav-link-text-hover: #0c1222;
+        --color-nav-link-corner: #ddd6ca;
         --color-nav-link-corner-hover: var(--color-base-success);
     }
 
@@ -21,11 +21,11 @@
     }
 
     .theme-nav-link-light {
-        --color-nav-link-bg: var(--color-base-paper-strong);
-        --color-nav-link-bg-hover: var(--color-base-paper);
-        --color-nav-link-text: var(--color-base-ink-muted);
-        --color-nav-link-text-hover: var(--color-base-ink);
-        --color-nav-link-corner: var(--color-base-paper-strong);
+        --color-nav-link-bg: #ddd6ca;
+        --color-nav-link-bg-hover: #ddd7cc;
+        --color-nav-link-text: #4a4038;
+        --color-nav-link-text-hover: #0c1222;
+        --color-nav-link-corner: #ddd6ca;
         --color-nav-link-corner-hover: var(--color-base-success);
     }
 

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const location = await fetchDexcomConnectLocation();
     return NextResponse.redirect(new URL(location));
   } catch (error) {
-    const url = new URL('/dashboard/integrations', origin);
+    const url = new URL('/dashboard/settings', origin);
     url.searchParams.set('error', error instanceof Error ? error.message : 'Dexcom connect failed');
     return NextResponse.redirect(url);
   }

@@ -3,10 +3,10 @@
 
 @layer theme {
     :root {
-        --color-dashboard-panel-bg: var(--color-base-paper-strong);
-        --color-dashboard-panel-header-bg: color-mix(in srgb, black 5%, var(--color-base-paper-strong));
-        --color-dashboard-panel-border: var(--color-base-ink);
-        --color-dashboard-panel-title: var(--color-base-ink-muted);
+        --color-dashboard-panel-bg: #e8e2d8;
+        --color-dashboard-panel-header-bg: #ddd7cc;
+        --color-dashboard-panel-border: rgb(90 70 50 / 0.22);
+        --color-dashboard-panel-title: #4a3f35;
     }
 
     .theme-dark {
@@ -17,10 +17,10 @@
     }
 
     .theme-dashboard-panel-light {
-        --color-dashboard-panel-bg: var(--color-base-paper-strong);
-        --color-dashboard-panel-header-bg: color-mix(in srgb, black 5%, var(--color-base-paper-strong));
-        --color-dashboard-panel-border: var(--color-base-ink);
-        --color-dashboard-panel-title: var(--color-base-ink-muted);
+        --color-dashboard-panel-bg: #e8e2d8;
+        --color-dashboard-panel-header-bg: #ddd7cc;
+        --color-dashboard-panel-border: rgb(90 70 50 / 0.22);
+        --color-dashboard-panel-title: #4a3f35;
     }
 
     .theme-dashboard-panel-dark {
