@@ -84,7 +84,7 @@ function getInitialChartHeight(): number {
 export function GlucoseAnalysisView() {
   const [selection, setSelection] = useState<HistorySelection>({
     kind: 'preset',
-    range: '24h'
+    range: '3d'
   });
   const [chartHeight] = useState(getInitialChartHeight);
   const [isDark, setIsDark] = useState(getInitialIsDark);
@@ -209,23 +209,23 @@ export function GlucoseAnalysisView() {
           twStyles="flex flex-col [&>div:last-child]:flex-1 [&>div:last-child]:flex [&>div:last-child]:items-center [&>div:last-child]:justify-center"
           headerRight={
             updatesError
-              ? <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-base-error-dark">Stale</span>
+              ? <span className="ui_micro_label ui_mono_text text-base-error-dark">Stale</span>
               : undefined
           }
         >
           {hasData ? (
             <div className="flex items-end justify-center gap-6" style={{ opacity: isTransitioning ? 0.45 : 1, transition: 'opacity 200ms ease' }}>
               <div className="grid gap-4 justify-items-center pb-0.5">
-                <span className="font-mono text-xl font-semibold leading-none" style={{ color: stats.min < 4 ? lowColor : 'var(--text-dim)' }}>{stats.min.toFixed(1)}</span>
-                <span className="text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-(--text-soft)">Min</span>
+                <span className="ui_mono_value_md" style={{ color: stats.min < 4 ? lowColor : 'var(--text-dim)' }}>{stats.min.toFixed(1)}</span>
+                <span className="ui_micro_label leading-none text-(--text-soft)">Min</span>
               </div>
               <div className="grid gap-4 justify-items-center">
-                <span className="font-mono text-5xl font-bold leading-none" style={{ color: avgColor }}>{stats.avg.toFixed(1)}</span>
-                <span className="text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-(--text-soft)">Avg</span>
+                <span className="ui_mono_value_display" style={{ color: avgColor }}>{stats.avg.toFixed(1)}</span>
+                <span className="ui_micro_label leading-none text-(--text-soft)">Avg</span>
               </div>
               <div className="grid gap-4 justify-items-center pb-0.5">
-                <span className="font-mono text-xl font-semibold leading-none" style={{ color: stats.max > 10 ? highColor : 'var(--text-dim)' }}>{stats.max.toFixed(1)}</span>
-                <span className="text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-(--text-soft)">Max</span>
+                <span className="ui_mono_value_md" style={{ color: stats.max > 10 ? highColor : 'var(--text-dim)' }}>{stats.max.toFixed(1)}</span>
+                <span className="ui_micro_label leading-none text-(--text-soft)">Max</span>
               </div>
             </div>
           ) : (
@@ -249,7 +249,7 @@ export function GlucoseAnalysisView() {
         <DashboardPanel title="Settings" twStyles="overflow-visible">
           <div className="grid gap-4">
             <div className="grid gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-(--text-soft)">Time Range</span>
+              <span className="ui_micro_label text-(--text-soft)">Time Range</span>
               <div className="flex flex-wrap items-center gap-1">
                 {GLUCOSE_TIME_RANGES.map((timeRange) => (
                   <SecondaryButton
@@ -270,7 +270,7 @@ export function GlucoseAnalysisView() {
             </div>
             <div className="flex items-end gap-4">
               <div className="grid gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-(--text-soft)">Color Mode</span>
+                <span className="ui_micro_label text-(--text-soft)">Color Mode</span>
                 <SegmentedControl
                   options={GLUCOSE_COLOR_MODES}
                   value={chartColorMode}
@@ -278,7 +278,7 @@ export function GlucoseAnalysisView() {
                 />
               </div>
               <div className="grid gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-(--text-soft)">Y-Axis Max</span>
+                <span className="ui_micro_label text-(--text-soft)">Y-Axis Max</span>
                 <NumberInput
                   label="Top"
                   value={chartYMaxInput}
@@ -294,11 +294,11 @@ export function GlucoseAnalysisView() {
         <DashboardPanel title="Time in Range" twStyles="flex flex-col [&>div:last-child]:flex-1 [&>div:last-child]:flex [&>div:last-child]:items-center [&>div:last-child]:justify-center">
           {hasData ? (
             <div className="flex items-end justify-center gap-3" style={{ opacity: isTransitioning ? 0.45 : 1, transition: 'opacity 200ms ease' }}>
-              <GlucoseStatRing label="Very low" percentage={stats.veryLow.percentage} color="#e11d48" size="sm" />
-              <GlucoseStatRing label="Low" percentage={stats.low.percentage} color="#fb7185" size="md" />
-              <GlucoseStatRing label="In range" percentage={stats.inRange.percentage} color="#34d399" size="lg" />
-              <GlucoseStatRing label="High" percentage={stats.high.percentage} color="#fbbf24" size="md" />
-              <GlucoseStatRing label="Very high" percentage={stats.veryHigh.percentage} color="#f97316" size="sm" />
+              <GlucoseStatRing label="Very low" percentage={stats.veryLow.percentage} color={isDark ? '#e11d48' : '#be123c'} size="sm" />
+              <GlucoseStatRing label="Low" percentage={stats.low.percentage} color={isDark ? '#fb7185' : '#be123c'} size="md" />
+              <GlucoseStatRing label="In range" percentage={stats.inRange.percentage} color={isDark ? '#34d399' : '#059669'} size="lg" />
+              <GlucoseStatRing label="High" percentage={stats.high.percentage} color={isDark ? '#fbbf24' : '#ca8a04'} size="md" />
+              <GlucoseStatRing label="Very high" percentage={stats.veryHigh.percentage} color={isDark ? '#f97316' : '#c2410c'} size="sm" />
             </div>
           ) : (
             <div className="flex items-end justify-center gap-3">
@@ -316,25 +316,25 @@ export function GlucoseAnalysisView() {
       <DashboardPanel
         title="Glucose Timeline"
         headerRight={
-          <span className="text-[10px] tracking-wide text-(--text-soft)">⌘ + Scroll to zoom · Drag to pan</span>
+          <span className="ui_caption tracking-wide text-(--text-soft)">⌘ + Scroll to zoom · Drag to pan</span>
         }
       >
         <div style={{ position: 'relative', minHeight: chartHeight, margin: '-1.5rem' }}>
           {isFirstLoad && (
             <div className="absolute inset-0 z-5 flex flex-col items-center justify-center gap-3">
               <div className="glucose-chart-skeleton" />
-              <p className="text-[13px] text-(--text-soft)">Loading glucose data...</p>
+              <p className="body_text text-(--text-soft)">Loading glucose data...</p>
             </div>
           )}
 
           {error && !isLoading && (
             <div className="absolute inset-0 z-5 flex flex-col items-center justify-center gap-3">
-              <p className="text-[13px] text-base-error-dark">{error.message}</p>
+              <p className="body_text text-base-error-dark">{error.message}</p>
               <button
                 type="button"
                 onClick={() => mutate()}
                 className="button-secondary"
-                style={{ minHeight: '2.25rem', fontSize: '0.82rem' }}
+                style={{ minHeight: '2.25rem' }}
               >
                 Retry
               </button>
@@ -342,7 +342,7 @@ export function GlucoseAnalysisView() {
           )}
 
           {!error && data && data.items.length === 0 && !isLoading && (
-            <div className="flex items-center justify-center text-sm text-(--text-soft)" style={{ height: chartHeight }}>
+            <div className="body_text flex items-center justify-center text-(--text-soft)" style={{ height: chartHeight }}>
               No glucose data available for this time range.
             </div>
           )}
@@ -381,11 +381,11 @@ export function GlucoseAnalysisView() {
                 </div>
               )}
               <div style={{ opacity: isTransitioning ? 0.35 : 1, transition: 'opacity 200ms ease' }}>
-                <GlucoseAgpChart data={data.items} height={chartHeight} yMax={chartYMax} />
+                <GlucoseAgpChart data={data.items} height={400} yMax={chartYMax} />
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center text-sm text-(--text-soft)" style={{ height: chartHeight }}>
+            <div className="body_text flex items-center justify-center text-(--text-soft)" style={{ height: 400 }}>
               {isFirstLoad ? '' : 'No data available.'}
             </div>
           )}

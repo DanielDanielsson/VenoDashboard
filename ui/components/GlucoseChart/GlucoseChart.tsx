@@ -30,7 +30,6 @@ const IOB_BAND_HEIGHT = 120;
 const IOB_BAND_GAP = 20;
 const EVENT_TRACK_HEIGHT = 120;
 const EVENT_TRACK_GAP = 20;
-const EVENT_MARKER_SPACING_PX = 22;
 const EVENT_LANE_COUNT = 3;
 const EVENT_HOVER_WINDOW_MS = 3 * 60 * 1000;
 const MAX_PX_PER_MS = 0.04;
@@ -308,18 +307,25 @@ function getHoveredStepBucket(
   return null;
 }
 
-function getTandemEventVisual(eventName: string): {
+function getTandemEventVisual(eventName: string, isDark = true): {
   label: string;
   fill: string;
   stroke: string;
   shape: 'circle' | 'ring' | 'diamond' | 'square' | 'triangle';
 } {
   switch (eventName) {
+    case 'CartridgeFilled':
+      return {
+        label: 'Cartridge',
+        fill: isDark ? 'rgba(148, 163, 184, 0.9)' : 'rgba(71, 85, 105, 0.85)',
+        stroke: isDark ? 'rgba(203, 213, 225, 1)' : 'rgba(51, 65, 85, 1)',
+        shape: 'circle'
+      };
     case 'BolusCompleted':
       return {
         label: 'Bolus',
-        fill: 'rgba(251, 191, 36, 0.95)',
-        stroke: 'rgba(253, 224, 71, 1)',
+        fill: isDark ? 'rgba(96, 165, 250, 0.95)' : 'rgba(37, 99, 235, 0.9)',
+        stroke: isDark ? 'rgba(147, 197, 253, 1)' : 'rgba(29, 78, 216, 1)',
         shape: 'circle'
       };
     case 'BGReading':
@@ -395,20 +401,28 @@ const SUPPRESSED_EVENT_NAMES = new Set([
   'PCMChange',
   'PumpingSuspended',
   'PumpingResumed',
+  'TubingFilled',
 ]);
 
 const GLUCOSE_ICON_PATH1 = 'M125.711 125.711C153.097 98.3253 153.097 53.9246 125.711 26.5391C98.3256 -0.846376 53.9249 -0.846376 26.5394 26.5391C-0.84609 53.9246 -0.846104 98.3253 26.5394 125.711L22.2967 129.953L21.6048 129.253C-7.20186 99.7071 -7.20159 52.5419 21.6055 22.996L22.2967 22.2965C52.0254 -7.43216 100.225 -7.43216 129.954 22.2965L130.645 22.996C159.681 52.7765 159.45 100.457 129.954 129.953L129.254 130.645C99.4737 159.68 51.7932 159.45 22.2967 129.953L26.5394 125.711C53.9249 153.096 98.3256 153.096 125.711 125.711Z';
 const GLUCOSE_ICON_PATH2 = 'M183.914 76.3893L127.872 20.3469C168.804 66.0228 146.708 112.027 129.84 130.17L183.914 76.3893Z';
+
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 function drawTandemMarker(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   eventName: string,
-  highlighted: boolean
+  highlighted: boolean,
+  visibleDurationMs: number,
+  insulinDelivered: number | null,
+  isDark: boolean
 ): void {
-  const visual = getTandemEventVisual(eventName);
-  const size = highlighted ? 22 : 18;
+  const visual = getTandemEventVisual(eventName, isDark);
+  const detailed = visibleDurationMs <= THREE_DAYS_MS;
+  const baseSize = detailed ? 28 : 14;
+  const size = highlighted ? baseSize + 4 : baseSize;
   const iconW = 184;
   const iconH = 153;
   const scale = size / iconW;
@@ -424,6 +438,18 @@ function drawTandemMarker(
   ctx.fill(new Path2D(GLUCOSE_ICON_PATH2));
 
   ctx.restore();
+
+  // Draw units label centred inside the circle when zoomed in enough
+  if (insulinDelivered !== null && size >= 26) {
+    const circleCenterX = x - 0.5 * scale;
+    const circleCenterY = y + 16 * scale;
+    const fontSize = Math.max(7, Math.round(size * 0.32));
+    ctx.font = `bold ${fontSize}px var(--font-plex-mono), monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = visual.fill;
+    ctx.fillText(insulinDelivered.toFixed(1), circleCenterX, circleCenterY);
+  }
 }
 
 export function GlucoseChart({
@@ -727,6 +753,9 @@ export function GlucoseChart({
         ctx.lineCap = 'butt';
       }
 
+      const eventVisibleDurationMs = visibleEndMs - visibleStartMs;
+      const detailedView = eventVisibleDurationMs <= THREE_DAYS_MS;
+      const dynamicSpacing = detailedView ? 32 : 18;
       const laneLastX = Array.from({ length: EVENT_LANE_COUNT }, () => Number.NEGATIVE_INFINITY);
 
       for (const event of visibleEventItems) {
@@ -736,7 +765,7 @@ export function GlucoseChart({
 
         while (
           laneIndex < EVENT_LANE_COUNT - 1 &&
-          x - laneLastX[laneIndex] < EVENT_MARKER_SPACING_PX
+          x - laneLastX[laneIndex] < dynamicSpacing
         ) {
           laneIndex += 1;
         }
@@ -750,7 +779,7 @@ export function GlucoseChart({
             hoveredEvent.eventName === event.eventName
         );
 
-        drawTandemMarker(ctx, x, y, event.eventName, highlighted);
+        drawTandemMarker(ctx, x, y, event.eventName, highlighted, eventVisibleDurationMs, event.insulinDelivered ?? null, isDark);
       }
     }
 
@@ -1415,84 +1444,40 @@ export function GlucoseChart({
             minWidth: 140
           }}
         >
-          <p style={{
-            margin: 0,
-            fontSize: 20,
-            fontWeight: 700,
-            fontFamily: 'var(--font-plex-mono), monospace',
-            color: getGlucoseColor(hoveredPoint.valueMmolL, colorMode, 1, isDark)
-          }}>
-            {hoveredPoint.valueMmolL.toFixed(1)} <span style={{ fontSize: 11, color: 'var(--text-soft)' }}>mmol/L</span>
+          <p className="ui_mono_value_lg" style={{ margin: 0, color: getGlucoseColor(hoveredPoint.valueMmolL, colorMode, 1, isDark) }}>
+            {hoveredPoint.valueMmolL.toFixed(1)} <span className="ui_caption" style={{ color: 'var(--text-soft)' }}>mmol/L</span>
           </p>
-          <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-dim)' }}>
+          <p className="ui_caption" style={{ margin: '4px 0 0', color: 'var(--text-dim)' }}>
             {new Date(hoveredPoint.timestamp).toLocaleString([], {
               month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
             })}
           </p>
-          <p style={{
-            margin: '2px 0 0',
-            fontSize: 10,
-            color: 'var(--text-soft)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em'
-          }}>
+          <p className="ui_micro_label" style={{ margin: '2px 0 0', color: 'var(--text-soft)' }}>
             {hoveredPoint.source}
           </p>
           {hoveredBasalPoint && (
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              <p style={{
-                margin: 0,
-                fontSize: 10,
-                color: 'var(--text-soft)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em'
-              }}>
+              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
                 Basal
               </p>
-              <p style={{
-                margin: '3px 0 0',
-                fontSize: 16,
-                fontWeight: 700,
-                fontFamily: 'var(--font-plex-mono), monospace',
-                color: 'rgba(186, 230, 253, 0.96)'
-              }}>
+              <p className="ui_mono_value_md" style={{ margin: '3px 0 0', color: 'rgba(186, 230, 253, 0.96)' }}>
                 {hoveredBasalPoint.basalRateUnitsPerHour.toFixed(1)}{' '}
-                <span style={{ fontSize: 10, color: 'var(--text-soft)' }}>U/hr</span>
+                <span className="ui_caption" style={{ color: 'var(--text-soft)' }}>U/hr</span>
               </p>
-              <p style={{
-                margin: '2px 0 0',
-                fontSize: 10,
-                color: 'var(--text-dim)'
-              }}>
+              <p className="ui_caption" style={{ margin: '2px 0 0', color: 'var(--text-dim)' }}>
                 {hoveredBasalPoint.eventName}
               </p>
             </div>
           )}
           {hoveredStepBucket && (
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              <p style={{
-                margin: 0,
-                fontSize: 10,
-                color: 'var(--text-soft)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em'
-              }}>
+              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
                 Steps
               </p>
-              <p style={{
-                margin: '3px 0 0',
-                fontSize: 16,
-                fontWeight: 700,
-                fontFamily: 'var(--font-plex-mono), monospace',
-                color: 'rgba(253, 224, 71, 0.96)'
-              }}>
+              <p className="ui_mono_value_md" style={{ margin: '3px 0 0', color: 'rgba(253, 224, 71, 0.96)' }}>
                 {hoveredStepBucket.stepCount.toLocaleString()}
               </p>
-              <p style={{
-                margin: '2px 0 0',
-                fontSize: 10,
-                color: 'var(--text-dim)'
-              }}>
+              <p className="ui_caption" style={{ margin: '2px 0 0', color: 'var(--text-dim)' }}>
                 {new Date(hoveredStepBucket.bucketStart).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit'
@@ -1507,32 +1492,19 @@ export function GlucoseChart({
           )}
           {hoveredEventItems.length > 0 && (
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              <p style={{
-                margin: 0,
-                fontSize: 10,
-                color: 'var(--text-soft)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em'
-              }}>
+              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
                 Tandem events
               </p>
               <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
                 {hoveredEventItems.slice(0, 4).map((event) => {
-                  const visual = getTandemEventVisual(event.eventName);
+                  const visual = getTandemEventVisual(event.eventName, isDark);
                   const summary = formatTandemEventSummary(event);
                   return (
                     <div
                       key={`${event.timestamp}:${event.eventName}`}
                       style={{ display: 'grid', gap: 2 }}
                     >
-                      <p style={{
-                        margin: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        fontSize: 12,
-                        color: 'var(--text)'
-                      }}>
+                      <p className="body_text" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text)' }}>
                         <span
                           style={{
                             width: 8,
@@ -1545,12 +1517,12 @@ export function GlucoseChart({
                         />
                         <span>{visual.label}</span>
                         {summary && (
-                          <span style={{ color: 'var(--text-soft)', fontFamily: 'var(--font-plex-mono), monospace' }}>
+                          <span className="ui_mono_text" style={{ color: 'var(--text-soft)' }}>
                             {summary}
                           </span>
                         )}
                       </p>
-                      <p style={{ margin: 0, fontSize: 10, color: 'var(--text-dim)' }}>
+                      <p className="ui_caption" style={{ margin: 0, color: 'var(--text-dim)' }}>
                         {new Date(event.timestamp).toLocaleTimeString([], {
                           hour: '2-digit',
                           minute: '2-digit'
@@ -1564,40 +1536,21 @@ export function GlucoseChart({
           )}
           {hoveredIobValue !== null && (
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              <p style={{
-                margin: 0,
-                fontSize: 10,
-                color: 'var(--text-soft)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em'
-              }}>
+              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
                 IOB
               </p>
-              <p style={{
-                margin: '3px 0 0',
-                fontSize: 16,
-                fontWeight: 700,
-                fontFamily: 'var(--font-plex-mono), monospace',
-                color: isDark ? 'rgba(167, 139, 250, 0.9)' : 'rgba(109, 40, 217, 0.85)'
-              }}>
+              <p className="ui_mono_value_md" style={{ margin: '3px 0 0', color: isDark ? 'rgba(167, 139, 250, 0.9)' : 'rgba(109, 40, 217, 0.85)' }}>
                 {hoveredIobValue.toFixed(2)}{' '}
-                <span style={{ fontSize: 10, color: 'var(--text-soft)' }}>U</span>
+                <span className="ui_caption" style={{ color: 'var(--text-soft)' }}>U</span>
               </p>
             </div>
           )}
           {hoveredSuspendInterval && (
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              <p style={{
-                margin: 0,
-                fontSize: 10,
-                color: isDark ? 'rgba(251, 113, 133, 0.9)' : 'rgba(190, 18, 60, 0.85)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                fontWeight: 700
-              }}>
+              <p className="ui_micro_label" style={{ margin: 0, color: isDark ? 'rgba(251, 113, 133, 0.9)' : 'rgba(190, 18, 60, 0.85)' }}>
                 Suspended
               </p>
-              <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-dim)' }}>
+              <p className="ui_caption" style={{ margin: '4px 0 0', color: 'var(--text-dim)' }}>
                 {new Date(hoveredSuspendInterval.suspendMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 {' → '}
                 {hoveredSuspendInterval.resumeMs

@@ -17,6 +17,7 @@ interface GlucoseAgpChartProps {
   yMax?: number;
 }
 
+const MIN_AGP_COVERAGE_MS = 24 * 60 * 60 * 1000;
 const Y_MIN = 2;
 const LOW_THRESHOLD = 4;
 const HIGH_THRESHOLD = 10;
@@ -85,6 +86,27 @@ function getYAxisTicks(yMax: number): number[] {
   }
 
   return ticks;
+}
+
+function getCoverageDurationMs(items: ChartPoint[]): number {
+  if (items.length < 2) {
+    return 0;
+  }
+
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+
+  for (const item of items) {
+    const timestamp = new Date(item.timestamp).getTime();
+    if (timestamp < min) {
+      min = timestamp;
+    }
+    if (timestamp > max) {
+      max = timestamp;
+    }
+  }
+
+  return Number.isFinite(min) && Number.isFinite(max) ? Math.max(0, max - min) : 0;
 }
 
 function buildLineSegments(points: Array<PlotPoint | null>): string[] {
@@ -165,6 +187,7 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [weekdayFilter, setWeekdayFilter] = useState<AgpWeekdayFilter>('all');
+  const [hoveredDisabledFilter, setHoveredDisabledFilter] = useState<AgpWeekdayFilter | null>(null);
   const [hoveredBucketIndex, setHoveredBucketIndex] = useState<number | null>(null);
   const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
   const [isDark, setIsDark] = useState(getInitialIsDark);
@@ -198,16 +221,29 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
     return () => observer.disconnect();
   }, []);
 
-  const filteredData = filterAgpItemsByWeekday(data, weekdayFilter);
+  const coverageByFilter = Object.fromEntries(
+    AGP_WEEKDAY_OPTIONS.map((option) => {
+      const items = filterAgpItemsByWeekday(data, option.key);
+      return [option.key, getCoverageDurationMs(items)];
+    })
+  ) as Record<AgpWeekdayFilter, number>;
+  const isFilterEnabled = (filter: AgpWeekdayFilter) => coverageByFilter[filter] > MIN_AGP_COVERAGE_MS;
+  const isCurrentFilterEnabled = isFilterEnabled(weekdayFilter);
+  const isAllFilterEnabled = isFilterEnabled('all');
+  const effectiveWeekdayFilter =
+    isCurrentFilterEnabled || !isAllFilterEnabled ? weekdayFilter : 'all';
+  const filteredData = filterAgpItemsByWeekday(data, effectiveWeekdayFilter);
   const weekdayCounts = getAgpWeekdayCounts(data);
   const profile = computeAgpProfile(filteredData);
   const interactiveBuckets = profile.buckets.filter((bucket) => bucket.sampleCount > 0);
   const chartHeight = Math.max(0, height - PADDING.top - PADDING.bottom);
   const svgWidth = Math.max(320, Math.floor(containerWidth || 0));
   const chartWidth = Math.max(0, svgWidth - PADDING.left - PADDING.right);
-  const activeSummary = formatFilterSummary(weekdayFilter, profile.dayCount);
+  const activeSummary = formatFilterSummary(effectiveWeekdayFilter, profile.dayCount);
   const yTicks = getYAxisTicks(yMax);
   const hoveredBucket = hoveredBucketIndex === null ? null : profile.buckets[hoveredBucketIndex] ?? null;
+  const isDisabled = !isFilterEnabled(effectiveWeekdayFilter);
+  const disabledHintColor = isDark ? '#fda4af' : '#be123c';
 
   function xForMinute(minuteOfDay: number): number {
     return PADDING.left + (minuteOfDay / (24 * 60)) * chartWidth;
@@ -310,6 +346,18 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
         </div>
       </div>
 
+      <div
+        className="ui_caption_strong"
+        style={{
+          minHeight: 18,
+          marginBottom: '0.4rem',
+          color: disabledHintColor,
+          letterSpacing: '0.02em'
+        }}
+      >
+        {hoveredDisabledFilter ? 'timerange to short' : ''}
+      </div>
+
       <div style={{
         display: 'flex',
         gap: '0.35rem',
@@ -320,21 +368,29 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
         paddingBottom: 2
       }}>
         {AGP_WEEKDAY_OPTIONS.map((option) => {
-          const isActive = option.key === weekdayFilter;
+          const isActive = option.key === effectiveWeekdayFilter;
           const count = weekdayCounts[option.key];
+          const isOptionDisabled = !isFilterEnabled(option.key);
 
           return (
-            <SecondaryButton
+            <div
               key={option.key}
-              isActive={isActive}
-              onClick={() => setWeekdayFilter(option.key)}
-              twStyles="inline-flex flex-col items-start justify-center gap-px flex-shrink-0 min-w-[3.75rem] px-2.5 py-1"
+              className="flex-shrink-0"
+              onMouseEnter={() => setHoveredDisabledFilter(isOptionDisabled ? option.key : null)}
+              onMouseLeave={() => setHoveredDisabledFilter((current) => (current === option.key ? null : current))}
             >
-              <span className="text-[0.775rem] leading-none">{option.shortLabel}</span>
-              <span className="text-[0.65rem] leading-none opacity-70">
-                {count}d
-              </span>
-            </SecondaryButton>
+              <SecondaryButton
+                isActive={isActive}
+                onClick={() => setWeekdayFilter(option.key)}
+                disabled={isOptionDisabled}
+                twStyles="inline-flex flex-col items-start justify-center gap-px min-w-[3.75rem] px-2.5 py-1"
+              >
+                <span className="ui_caption leading-none">{option.shortLabel}</span>
+                <span className="ui_caption leading-none opacity-70">
+                  {count}d
+                </span>
+              </SecondaryButton>
+            </div>
           );
         })}
       </div>
@@ -346,9 +402,14 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
           height={height}
           role="img"
           aria-label="Ambulatory glucose profile chart"
-          style={{ display: 'block' }}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
+          style={{
+            display: 'block',
+            opacity: isDisabled ? 0.28 : 1,
+            filter: isDisabled ? 'grayscale(0.2)' : 'none',
+            transition: 'opacity 180ms ease'
+          }}
+          onMouseMove={isDisabled ? undefined : handleMouseMove}
+          onMouseLeave={isDisabled ? undefined : handleMouseLeave}
         >
           <rect x="0" y="0" width={svgWidth} height={height} fill="transparent" />
           {X_TICKS.slice(0, -1).map((tick, index) => (
@@ -476,7 +537,7 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
               strokeLinejoin="round"
             />
           ))}
-          {hoveredBucket && (
+          {!isDisabled && hoveredBucket && (
             <line
               x1={xForMinute(hoveredBucket.minuteOfDay)}
               y1={PADDING.top}
@@ -489,7 +550,38 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
           )}
         </svg>
 
-        {hoveredBucket && (
+        {isDisabled && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1.5rem',
+              textAlign: 'center',
+              pointerEvents: 'none'
+            }}
+          >
+            <div
+              style={{
+                maxWidth: 320,
+                padding: '0.9rem 1rem',
+                borderRadius: 'var(--radius)',
+                border: '1px solid var(--border-strong)',
+                background: 'color-mix(in srgb, var(--surface-strong) 88%, transparent)',
+                backdropFilter: 'blur(10px)',
+                color: 'var(--text-dim)'
+              }}
+            >
+              <span className="ui_helper_text">
+                A wider time range needs to be selected in order for the AGP profile to work.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {!isDisabled && hoveredBucket && (
           <div
             style={{
               position: 'absolute',
@@ -505,28 +597,16 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
               minWidth: 184
             }}
           >
-            <p style={{
-              margin: 0,
-              fontSize: 12,
-              color: 'var(--text-soft)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.12em'
-            }}>
+            <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
               {formatHourLabel(hoveredBucket.minuteOfDay)}
             </p>
-            <p style={{
-              margin: '6px 0 0',
-              fontSize: 18,
-              fontWeight: 700,
-              fontFamily: 'var(--font-plex-mono), monospace',
-              color: 'var(--text)'
-            }}>
+            <p className="ui_mono_value_md" style={{ margin: '6px 0 0', color: 'var(--text)' }}>
               Median {hoveredBucket.p50?.toFixed(1) ?? '—'}
             </p>
-            <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text-dim)' }}>
+            <p className="ui_caption" style={{ margin: '6px 0 0', color: 'var(--text-dim)' }}>
               50% band {hoveredBucket.p25?.toFixed(1) ?? '—'} to {hoveredBucket.p75?.toFixed(1) ?? '—'}
             </p>
-            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-dim)' }}>
+            <p className="ui_caption" style={{ margin: '2px 0 0', color: 'var(--text-dim)' }}>
               80% band {hoveredBucket.p10?.toFixed(1) ?? '—'} to {hoveredBucket.p90?.toFixed(1) ?? '—'}
             </p>
           </div>
