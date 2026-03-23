@@ -9,6 +9,7 @@ import {
   type AgpWeekdayFilter
 } from '@/lib/glucose/agp';
 import type { ChartPoint } from '@/lib/glucose/types';
+import { SecondaryButton } from '../SecondaryButton';
 
 interface GlucoseAgpChartProps {
   data: ChartPoint[];
@@ -152,12 +153,32 @@ function buildBandSegments(
   return paths;
 }
 
+function getInitialIsDark(): boolean {
+  try {
+    return document.documentElement.classList.contains('theme-dark');
+  } catch {
+    return true;
+  }
+}
+
 export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [weekdayFilter, setWeekdayFilter] = useState<AgpWeekdayFilter>('all');
   const [hoveredBucketIndex, setHoveredBucketIndex] = useState<number | null>(null);
   const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
+  const [isDark, setIsDark] = useState(getInitialIsDark);
+
+  useEffect(() => {
+    const read = () => document.documentElement.classList.contains('theme-dark');
+    const handleChange = () => setIsDark(read());
+    window.addEventListener('pulse-theme-change', handleChange);
+    window.addEventListener('storage', handleChange);
+    return () => {
+      window.removeEventListener('pulse-theme-change', handleChange);
+      window.removeEventListener('storage', handleChange);
+    };
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -275,17 +296,6 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
         marginBottom: 12,
         flexWrap: 'wrap'
       }}>
-        <div>
-          <div style={{
-            fontSize: 12,
-            fontWeight: 700,
-            color: 'var(--accent)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.14em'
-          }}>
-            AGP
-          </div>
-        </div>
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -314,28 +324,17 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
           const count = weekdayCounts[option.key];
 
           return (
-            <button
+            <SecondaryButton
               key={option.key}
-              type="button"
+              isActive={isActive}
               onClick={() => setWeekdayFilter(option.key)}
-              className={isActive ? 'button-primary' : 'button-ghost'}
-              style={{
-                minHeight: '2.2rem',
-                padding: '0.25rem 0.625rem',
-                display: 'inline-flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                justifyContent: 'center',
-                gap: 1,
-                flexShrink: 0,
-                minWidth: '3.75rem'
-              }}
+              twStyles="inline-flex flex-col items-start justify-center gap-px flex-shrink-0 min-w-[3.75rem] px-2.5 py-1"
             >
-              <span style={{ fontSize: '0.775rem', lineHeight: 1 }}>{option.shortLabel}</span>
-              <span style={{ fontSize: '0.65rem', lineHeight: 1, opacity: 0.7 }}>
+              <span className="text-[0.775rem] leading-none">{option.shortLabel}</span>
+              <span className="text-[0.65rem] leading-none opacity-70">
                 {count}d
               </span>
-            </button>
+            </SecondaryButton>
           );
         })}
       </div>
@@ -437,17 +436,17 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
           ))}
 
           {band10To90.map((path) => (
-            <path key={path} d={path} fill="rgba(34, 211, 238, 0.14)" stroke="none" />
+            <path key={path} d={path} fill={isDark ? 'rgba(34, 211, 238, 0.14)' : 'rgba(5, 130, 160, 0.18)'} stroke="none" />
           ))}
           {band25To75.map((path) => (
-            <path key={path} d={path} fill="rgba(34, 211, 238, 0.26)" stroke="none" />
+            <path key={path} d={path} fill={isDark ? 'rgba(34, 211, 238, 0.26)' : 'rgba(5, 130, 160, 0.32)'} stroke="none" />
           ))}
           {p05Paths.map((path) => (
             <path
               key={path}
               d={path}
               fill="none"
-              stroke="rgba(103, 232, 249, 0.55)"
+              stroke={isDark ? 'rgba(103, 232, 249, 0.55)' : 'rgba(5, 130, 160, 0.6)'}
               strokeWidth="1.5"
               strokeDasharray="4 4"
               strokeLinecap="round"
@@ -459,7 +458,7 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
               key={path}
               d={path}
               fill="none"
-              stroke="rgba(103, 232, 249, 0.55)"
+              stroke={isDark ? 'rgba(103, 232, 249, 0.55)' : 'rgba(5, 130, 160, 0.6)'}
               strokeWidth="1.5"
               strokeDasharray="4 4"
               strokeLinecap="round"
@@ -471,7 +470,7 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
               key={path}
               d={path}
               fill="none"
-              stroke="#f8fafc"
+              stroke={isDark ? '#f8fafc' : '#0c1222'}
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"

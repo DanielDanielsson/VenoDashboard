@@ -1,10 +1,12 @@
 import {
   compressTandemBasalHistory,
+  fetchHealthStepHistory,
   fetchGlucoseHistory,
   fetchGlucoseLatest,
   fetchTandemBasalHistory,
   fetchTandemEventHistory,
   pickLatestGlucoseReading,
+  type HealthStepHistoryPoint,
   type TandemBasalHistoryPoint,
   type TandemEventHistoryPoint,
   type MergedGlucosePoint,
@@ -33,6 +35,7 @@ export interface MergedWindowResult {
   shareItems: PulseApiReading[];
   tandemBasalItems: TandemBasalHistoryPoint[];
   tandemEventItems: TandemEventHistoryPoint[];
+  healthStepItems: HealthStepHistoryPoint[];
   merged: MergedGlucosePoint[];
 }
 
@@ -141,12 +144,15 @@ export async function fetchMergedGlucoseWindow(
     fetchChunkedHistory('official', from, to).catch(() => [] as PulseApiReading[]),
     fetchChunkedHistory('share', from, to).catch(() => [] as PulseApiReading[])
   ]);
-  const [tandemBasal, tandemEvents] = await Promise.all([
+  const [tandemBasal, tandemEvents, healthSteps] = await Promise.all([
     fetchTandemBasalHistory(from, to, API_MAX_LIMIT).catch(() => ({
       items: [] as TandemBasalHistoryPoint[]
     })),
     fetchTandemEventHistory(from, to, API_MAX_LIMIT).catch(() => ({
       items: [] as TandemEventHistoryPoint[]
+    })),
+    fetchHealthStepHistory(from, to).catch(() => ({
+      items: [] as HealthStepHistoryPoint[]
     }))
   ]);
   const tandemBasalItems = compressTandemBasalHistory(tandemBasal.items);
@@ -156,6 +162,7 @@ export async function fetchMergedGlucoseWindow(
     shareItems: share,
     tandemBasalItems,
     tandemEventItems: tandemEvents.items,
+    healthStepItems: healthSteps.items,
     merged: mergeGlucoseReadings(officialItems, share)
   };
 }

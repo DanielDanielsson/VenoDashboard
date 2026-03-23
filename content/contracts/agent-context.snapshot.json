@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-03-19T03:48:41.677Z",
+  "generatedAt": "2026-03-23T03:58:09.504Z",
   "baseUrl": "https://api.veno.local",
   "scope": "mixed",
   "endpoints": [
@@ -101,6 +101,127 @@
       "source": "official",
       "tags": [
         "Events"
+      ]
+    },
+    {
+      "id": "docs-openapi",
+      "method": "GET",
+      "path": "/docs/openapi.json",
+      "summary": "OpenAPI contract",
+      "auth": "none",
+      "source": "mixed",
+      "tags": [
+        "Docs"
+      ]
+    },
+    {
+      "id": "docs-agent-context",
+      "method": "GET",
+      "path": "/docs/agent-context.json",
+      "summary": "Agent context contract",
+      "auth": "none",
+      "source": "mixed",
+      "tags": [
+        "Docs"
+      ]
+    },
+    {
+      "id": "glucose-time-in-range",
+      "method": "GET",
+      "path": "/api/v1/glucose/time-in-range",
+      "summary": "Time in range summary",
+      "auth": "api_key",
+      "source": "official",
+      "tags": [
+        "Glucose Analytics"
+      ]
+    },
+    {
+      "id": "health-steps-get",
+      "method": "GET",
+      "path": "/api/v1/health/steps",
+      "summary": "List step buckets for caller API key",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Health and Activity"
+      ]
+    },
+    {
+      "id": "health-steps-post",
+      "method": "POST",
+      "path": "/api/v1/health/steps",
+      "summary": "Upload health step buckets",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Health and Activity"
+      ]
+    },
+    {
+      "id": "tandem-basal-history",
+      "method": "GET",
+      "path": "/api/v1/tandem/basal/history",
+      "summary": "Tandem basal history",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Tandem"
+      ]
+    },
+    {
+      "id": "tandem-events-history",
+      "method": "GET",
+      "path": "/api/v1/tandem/events/history",
+      "summary": "Tandem event history",
+      "auth": "api_key",
+      "source": "official",
+      "tags": [
+        "Tandem"
+      ]
+    },
+    {
+      "id": "timers-list",
+      "method": "GET",
+      "path": "/api/v1/timers",
+      "summary": "List shared timers",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Timers"
+      ]
+    },
+    {
+      "id": "timers-create",
+      "method": "POST",
+      "path": "/api/v1/timers",
+      "summary": "Create shared timer",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Timers"
+      ]
+    },
+    {
+      "id": "timers-remove",
+      "method": "DELETE",
+      "path": "/api/v1/timers/:timerId",
+      "summary": "Remove shared timer",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Timers"
+      ]
+    },
+    {
+      "id": "timers-stream",
+      "method": "GET",
+      "path": "/api/v1/timers/stream",
+      "summary": "Shared timer stream (SSE)",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Timers"
       ]
     },
     {
@@ -269,6 +390,17 @@
       ]
     },
     {
+      "id": "admin-health-steps",
+      "method": "GET",
+      "path": "/api/admin/health/steps",
+      "summary": "Read all stored health step buckets",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
       "id": "cron-sync",
       "method": "GET",
       "path": "/api/cron/sync",
@@ -295,6 +427,17 @@
       "method": "GET",
       "path": "/api/cron/webhook-deliver",
       "summary": "Deliver queued webhooks now",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "cron-tandem-sync",
+      "method": "GET",
+      "path": "/api/cron/tandem-sync",
+      "summary": "Run Tandem sync now",
       "auth": "admin",
       "source": "mixed",
       "tags": [

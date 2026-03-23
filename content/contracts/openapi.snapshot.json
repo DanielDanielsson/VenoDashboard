@@ -4,7 +4,7 @@
     "title": "VenoAPI",
     "version": "1.0.0",
     "description": "Machine readable OpenAPI contract for VenoAPI consumer and operational endpoints.",
-    "x-generatedAt": "2026-03-19T03:48:41.672Z"
+    "x-generatedAt": "2026-03-23T03:58:09.500Z"
   },
   "servers": [
     {
@@ -497,6 +497,507 @@
         },
         "x-pulseglucose-auth": "api_key",
         "x-pulseglucose-source": "official"
+      }
+    },
+    "/docs/openapi.json": {
+      "get": {
+        "operationId": "docs-openapi",
+        "summary": "OpenAPI contract",
+        "description": "Machine readable OpenAPI contract for consumer and operational endpoints.",
+        "tags": [
+          "Docs"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        },
+        "x-pulseglucose-auth": "none",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/docs/agent-context.json": {
+      "get": {
+        "operationId": "docs-agent-context",
+        "summary": "Agent context contract",
+        "description": "Machine readable context contract used by dashboard and AI tooling.",
+        "tags": [
+          "Docs"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        },
+        "x-pulseglucose-auth": "none",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/v1/glucose/time-in-range": {
+      "get": {
+        "operationId": "glucose-time-in-range",
+        "summary": "Time in range summary",
+        "description": "Returns merged official and share time in range summaries for common windows.",
+        "tags": [
+          "Glucose Analytics"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "description": "Supported windows: 3d, 7d, 14d, 30d, 90d. Defaults to 14d.",
+            "schema": {
+              "type": "string",
+              "example": "14d"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "requestedRange": "14d",
+                  "source": "merged",
+                  "from": "2026-02-02T12:00:00.000Z",
+                  "to": "2026-02-16T12:00:00.000Z",
+                  "availableFrom": "2026-02-02T12:00:00.000Z",
+                  "availableTo": "2026-02-16T12:00:00.000Z",
+                  "availableDays": 14,
+                  "availableReadings": 288,
+                  "summaries": []
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "official"
+      }
+    },
+    "/api/v1/health/steps": {
+      "get": {
+        "operationId": "health-steps-get",
+        "summary": "List step buckets for caller API key",
+        "description": "Returns stored health step buckets scoped to the calling consumer API key.",
+        "tags": [
+          "Health and Activity"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "description": "ISO start timestamp for bucket filtering.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-15T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "ISO end timestamp for bucket filtering.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-16T12:00:00.000Z"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "bucketStart": "2026-02-16T11:00:00.000Z",
+                      "bucketEnd": "2026-02-16T12:00:00.000Z",
+                      "stepCount": 1264,
+                      "source": "apple_health"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
+      },
+      "post": {
+        "operationId": "health-steps-post",
+        "summary": "Upload health step buckets",
+        "description": "Stores or updates step buckets for the calling consumer API key.",
+        "tags": [
+          "Health and Activity"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "items": [
+                  {
+                    "bucketStart": "2026-02-16T11:00:00.000Z",
+                    "bucketEnd": "2026-02-16T12:00:00.000Z",
+                    "stepCount": 1264,
+                    "source": "apple_health"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "importedCount": 1,
+                  "rangeStart": "2026-02-16T11:00:00.000Z",
+                  "rangeEnd": "2026-02-16T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/v1/tandem/basal/history": {
+      "get": {
+        "operationId": "tandem-basal-history",
+        "summary": "Tandem basal history",
+        "description": "Returns Tandem basal delivery history for chart overlays and pump analysis.",
+        "tags": [
+          "Tandem"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "description": "ISO start timestamp. Defaults to 24h lookback.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-15T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "ISO end timestamp. Defaults to now.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-16T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max points returned.",
+            "schema": {
+              "type": "string",
+              "example": "288"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "timestamp": "2026-02-16T12:00:00.000Z",
+                      "basalRateUnitsPerHour": 0.8,
+                      "eventName": "BasalDelivery",
+                      "localTimestamp": "2026-02-16T13:00:00",
+                      "pumpTimeZone": "Europe/Stockholm"
+                    }
+                  ],
+                  "meta": {
+                    "from": "2026-02-15T12:00:00.000Z",
+                    "to": "2026-02-16T12:00:00.000Z",
+                    "limit": 288,
+                    "returned": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/v1/tandem/events/history": {
+      "get": {
+        "operationId": "tandem-events-history",
+        "summary": "Tandem event history",
+        "description": "Returns Tandem pump events such as boluses, resumes, suspends, and carbs.",
+        "tags": [
+          "Tandem"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "description": "ISO start timestamp. Defaults to 24h lookback.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-15T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "ISO end timestamp. Defaults to now.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-16T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max events returned.",
+            "schema": {
+              "type": "string",
+              "example": "288"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "timestamp": "2026-02-16T12:00:00.000Z",
+                      "eventName": "BolusDelivery",
+                      "localTimestamp": "2026-02-16T13:00:00",
+                      "pumpTimeZone": "Europe/Stockholm",
+                      "insulinDelivered": 1.5,
+                      "insulinRequested": 1.5,
+                      "iob": 0.8,
+                      "carbsGrams": null,
+                      "glucoseMmolL": null
+                    }
+                  ],
+                  "meta": {
+                    "from": "2026-02-15T12:00:00.000Z",
+                    "to": "2026-02-16T12:00:00.000Z",
+                    "limit": 288,
+                    "returned": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "official"
+      }
+    },
+    "/api/v1/timers": {
+      "get": {
+        "operationId": "timers-list",
+        "summary": "List shared timers",
+        "description": "Returns active shared timers and the current server time.",
+        "tags": [
+          "Timers"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [],
+                  "serverNow": "2026-02-16T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
+      },
+      "post": {
+        "operationId": "timers-create",
+        "summary": "Create shared timer",
+        "description": "Creates a shared timer and publishes timer started notifications.",
+        "tags": [
+          "Timers"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "durationSeconds": 900
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "timer": {
+                    "id": "timer-1",
+                    "durationSeconds": 900,
+                    "createdAt": "2026-02-16T12:00:00.000Z",
+                    "fireAt": "2026-02-16T12:00:00.000Z",
+                    "removedAt": null,
+                    "createdBy": {
+                      "apiKeyId": "8f0a15a7-5f13-43de-982d-9d2fd7d0d840",
+                      "apiKeyName": "menubar-app"
+                    }
+                  },
+                  "serverNow": "2026-02-16T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/v1/timers/:timerId": {
+      "delete": {
+        "operationId": "timers-remove",
+        "summary": "Remove shared timer",
+        "description": "Removes a shared timer and publishes timer removed notifications.",
+        "tags": [
+          "Timers"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "timer": {
+                    "id": "timer-1",
+                    "durationSeconds": 900,
+                    "createdAt": "2026-02-16T12:00:00.000Z",
+                    "fireAt": "2026-02-16T12:00:00.000Z",
+                    "removedAt": "2026-02-16T12:00:00.000Z",
+                    "createdBy": {
+                      "apiKeyId": "8f0a15a7-5f13-43de-982d-9d2fd7d0d840",
+                      "apiKeyName": "menubar-app"
+                    }
+                  },
+                  "serverNow": "2026-02-16T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/v1/timers/stream": {
+      "get": {
+        "operationId": "timers-stream",
+        "summary": "Shared timer stream (SSE)",
+        "description": "Realtime stream for shared timer lifecycle events.",
+        "tags": [
+          "Timers"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "text/event-stream": {
+                "example": {
+                  "event": "timer_started",
+                  "data": {
+                    "timer": {
+                      "id": "timer-1"
+                    },
+                    "serverNow": "2026-02-16T12:00:00.000Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
       }
     },
     "/api/v1/notifications/publish": {
@@ -1016,7 +1517,7 @@
       "post": {
         "operationId": "admin-keys-revoke",
         "summary": "Revoke API key",
-        "description": "Permanently deletes API key by id.",
+        "description": "Revokes an API key by id so it can no longer authenticate.",
         "tags": [
           "Admin and Ops"
         ],
@@ -1225,6 +1726,64 @@
         "x-pulseglucose-source": "mixed"
       }
     },
+    "/api/admin/health/steps": {
+      "get": {
+        "operationId": "admin-health-steps",
+        "summary": "Read all stored health step buckets",
+        "description": "Admin only endpoint that returns aggregated step buckets across all API keys.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "description": "ISO start timestamp for bucket filtering.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-15T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "ISO end timestamp for bucket filtering.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-16T12:00:00.000Z"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "bucketStart": "2026-02-16T11:00:00.000Z",
+                      "bucketEnd": "2026-02-16T12:00:00.000Z",
+                      "stepCount": 1264,
+                      "source": "apple_health"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
     "/api/cron/sync": {
       "get": {
         "operationId": "cron-sync",
@@ -1337,6 +1896,42 @@
                   "delivered": 1,
                   "failed": 0,
                   "retried": 1,
+                  "timestamp": "2026-02-16T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/cron/tandem-sync": {
+      "get": {
+        "operationId": "cron-tandem-sync",
+        "summary": "Run Tandem sync now",
+        "description": "Runs Tandem sync immediately when the backend decides a fresh sync is warranted.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": true,
+                  "inserted": 1,
+                  "pruned": 0,
+                  "metadataUpdated": true,
+                  "eventsRequested": true,
+                  "eventFetchSkipped": false,
                   "timestamp": "2026-02-16T12:00:00.000Z"
                 }
               }

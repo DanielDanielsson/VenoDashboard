@@ -24,6 +24,13 @@ export interface TandemEventChartPoint {
   glucoseMmolL: number | null;
 }
 
+export interface HealthStepChartPoint {
+  bucketStart: string;
+  bucketEnd: string;
+  stepCount: number;
+  source: string;
+}
+
 export interface LatestReading {
   valueMmolL: number;
   valueMgDl: number;
@@ -36,6 +43,7 @@ export interface GlucoseApiResponse {
   items: ChartPoint[];
   basalItems: BasalChartPoint[];
   eventItems: TandemEventChartPoint[];
+  stepItems: HealthStepChartPoint[];
   latest: LatestReading | null;
   meta: {
     from: string;
@@ -45,6 +53,7 @@ export interface GlucoseApiResponse {
     mergedCount: number;
     tandemBasalCount: number;
     tandemEventCount: number;
+    healthStepCount: number;
   };
   error?: { message: string };
 }

@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 
 import { useRef, useEffect, useCallback, useState } from 'react';
-import type { BasalChartPoint, ChartPoint, TandemEventChartPoint } from '@/lib/glucose/types';
+import type { BasalChartPoint, ChartPoint, HealthStepChartPoint, TandemEventChartPoint } from '@/lib/glucose/types';
 import { getGlucoseColor, type GlucoseColorMode } from '@/lib/glucose/tints';
 
 export type { ChartPoint } from '@/lib/glucose/types';
@@ -11,6 +11,7 @@ interface GlucoseChartProps {
   data: ChartPoint[];
   basalData?: BasalChartPoint[];
   eventData?: TandemEventChartPoint[];
+  stepData?: HealthStepChartPoint[];
   height?: number;
   yMax?: number;
   colorMode: GlucoseColorMode;
@@ -19,13 +20,17 @@ interface GlucoseChartProps {
 const LOW_THRESHOLD = 4.0;
 const HIGH_THRESHOLD = 10.0;
 const Y_MIN = 2.0;
-const PADDING = { top: 32, right: 72, bottom: 48, left: 56 };
-const BASAL_BAND_HEIGHT = 88;
-const BASAL_BAND_GAP = 18;
+const PADDING = { top: 32, right: 16, bottom: 48, left: 96 };
+const BASAL_BAND_HEIGHT = 120;
+const BASAL_BAND_GAP = 20;
 const BASAL_TICK_COUNT = 3;
-const EVENT_TRACK_HEIGHT = 24;
-const EVENT_TRACK_GAP = 10;
-const EVENT_MARKER_SPACING_PX = 14;
+const STEP_BAND_HEIGHT = 120;
+const STEP_BAND_GAP = 20;
+const IOB_BAND_HEIGHT = 120;
+const IOB_BAND_GAP = 20;
+const EVENT_TRACK_HEIGHT = 120;
+const EVENT_TRACK_GAP = 20;
+const EVENT_MARKER_SPACING_PX = 22;
 const EVENT_LANE_COUNT = 3;
 const EVENT_HOVER_WINDOW_MS = 3 * 60 * 1000;
 const MAX_PX_PER_MS = 0.04;
@@ -177,6 +182,31 @@ function getBasalTicks(yMax: number): number[] {
   return [0, yMax / 2, yMax].slice(0, BASAL_TICK_COUNT);
 }
 
+function getStepYMax(values: number[]): number {
+  const maxValue = values.length > 0 ? Math.max(...values) : 0;
+  if (maxValue <= 0) {
+    return 0;
+  }
+
+  if (maxValue <= 1000) {
+    return Math.max(250, Math.ceil(maxValue / 250) * 250);
+  }
+
+  if (maxValue <= 5000) {
+    return Math.ceil(maxValue / 500) * 500;
+  }
+
+  return Math.ceil(maxValue / 1000) * 1000;
+}
+
+function getStepTicks(yMax: number): number[] {
+  if (yMax <= 0) {
+    return [];
+  }
+
+  return [0, yMax / 2, yMax];
+}
+
 function snapStrokeCoord(value: number): number {
   return Math.round(value) + 0.5;
 }
@@ -222,6 +252,62 @@ function getHoveredTandemEvents(
   });
 }
 
+function getHoveredIobValue(
+  timestampMs: number | null,
+  points: { timestamp: string; iob: number | null }[]
+): number | null {
+  if (timestampMs === null || points.length === 0) return null;
+  let closest: { timestamp: string; iob: number | null } | null = null;
+  let closestDiff = Number.POSITIVE_INFINITY;
+  for (const pt of points) {
+    const diff = Math.abs(new Date(pt.timestamp).getTime() - timestampMs);
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      closest = pt;
+    }
+  }
+  return closest?.iob ?? null;
+}
+
+function getHoveredSuspendInterval(
+  timestampMs: number | null,
+  eventData: TandemEventChartPoint[]
+): { suspendMs: number; resumeMs: number | null } | null {
+  if (timestampMs === null) return null;
+  const sorted = [...eventData].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+  for (let i = 0; i < sorted.length; i++) {
+    if (sorted[i].eventName !== 'PumpingSuspended') continue;
+    const suspendMs = new Date(sorted[i].timestamp).getTime();
+    const resumeEvent = sorted.find((e, j) => j > i && e.eventName === 'PumpingResumed');
+    const resumeMs = resumeEvent ? new Date(resumeEvent.timestamp).getTime() : null;
+    if (timestampMs >= suspendMs && (resumeMs === null || timestampMs <= resumeMs)) {
+      return { suspendMs, resumeMs };
+    }
+  }
+  return null;
+}
+
+function getHoveredStepBucket(
+  hoveredTimestampMs: number | null,
+  stepData: HealthStepChartPoint[]
+): HealthStepChartPoint | null {
+  if (hoveredTimestampMs === null || stepData.length === 0) {
+    return null;
+  }
+
+  for (const bucket of stepData) {
+    const bucketStartMs = new Date(bucket.bucketStart).getTime();
+    const bucketEndMs = new Date(bucket.bucketEnd).getTime();
+    if (hoveredTimestampMs >= bucketStartMs && hoveredTimestampMs < bucketEndMs) {
+      return bucket;
+    }
+  }
+
+  return null;
+}
+
 function getTandemEventVisual(eventName: string): {
   label: string;
   fill: string;
@@ -229,7 +315,6 @@ function getTandemEventVisual(eventName: string): {
   shape: 'circle' | 'ring' | 'diamond' | 'square' | 'triangle';
 } {
   switch (eventName) {
-    case 'BolusDelivery':
     case 'BolusCompleted':
       return {
         label: 'Bolus',
@@ -303,6 +388,18 @@ function formatTandemEventSummary(event: TandemEventChartPoint): string | null {
   return null;
 }
 
+const SUPPRESSED_EVENT_NAMES = new Set([
+  'BolusDelivery',
+  'BGReading',
+  'UserModeChange',
+  'PCMChange',
+  'PumpingSuspended',
+  'PumpingResumed',
+]);
+
+const GLUCOSE_ICON_PATH1 = 'M125.711 125.711C153.097 98.3253 153.097 53.9246 125.711 26.5391C98.3256 -0.846376 53.9249 -0.846376 26.5394 26.5391C-0.84609 53.9246 -0.846104 98.3253 26.5394 125.711L22.2967 129.953L21.6048 129.253C-7.20186 99.7071 -7.20159 52.5419 21.6055 22.996L22.2967 22.2965C52.0254 -7.43216 100.225 -7.43216 129.954 22.2965L130.645 22.996C159.681 52.7765 159.45 100.457 129.954 129.953L129.254 130.645C99.4737 159.68 51.7932 159.45 22.2967 129.953L26.5394 125.711C53.9249 153.096 98.3256 153.096 125.711 125.711Z';
+const GLUCOSE_ICON_PATH2 = 'M183.914 76.3893L127.872 20.3469C168.804 66.0228 146.708 112.027 129.84 130.17L183.914 76.3893Z';
+
 function drawTandemMarker(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -311,60 +408,29 @@ function drawTandemMarker(
   highlighted: boolean
 ): void {
   const visual = getTandemEventVisual(eventName);
-  const radius = highlighted ? 4.5 : 3.5;
-  ctx.lineWidth = highlighted ? 1.6 : 1.2;
-  ctx.strokeStyle = visual.stroke;
-  ctx.fillStyle = visual.fill;
+  const size = highlighted ? 22 : 18;
+  const iconW = 184;
+  const iconH = 153;
+  const scale = size / iconW;
 
-  switch (visual.shape) {
-    case 'circle':
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      return;
-    case 'ring':
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(x, y, Math.max(1.5, radius - 1.7), 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(2, 6, 23, 0.95)';
-      ctx.fill();
-      return;
-    case 'diamond':
-      ctx.beginPath();
-      ctx.moveTo(x, y - radius - 0.5);
-      ctx.lineTo(x + radius, y);
-      ctx.lineTo(x, y + radius + 0.5);
-      ctx.lineTo(x - radius, y);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      return;
-    case 'square':
-      ctx.beginPath();
-      ctx.rect(x - radius, y - radius, radius * 2, radius * 2);
-      ctx.fill();
-      ctx.stroke();
-      return;
-    case 'triangle':
-      ctx.beginPath();
-      ctx.moveTo(x, y - radius - 1);
-      ctx.lineTo(x + radius, y + radius);
-      ctx.lineTo(x - radius, y + radius);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      return;
-  }
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(-Math.PI / 2);
+  ctx.translate(-(iconW * scale) / 2, -(iconH * scale) / 2);
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = visual.fill;
+  ctx.fill(new Path2D(GLUCOSE_ICON_PATH1));
+  ctx.fill(new Path2D(GLUCOSE_ICON_PATH2));
+
+  ctx.restore();
 }
 
 export function GlucoseChart({
   data,
   basalData = [],
   eventData = [],
+  stepData = [],
   height = 400,
   yMax = 25,
   colorMode
@@ -383,6 +449,22 @@ export function GlucoseChart({
   const [hoveredTimestampMs, setHoveredTimestampMs] = useState<number | null>(null);
   const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
   const dataSignatureRef = useRef('');
+  const [isDark, setIsDark] = useState(() =>
+    typeof document !== 'undefined'
+      ? document.documentElement.classList.contains('theme-dark')
+      : true
+  );
+
+  useEffect(() => {
+    const handleChange = () =>
+      setIsDark(document.documentElement.classList.contains('theme-dark'));
+    window.addEventListener('pulse-theme-change', handleChange);
+    window.addEventListener('storage', handleChange);
+    return () => {
+      window.removeEventListener('pulse-theme-change', handleChange);
+      window.removeEventListener('storage', handleChange);
+    };
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -408,13 +490,24 @@ export function GlucoseChart({
   const chartHeight = Math.max(0, height - PADDING.top - PADDING.bottom);
   const hasBasalBand = basalData.length > 0;
   const hasEventTrack = eventData.length > 0;
-  const basalBandHeight = hasBasalBand ? Math.min(BASAL_BAND_HEIGHT, Math.max(64, chartHeight * 0.3)) : 0;
+  const hasStepBand = stepData.length > 0;
+  const iobPoints = eventData
+    .filter((e) => e.iob !== null)
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  const hasIobBand = iobPoints.length > 0;
+  const basalBandHeight = hasBasalBand ? Math.min(BASAL_BAND_HEIGHT, Math.max(64, chartHeight * 0.4)) : 0;
   const basalGap = hasBasalBand ? BASAL_BAND_GAP : 0;
+  const stepBandHeight = hasStepBand ? STEP_BAND_HEIGHT : 0;
+  const stepGap = hasStepBand ? STEP_BAND_GAP : 0;
   const eventTrackHeight = hasEventTrack ? EVENT_TRACK_HEIGHT : 0;
   const eventGap = hasEventTrack ? EVENT_TRACK_GAP : 0;
-  const glucosePlotHeight = Math.max(0, chartHeight - basalBandHeight - basalGap - eventTrackHeight - eventGap);
+  const iobBandHeight = hasIobBand ? IOB_BAND_HEIGHT : 0;
+  const iobGap = hasIobBand ? IOB_BAND_GAP : 0;
+  const glucosePlotHeight = 240;
   const eventTrackTop = PADDING.top + glucosePlotHeight + eventGap;
   const basalBandTop = eventTrackTop + eventTrackHeight + basalGap;
+  const iobBandTop = basalBandTop + basalBandHeight + iobGap;
+  const stepBandTop = iobBandTop + iobBandHeight + stepGap;
   const fitAllPxPerMs = chartWidth > 0 ? chartWidth / totalDurationMs : 0;
   const minPxPerMs = fitAllPxPerMs > 0 ? fitAllPxPerMs : 0;
   const hoveredPoint = hoveredIndex === null ? null : data[hoveredIndex] ?? null;
@@ -426,7 +519,12 @@ export function GlucoseChart({
           basalTimestamps
         )
       : null;
-  const hoveredEventItems = getHoveredTandemEvents(hoveredTimestampMs, eventData);
+  const hoveredEventItems = getHoveredTandemEvents(hoveredTimestampMs, eventData).filter(
+    (e) => !SUPPRESSED_EVENT_NAMES.has(e.eventName)
+  );
+  const hoveredStepBucket = getHoveredStepBucket(hoveredTimestampMs, stepData);
+  const hoveredSuspendInterval = getHoveredSuspendInterval(hoveredTimestampMs, eventData);
+  const hoveredIobValue = getHoveredIobValue(hoveredTimestampMs, iobPoints);
 
   useEffect(() => {
     if (data.length > 1 && chartWidth > 0 && fitAllPxPerMs > 0) {
@@ -489,6 +587,24 @@ export function GlucoseChart({
     const textSoft = style.getPropertyValue('--text-soft').trim() || '#64748b';
     const textDim = style.getPropertyValue('--text-dim').trim() || '#94a3b8';
     const border = style.getPropertyValue('--border').trim() || 'rgba(148,163,184,0.1)';
+    const basalBandBg      = isDark ? 'rgba(14, 165, 233, 0.07)'  : 'rgba(2, 100, 180, 0.1)';
+    const basalBandBorder  = isDark ? 'rgba(56, 189, 248, 0.18)'  : 'rgba(2, 100, 180, 0.3)';
+    const basalTickLine    = isDark ? 'rgba(56, 189, 248, 0.08)'  : 'rgba(2, 100, 180, 0.18)';
+    const basalTickLabel   = isDark ? 'rgba(125, 211, 252, 0.88)' : 'rgba(2, 80, 150, 0.9)';
+    const basalFillTop     = isDark ? 'rgba(56, 189, 248, 0.48)'  : 'rgba(2, 100, 180, 0.55)';
+    const basalFillBottom  = isDark ? 'rgba(14, 165, 233, 0.14)'  : 'rgba(2, 100, 180, 0.2)';
+    const basalDeliveryMk  = isDark ? 'rgba(186, 230, 253, 0.95)' : 'rgba(2, 80, 150, 0.75)';
+    const basalOtherMk     = isDark ? 'rgba(125, 211, 252, 0.5)'  : 'rgba(2, 80, 150, 0.45)';
+    const basalStroke      = isDark ? 'rgba(186, 230, 253, 0.96)' : 'rgba(2, 80, 150, 0.75)';
+
+    const stepBandBg       = isDark ? 'rgba(245, 158, 11, 0.07)'  : 'rgba(160, 90, 0, 0.1)';
+    const stepBandBorder   = isDark ? 'rgba(251, 191, 36, 0.18)'  : 'rgba(160, 90, 0, 0.3)';
+    const stepTickLine     = isDark ? 'rgba(251, 191, 36, 0.08)'  : 'rgba(160, 90, 0, 0.18)';
+    const stepTickLabel    = isDark ? 'rgba(253, 230, 138, 0.88)' : 'rgba(120, 70, 0, 0.9)';
+    const stepFillTop      = isDark ? 'rgba(251, 191, 36, 0.52)'  : 'rgba(160, 90, 0, 0.55)';
+    const stepFillBottom   = isDark ? 'rgba(245, 158, 11, 0.18)'  : 'rgba(160, 90, 0, 0.2)';
+    const stepBarOutline   = isDark ? 'rgba(253, 224, 71, 0.45)'  : 'rgba(160, 90, 0, 0.45)';
+    const stepBarHovered   = isDark ? 'rgba(254, 240, 138, 1)'    : 'rgba(120, 60, 0, 0.9)';
 
     const yLow = yForValue(LOW_THRESHOLD);
     const yHigh = yForValue(HIGH_THRESHOLD);
@@ -518,18 +634,24 @@ export function GlucoseChart({
     ctx.setLineDash([4, 4]);
     ctx.lineWidth = 1;
 
-    ctx.strokeStyle = getGlucoseColor(LOW_THRESHOLD, colorMode, 0.3);
+    ctx.strokeStyle = getGlucoseColor(LOW_THRESHOLD, colorMode, 0.3, isDark);
     ctx.beginPath();
     ctx.moveTo(PADDING.left, yLow);
     ctx.lineTo(PADDING.left + chartWidth, yLow);
     ctx.stroke();
 
-    ctx.strokeStyle = getGlucoseColor(HIGH_THRESHOLD, colorMode, 0.3);
+    ctx.strokeStyle = getGlucoseColor(HIGH_THRESHOLD, colorMode, 0.3, isDark);
     ctx.beginPath();
     ctx.moveTo(PADDING.left, yHigh);
     ctx.lineTo(PADDING.left + chartWidth, yHigh);
     ctx.stroke();
     ctx.setLineDash([]);
+
+    ctx.font = '10px var(--font-plex-mono), monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = textSoft;
+    ctx.fillText('mmol/L', 8, PADDING.top - 4);
 
     ctx.font = '11px var(--font-plex-mono), monospace';
     ctx.textAlign = 'right';
@@ -550,9 +672,11 @@ export function GlucoseChart({
 
     if (hasEventTrack && eventTrackHeight > 0) {
       const visibleEventItems = eventData.filter((event) => {
+        if (SUPPRESSED_EVENT_NAMES.has(event.eventName)) return false;
         const timestampMs = new Date(event.timestamp).getTime();
         return timestampMs >= visibleStartMs && timestampMs <= visibleEndMs;
       });
+
       const trackMidY = eventTrackTop + eventTrackHeight / 2;
 
       ctx.fillStyle = 'rgba(148, 163, 184, 0.035)';
@@ -561,15 +685,47 @@ export function GlucoseChart({
       ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(PADDING.left, trackMidY);
-      ctx.lineTo(PADDING.left + chartWidth, trackMidY);
+      ctx.moveTo(PADDING.left, eventTrackTop);
+      ctx.lineTo(PADDING.left + chartWidth, eventTrackTop);
       ctx.stroke();
 
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
+      ctx.textBaseline = 'top';
       ctx.font = '10px var(--font-plex-mono), monospace';
       ctx.fillStyle = textSoft;
-      ctx.fillText('Events', PADDING.left + chartWidth + 8, trackMidY);
+      ctx.fillText('Tandem events', 8, eventTrackTop + 4);
+
+      // Draw suspend intervals as red lines
+      const sortedEvents = [...eventData].sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+      for (let i = 0; i < sortedEvents.length; i++) {
+        if (sortedEvents[i].eventName !== 'PumpingSuspended') continue;
+        const suspendMs = new Date(sortedEvents[i].timestamp).getTime();
+        const resumeEvent = sortedEvents.find(
+          (e, j) => j > i && e.eventName === 'PumpingResumed'
+        );
+        const resumeMs = resumeEvent
+          ? new Date(resumeEvent.timestamp).getTime()
+          : visibleEndMs;
+
+        if (resumeMs < visibleStartMs || suspendMs > visibleEndMs) continue;
+
+        const lineStartX = Math.max(xForTimestamp(suspendMs), PADDING.left);
+        const lineEndX = Math.min(xForTimestamp(resumeMs), PADDING.left + chartWidth);
+
+        if (lineEndX <= lineStartX) continue;
+
+        ctx.strokeStyle = isDark ? 'rgba(251, 113, 133, 0.9)' : 'rgba(190, 18, 60, 0.85)';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        const suspendLineY = eventTrackTop + eventTrackHeight - 10;
+        ctx.moveTo(lineStartX, suspendLineY);
+        ctx.lineTo(lineEndX, suspendLineY);
+        ctx.stroke();
+        ctx.lineCap = 'butt';
+      }
 
       const laneLastX = Array.from({ length: EVENT_LANE_COUNT }, () => Number.NEGATIVE_INFINITY);
 
@@ -586,7 +742,7 @@ export function GlucoseChart({
         }
 
         laneLastX[laneIndex] = x;
-        const laneOffset = (laneIndex - (EVENT_LANE_COUNT - 1) / 2) * 6;
+        const laneOffset = (laneIndex - (EVENT_LANE_COUNT - 1) / 2) * 28;
         const y = trackMidY + laneOffset;
         const highlighted = hoveredEventItems.some(
           (hoveredEvent) =>
@@ -614,10 +770,10 @@ export function GlucoseChart({
       const visibleBasalValues = visibleBasal.map((point) => point.basalRateUnitsPerHour);
       const basalYMax = getBasalYMax(visibleBasalValues);
 
-      ctx.fillStyle = 'rgba(14, 165, 233, 0.07)';
+      ctx.fillStyle = basalBandBg;
       ctx.fillRect(PADDING.left, basalBandTop, chartWidth, basalBandHeight);
 
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
+      ctx.strokeStyle = basalBandBorder;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(PADDING.left, basalBandTop);
@@ -627,31 +783,27 @@ export function GlucoseChart({
       if (basalYMax > 0) {
         const basalTicks = getBasalTicks(basalYMax);
 
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
         ctx.font = '10px var(--font-plex-mono), monospace';
         for (const tick of basalTicks) {
           const y =
             basalBandTop + basalBandHeight - (tick / basalYMax) * basalBandHeight;
-          ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+          ctx.strokeStyle = basalTickLine;
           ctx.lineWidth = 0.5;
           ctx.beginPath();
           ctx.moveTo(PADDING.left, y);
           ctx.lineTo(PADDING.left + chartWidth, y);
           ctx.stroke();
 
-          ctx.fillStyle = 'rgba(125, 211, 252, 0.88)';
-          ctx.fillText(
-            tick.toFixed(tick % 1 === 0 ? 0 : 1),
-            PADDING.left + chartWidth + 8,
-            y
-          );
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = basalTickLabel;
+          ctx.fillText(tick.toFixed(tick % 1 === 0 ? 0 : 1), PADDING.left - 8, y);
         }
 
         ctx.textAlign = 'left';
-        ctx.textBaseline = 'bottom';
+        ctx.textBaseline = 'top';
         ctx.fillStyle = textSoft;
-        ctx.fillText('Basal U/hr', PADDING.left + chartWidth + 8, basalBandTop - 4);
+        ctx.fillText('Basal U/hr', 8, basalBandTop + 4);
 
         ctx.save();
         ctx.beginPath();
@@ -660,8 +812,8 @@ export function GlucoseChart({
 
         const basalFloorY = basalBandTop + basalBandHeight - 2;
         const basalFill = ctx.createLinearGradient(0, basalBandTop, 0, basalFloorY);
-        basalFill.addColorStop(0, 'rgba(56, 189, 248, 0.48)');
-        basalFill.addColorStop(1, 'rgba(14, 165, 233, 0.14)');
+        basalFill.addColorStop(0, basalFillTop);
+        basalFill.addColorStop(1, basalFillBottom);
 
         let hasBasalPath = false;
         let previousStepEndX: number | null = null;
@@ -712,15 +864,15 @@ export function GlucoseChart({
           if (timestampMs >= visibleStartMs && timestampMs <= visibleEndMs) {
             ctx.fillStyle =
               point.eventName === 'BasalDelivery'
-                ? 'rgba(186, 230, 253, 0.95)'
-                : 'rgba(125, 211, 252, 0.5)';
+                ? basalDeliveryMk
+                : basalOtherMk;
             const markerX = snapFillCoord(Math.max(PADDING.left, startX));
             ctx.fillRect(markerX, fillY - 4, 1, 4);
           }
         }
 
         if (hasBasalPath) {
-          ctx.strokeStyle = 'rgba(186, 230, 253, 0.96)';
+          ctx.strokeStyle = basalStroke;
           ctx.lineWidth = 1.25;
           ctx.lineJoin = 'round';
           ctx.lineCap = 'round';
@@ -733,7 +885,179 @@ export function GlucoseChart({
         ctx.textBaseline = 'top';
         ctx.font = '10px var(--font-plex-mono), monospace';
         ctx.fillStyle = textSoft;
-        ctx.fillText('Basal U/hr', PADDING.left + chartWidth + 8, basalBandTop);
+        ctx.fillText('Basal U/hr', 8, basalBandTop + 4);
+      }
+    }
+
+    if (hasStepBand && stepBandHeight > 0) {
+      const visibleStepBuckets = stepData.filter((bucket) => {
+        const bucketStartMs = new Date(bucket.bucketStart).getTime();
+        const bucketEndMs = new Date(bucket.bucketEnd).getTime();
+        return bucketEndMs > visibleStartMs && bucketStartMs < visibleEndMs;
+      });
+      const stepYMax = getStepYMax(visibleStepBuckets.map((bucket) => bucket.stepCount));
+
+      ctx.fillStyle = stepBandBg;
+      ctx.fillRect(PADDING.left, stepBandTop, chartWidth, stepBandHeight);
+
+      ctx.strokeStyle = stepBandBorder;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(PADDING.left, stepBandTop);
+      ctx.lineTo(PADDING.left + chartWidth, stepBandTop);
+      ctx.stroke();
+
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.font = '10px var(--font-plex-mono), monospace';
+
+      if (stepYMax > 0) {
+        const stepTicks = getStepTicks(stepYMax);
+
+        for (const tick of stepTicks) {
+          const y =
+            stepBandTop + stepBandHeight - (tick / stepYMax) * stepBandHeight;
+          ctx.strokeStyle = stepTickLine;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(PADDING.left, y);
+          ctx.lineTo(PADDING.left + chartWidth, y);
+          ctx.stroke();
+
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = stepTickLabel;
+          ctx.fillText(tick.toFixed(0), PADDING.left - 8, y);
+        }
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = textSoft;
+        ctx.fillText('Steps', 8, stepBandTop + 4);
+
+        const stepFloorY = stepBandTop + stepBandHeight - 2;
+        const stepFill = ctx.createLinearGradient(0, stepBandTop, 0, stepFloorY);
+        stepFill.addColorStop(0, stepFillTop);
+        stepFill.addColorStop(1, stepFillBottom);
+
+        for (const bucket of visibleStepBuckets) {
+          const bucketStartMs = new Date(bucket.bucketStart).getTime();
+          const bucketEndMs = new Date(bucket.bucketEnd).getTime();
+          const clampedStartMs = Math.max(bucketStartMs, visibleStartMs);
+          const clampedEndMs = Math.min(bucketEndMs, visibleEndMs);
+
+          if (clampedEndMs <= clampedStartMs) {
+            continue;
+          }
+
+          const startX = snapFillCoord(xForTimestamp(clampedStartMs));
+          const endX = snapFillCoord(xForTimestamp(clampedEndMs));
+          const width = Math.max(2, endX - startX);
+          const barHeight = Math.max(
+            2,
+            (bucket.stepCount / stepYMax) * (stepBandHeight - 8)
+          );
+          const fillY = snapFillCoord(stepFloorY - barHeight);
+
+          ctx.fillStyle = stepFill;
+          ctx.fillRect(startX, fillY, width, stepFloorY - fillY);
+
+          ctx.strokeStyle =
+            hoveredStepBucket &&
+            hoveredStepBucket.bucketStart === bucket.bucketStart &&
+            hoveredStepBucket.bucketEnd === bucket.bucketEnd
+              ? stepBarHovered
+              : stepBarOutline;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(startX + 0.5, fillY + 0.5, Math.max(1, width - 1), Math.max(1, stepFloorY - fillY - 1));
+        }
+      } else {
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = textSoft;
+        ctx.fillText('Steps', 8, stepBandTop + 4);
+      }
+    }
+
+    if (hasIobBand && iobBandHeight > 0) {
+      const visibleIob = iobPoints.filter((pt) => {
+        const t = new Date(pt.timestamp).getTime();
+        return t >= visibleStartMs - 30 * 60 * 1000 && t <= visibleEndMs + 30 * 60 * 1000;
+      });
+      const iobValues = visibleIob.map((pt) => pt.iob as number);
+      const iobYMax = Math.max(1, ...iobValues) * 1.15;
+
+      const iobColor = isDark ? 'rgba(167, 139, 250, 0.9)' : 'rgba(109, 40, 217, 0.85)';
+      const iobFill  = isDark ? 'rgba(167, 139, 250, 0.07)' : 'rgba(109, 40, 217, 0.07)';
+
+      ctx.fillStyle = iobFill;
+      ctx.fillRect(PADDING.left, iobBandTop, chartWidth, iobBandHeight);
+
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(PADDING.left, iobBandTop);
+      ctx.lineTo(PADDING.left + chartWidth, iobBandTop);
+      ctx.stroke();
+
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.font = '10px var(--font-plex-mono), monospace';
+      ctx.fillStyle = textSoft;
+      ctx.fillText('IOB', 8, iobBandTop + 4);
+
+      const iobFloorY = iobBandTop + iobBandHeight - 4;
+
+      function yForIob(value: number): number {
+        return iobFloorY - (value / iobYMax) * (iobBandHeight - 8);
+      }
+
+      // Tick lines and labels
+      const iobTickCount = 3;
+      for (let i = 0; i <= iobTickCount; i++) {
+        const tickVal = (iobYMax * i) / iobTickCount;
+        const y = yForIob(tickVal);
+        ctx.strokeStyle = isDark ? 'rgba(167, 139, 250, 0.08)' : 'rgba(109, 40, 217, 0.1)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(PADDING.left, y);
+        ctx.lineTo(PADDING.left + chartWidth, y);
+        ctx.stroke();
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = iobColor;
+        ctx.fillText(tickVal.toFixed(1), PADDING.left - 8, y);
+      }
+
+      // IOB line
+      if (visibleIob.length > 1) {
+        ctx.strokeStyle = iobColor;
+        ctx.lineWidth = 2;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        let started = false;
+        for (const pt of visibleIob) {
+          const t = new Date(pt.timestamp).getTime();
+          const x = xForTimestamp(t);
+          const y = yForIob(pt.iob as number);
+          if (!started) {
+            ctx.moveTo(x, y);
+            started = true;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+
+        // Dot at hovered position
+        if (hoveredIobValue !== null && hoveredTimestampMs !== null) {
+          const hx = xForTimestamp(hoveredTimestampMs);
+          const hy = yForIob(hoveredIobValue);
+          ctx.beginPath();
+          ctx.arc(hx, hy, 4, 0, Math.PI * 2);
+          ctx.fillStyle = iobColor;
+          ctx.fill();
+        }
       }
     }
 
@@ -817,7 +1141,7 @@ export function GlucoseChart({
       const y2 = yForValue(data[i + 1].valueMmolL);
       const avgValue = (data[i].valueMmolL + data[i + 1].valueMmolL) / 2;
 
-      ctx.strokeStyle = getGlucoseColor(avgValue, colorMode);
+      ctx.strokeStyle = getGlucoseColor(avgValue, colorMode, 1, isDark);
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
@@ -829,7 +1153,7 @@ export function GlucoseChart({
       for (let i = startIdx; i <= endIdx; i++) {
         const x = xForTimestamp(timestamps[i]);
         const y = yForValue(data[i].valueMmolL);
-        const color = getGlucoseColor(data[i].valueMmolL, colorMode);
+        const color = getGlucoseColor(data[i].valueMmolL, colorMode, 1, isDark);
         const isShare = data[i].source === 'share';
 
         ctx.beginPath();
@@ -865,7 +1189,7 @@ export function GlucoseChart({
 
       ctx.beginPath();
       ctx.arc(hoverX, hoverY, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = getGlucoseColor(data[hoveredIndex].valueMmolL, colorMode);
+      ctx.fillStyle = getGlucoseColor(data[hoveredIndex].valueMmolL, colorMode, 1, isDark);
       ctx.fill();
     }
 
@@ -887,6 +1211,7 @@ export function GlucoseChart({
     basalBandHeight,
     basalBandTop,
     basalData,
+    hasStepBand,
     chartHeight,
     chartWidth,
     colorMode,
@@ -902,12 +1227,25 @@ export function GlucoseChart({
     height,
     hoveredIndex,
     hoveredEventItems,
+    hoveredStepBucket,
+    hoveredSuspendInterval,
+    stepBandHeight,
+    stepBandTop,
+    stepData,
+    stepGap,
     timeEndMs,
     timeStartMs,
     timestamps,
     basalTimestamps,
     totalDurationMs,
-    yMax
+    yMax,
+    isDark,
+    iobPoints,
+    iobBandHeight,
+    iobBandTop,
+    iobGap,
+    hasIobBand,
+    hoveredIobValue
   ]);
 
   useEffect(() => {
@@ -1082,7 +1420,7 @@ export function GlucoseChart({
             fontSize: 20,
             fontWeight: 700,
             fontFamily: 'var(--font-plex-mono), monospace',
-            color: getGlucoseColor(hoveredPoint.valueMmolL, colorMode)
+            color: getGlucoseColor(hoveredPoint.valueMmolL, colorMode, 1, isDark)
           }}>
             {hoveredPoint.valueMmolL.toFixed(1)} <span style={{ fontSize: 11, color: 'var(--text-soft)' }}>mmol/L</span>
           </p>
@@ -1127,6 +1465,43 @@ export function GlucoseChart({
                 color: 'var(--text-dim)'
               }}>
                 {hoveredBasalPoint.eventName}
+              </p>
+            </div>
+          )}
+          {hoveredStepBucket && (
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+              <p style={{
+                margin: 0,
+                fontSize: 10,
+                color: 'var(--text-soft)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em'
+              }}>
+                Steps
+              </p>
+              <p style={{
+                margin: '3px 0 0',
+                fontSize: 16,
+                fontWeight: 700,
+                fontFamily: 'var(--font-plex-mono), monospace',
+                color: 'rgba(253, 224, 71, 0.96)'
+              }}>
+                {hoveredStepBucket.stepCount.toLocaleString()}
+              </p>
+              <p style={{
+                margin: '2px 0 0',
+                fontSize: 10,
+                color: 'var(--text-dim)'
+              }}>
+                {new Date(hoveredStepBucket.bucketStart).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}{' '}
+                to{' '}
+                {new Date(hoveredStepBucket.bucketEnd).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
               </p>
             </div>
           )}
@@ -1185,6 +1560,50 @@ export function GlucoseChart({
                   );
                 })}
               </div>
+            </div>
+          )}
+          {hoveredIobValue !== null && (
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+              <p style={{
+                margin: 0,
+                fontSize: 10,
+                color: 'var(--text-soft)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em'
+              }}>
+                IOB
+              </p>
+              <p style={{
+                margin: '3px 0 0',
+                fontSize: 16,
+                fontWeight: 700,
+                fontFamily: 'var(--font-plex-mono), monospace',
+                color: isDark ? 'rgba(167, 139, 250, 0.9)' : 'rgba(109, 40, 217, 0.85)'
+              }}>
+                {hoveredIobValue.toFixed(2)}{' '}
+                <span style={{ fontSize: 10, color: 'var(--text-soft)' }}>U</span>
+              </p>
+            </div>
+          )}
+          {hoveredSuspendInterval && (
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+              <p style={{
+                margin: 0,
+                fontSize: 10,
+                color: isDark ? 'rgba(251, 113, 133, 0.9)' : 'rgba(190, 18, 60, 0.85)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                fontWeight: 700
+              }}>
+                Suspended
+              </p>
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-dim)' }}>
+                {new Date(hoveredSuspendInterval.suspendMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {' → '}
+                {hoveredSuspendInterval.resumeMs
+                  ? new Date(hoveredSuspendInterval.resumeMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : 'ongoing'}
+              </p>
             </div>
           )}
         </div>

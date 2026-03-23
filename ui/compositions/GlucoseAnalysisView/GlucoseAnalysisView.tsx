@@ -65,16 +65,43 @@ function getStoredChartColorMode(): GlucoseColorMode {
   }
 }
 
+function getInitialIsDark(): boolean {
+  try {
+    return document.documentElement.classList.contains('theme-dark');
+  } catch {
+    return true;
+  }
+}
+
+function getInitialChartHeight(): number {
+  try {
+    return window.innerWidth < 640 ? 600 : 880;
+  } catch {
+    return 880;
+  }
+}
+
 export function GlucoseAnalysisView() {
   const [selection, setSelection] = useState<HistorySelection>({
     kind: 'preset',
     range: '24h'
   });
-  const [chartHeight] = useState(() =>
-    globalThis.window !== undefined && globalThis.window.innerWidth < 640 ? 340 : 500
-  );
+  const [chartHeight] = useState(getInitialChartHeight);
+  const [isDark, setIsDark] = useState(getInitialIsDark);
+
+  useEffect(() => {
+    const read = () => document.documentElement.classList.contains('theme-dark');
+    const handleChange = () => setIsDark(read());
+    window.addEventListener('pulse-theme-change', handleChange);
+    window.addEventListener('storage', handleChange);
+    return () => {
+      window.removeEventListener('pulse-theme-change', handleChange);
+      window.removeEventListener('storage', handleChange);
+    };
+  }, []);
   const [chartYMaxInput, setChartYMaxInput] = useState('25');
   const [chartColorMode, setChartColorMode] = useState<GlucoseColorMode>(getStoredChartColorMode);
+
   const isApplyingUpdatesRef = useRef(false);
   const { cache, mutate: globalMutate } = useSWRConfig();
 
@@ -166,7 +193,10 @@ export function GlucoseAnalysisView() {
     sourceKey
   ]);
 
-  const avgColor = stats.avg < 4 ? '#fb7185' : stats.avg > 10 ? '#fbbf24' : '#34d399';
+  const lowColor  = isDark ? '#fb7185' : '#be123c';
+  const highColor = isDark ? '#fbbf24' : '#ca8a04';
+  const normColor = isDark ? '#34d399' : '#059669';
+  const avgColor  = stats.avg < 4 ? lowColor : stats.avg > 10 ? highColor : normColor;
 
   const hasData = !error && data && data.items.length > 0;
 
@@ -186,7 +216,7 @@ export function GlucoseAnalysisView() {
           {hasData ? (
             <div className="flex items-end justify-center gap-6" style={{ opacity: isTransitioning ? 0.45 : 1, transition: 'opacity 200ms ease' }}>
               <div className="grid gap-4 justify-items-center pb-0.5">
-                <span className="font-mono text-xl font-semibold leading-none" style={{ color: stats.min < 4 ? '#fb7185' : 'var(--text-dim)' }}>{stats.min.toFixed(1)}</span>
+                <span className="font-mono text-xl font-semibold leading-none" style={{ color: stats.min < 4 ? lowColor : 'var(--text-dim)' }}>{stats.min.toFixed(1)}</span>
                 <span className="text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-(--text-soft)">Min</span>
               </div>
               <div className="grid gap-4 justify-items-center">
@@ -194,7 +224,7 @@ export function GlucoseAnalysisView() {
                 <span className="text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-(--text-soft)">Avg</span>
               </div>
               <div className="grid gap-4 justify-items-center pb-0.5">
-                <span className="font-mono text-xl font-semibold leading-none" style={{ color: stats.max > 10 ? '#fbbf24' : 'var(--text-dim)' }}>{stats.max.toFixed(1)}</span>
+                <span className="font-mono text-xl font-semibold leading-none" style={{ color: stats.max > 10 ? highColor : 'var(--text-dim)' }}>{stats.max.toFixed(1)}</span>
                 <span className="text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-(--text-soft)">Max</span>
               </div>
             </div>
@@ -283,7 +313,12 @@ export function GlucoseAnalysisView() {
       </div>
 
       {/* Glucose Chart */}
-      <DashboardPanel title="Glucose Timeline">
+      <DashboardPanel
+        title="Glucose Timeline"
+        headerRight={
+          <span className="text-[10px] tracking-wide text-(--text-soft)">⌘ + Scroll to zoom · Drag to pan</span>
+        }
+      >
         <div style={{ position: 'relative', minHeight: chartHeight, margin: '-1.5rem' }}>
           {isFirstLoad && (
             <div className="absolute inset-0 z-5 flex flex-col items-center justify-center gap-3">
@@ -324,6 +359,7 @@ export function GlucoseAnalysisView() {
                   data={data.items}
                   basalData={data.basalItems}
                   eventData={data.eventItems}
+                  stepData={data.stepItems}
                   height={chartHeight}
                   yMax={chartYMax}
                   colorMode={chartColorMode}

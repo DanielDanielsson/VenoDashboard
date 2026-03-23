@@ -1,5 +1,5 @@
 import type { PulseApiReading } from '@/lib/pulse-api/types';
-import { getApiBaseUrl } from '@/lib/pulse-api/env';
+import { getAdminApiToken, getApiBaseUrl } from '@/lib/pulse-api/env';
 import { fetchWithApiAuth } from '@/lib/pulse-api/auth-fetch';
 
 export interface GlucoseHistoryResponse {
@@ -50,6 +50,17 @@ export interface TandemEventHistoryResponse {
     limit: number;
     returned: number;
   };
+}
+
+export interface HealthStepHistoryPoint {
+  bucketStart: string;
+  bucketEnd: string;
+  stepCount: number;
+  source: string;
+}
+
+export interface HealthStepHistoryResponse {
+  items: HealthStepHistoryPoint[];
 }
 
 const BASAL_VISUAL_STEP = 0.1;
@@ -202,6 +213,28 @@ export async function fetchTandemEventHistory(
   }
 
   return response.json() as Promise<TandemEventHistoryResponse>;
+}
+
+export async function fetchHealthStepHistory(
+  from: string,
+  to: string
+): Promise<HealthStepHistoryResponse> {
+  const url = new URL(resolveUrl('/api/admin/health/steps'));
+  url.searchParams.set('from', from);
+  url.searchParams.set('to', to);
+
+  const response = await fetch(url.toString(), {
+    cache: 'no-store',
+    headers: {
+      Authorization: `Bearer ${getAdminApiToken()}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Health step history failed with status ${response.status}`);
+  }
+
+  return response.json() as Promise<HealthStepHistoryResponse>;
 }
 
 export function pickLatestGlucoseReading(

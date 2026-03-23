@@ -90,6 +90,20 @@ function pickEventItemsForWindow(
   });
 }
 
+function pickStepItemsForWindow(
+  stepItems: GlucoseApiResponse['stepItems'],
+  window: HistoryWindow
+): GlucoseApiResponse['stepItems'] {
+  const fromMs = toMs(window.from);
+  const toMsValue = toMs(window.to);
+
+  return stepItems.filter((item) => {
+    const bucketStartMs = toMs(item.bucketStart);
+    const bucketEndMs = toMs(item.bucketEnd);
+    return bucketEndMs > fromMs && bucketStartMs < toMsValue;
+  });
+}
+
 export function pickBestLoadedSourceKey(
   cache: HistoryCacheLike,
   selection: HistorySelection
@@ -180,12 +194,14 @@ export function sliceHistoryResponseToWindow(
   const shareCount = items.length - officialCount;
   const basalItems = pickBasalItemsForWindow(sourceData.basalItems, window);
   const eventItems = pickEventItemsForWindow(sourceData.eventItems, window);
+  const stepItems = pickStepItemsForWindow(sourceData.stepItems, window);
 
   return {
     ...sourceData,
     items,
     basalItems,
     eventItems,
+    stepItems,
     meta: {
       from: window.from,
       to: window.to,
@@ -193,7 +209,8 @@ export function sliceHistoryResponseToWindow(
       shareCount,
       mergedCount: items.length,
       tandemBasalCount: basalItems.length,
-      tandemEventCount: eventItems.length
+      tandemEventCount: eventItems.length,
+      healthStepCount: stepItems.length
     }
   };
 }

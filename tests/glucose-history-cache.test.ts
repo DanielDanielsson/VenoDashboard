@@ -56,6 +56,20 @@ function response(from: string, to: string): GlucoseApiResponse {
         glucoseMmolL: null
       }
     ],
+    stepItems: [
+      {
+        bucketStart: '2026-03-06T11:00:00.000Z',
+        bucketEnd: '2026-03-06T12:00:00.000Z',
+        stepCount: 432,
+        source: 'apple_health'
+      },
+      {
+        bucketStart: '2026-03-06T12:00:00.000Z',
+        bucketEnd: '2026-03-06T13:00:00.000Z',
+        stepCount: 1180,
+        source: 'apple_health'
+      }
+    ],
     latest: {
       timestamp: to,
       valueMmolL: 5.8,
@@ -70,7 +84,8 @@ function response(from: string, to: string): GlucoseApiResponse {
       shareCount: 1,
       mergedCount: 3,
       tandemBasalCount: 2,
-      tandemEventCount: 2
+      tandemEventCount: 2,
+      healthStepCount: 2
     }
   };
 }
@@ -120,10 +135,12 @@ describe('glucose history cache helpers', () => {
     expect(sliced.eventItems).toHaveLength(2);
     expect(sliced.eventItems[0].timestamp).toBe('2026-03-06T07:30:00.000Z');
     expect(sliced.eventItems[1].timestamp).toBe('2026-03-06T15:30:00.000Z');
+    expect(sliced.stepItems).toHaveLength(2);
     expect(sliced.meta.officialCount).toBe(0);
     expect(sliced.meta.shareCount).toBe(1);
     expect(sliced.meta.tandemBasalCount).toBe(2);
     expect(sliced.meta.tandemEventCount).toBe(2);
+    expect(sliced.meta.healthStepCount).toBe(2);
   });
 
   test('keeps the last basal step before the requested window', () => {
@@ -152,6 +169,7 @@ describe('glucose history cache helpers', () => {
     expect(sliced.basalItems[0].timestamp).toBe('2026-03-06T04:00:00.000Z');
     expect(sliced.meta.tandemBasalCount).toBe(3);
     expect(sliced.meta.tandemEventCount).toBe(2);
+    expect(sliced.meta.healthStepCount).toBe(2);
   });
 
   test('buildPresetWindow uses the requested preset duration ending at the provided timestamp', () => {
