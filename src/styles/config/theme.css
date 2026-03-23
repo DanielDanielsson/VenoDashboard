@@ -49,8 +49,8 @@
     --border-strong: rgb(148 163 184 / 0.18);
     --border-hover: rgb(17 185 129 / 0.28);
     --text: #e8edf5;
-    --text-dim: var(--color-base-ink-soft);
-    --text-soft: #64748b;
+    --text-dim: #c0ccd8;
+    --text-soft: #8898ab;
     --accent: var(--color-base-accent-bright);
     --accent-soft: rgb(17 185 129 / 0.08);
     --accent-strong: var(--color-base-accent-bright-strong);
