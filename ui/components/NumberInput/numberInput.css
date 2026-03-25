@@ -1,0 +1,39 @@
+@custom-variant theme-number-input-light (.theme-number-input-light);
+@custom-variant theme-number-input-dark (.theme-number-input-dark);
+
+@layer theme {
+    :root {
+        --color-number-input-bg: transparent;
+        --color-number-input-border: rgb(90 70 50 / 0.25);
+        --color-number-input-focus-border: var(--color-base-ink);
+        --color-number-input-text: var(--text);
+    }
+
+    .theme-dark {
+        --color-number-input-bg: transparent;
+        --color-number-input-border: rgba(148, 163, 184, 0.3);
+        --color-number-input-focus-border: #e8edf5;
+        --color-number-input-text: var(--text);
+    }
+
+    .theme-number-input-light {
+        --color-number-input-bg: transparent;
+        --color-number-input-border: rgb(90 70 50 / 0.25);
+        --color-number-input-focus-border: var(--color-base-ink);
+        --color-number-input-text: var(--text);
+    }
+
+    .theme-number-input-dark {
+        --color-number-input-bg: transparent;
+        --color-number-input-border: rgba(148, 163, 184, 0.3);
+        --color-number-input-focus-border: #e8edf5;
+        --color-number-input-text: var(--text);
+    }
+}
+
+@theme inline {
+    --color-number-input-bg: var(--color-number-input-bg);
+    --color-number-input-border: var(--color-number-input-border);
+    --color-number-input-focus-border: var(--color-number-input-focus-border);
+    --color-number-input-text: var(--color-number-input-text);
+}

@@ -138,7 +138,7 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
             <h1 className="dashboard-section__title">API Keys</h1>
             <p className="dashboard-section__meta">Create, revoke, and rotate consumer API keys without leaving the dashboard.</p>
           </div>
-          <div className="ui_caption rounded-full border border-[var(--border)] px-4 py-2 text-[var(--text-dim)]">
+          <div className="ui_caption rounded-full border border-(--border) px-4 py-2 text-(--text-dim)">
             {items.length} active
           </div>
         </div>
@@ -148,7 +148,7 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Client name"
-            className="ui_input_text w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-[var(--text)] outline-none"
+            className="ui_input_text w-full rounded-2xl border border-(--border) bg-(--surface-muted) px-4 py-3 text-(--text) outline-none"
           />
           <button type="button" onClick={createKey} className="button-primary" disabled={busy}>
             {busy ? 'Working...' : 'Create key'}
@@ -181,7 +181,7 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
               ? 'border-rose-400/30 bg-rose-500/10 text-rose-200'
               : messageTone === 'success'
                 ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200'
-                : 'border-[var(--border)] bg-[var(--surface-muted)] text-[var(--text-dim)]'
+                : 'border-(--border) bg-(--surface-muted) text-(--text-dim)'
           }`}
         >
           {message}
@@ -191,7 +191,7 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
       <section className="panel dashboard-section overflow-hidden">
         <div className="overflow-x-auto">
           <table className="ui_table_text min-w-full text-left">
-            <thead className="ui_table_heading border-b border-[var(--border)] text-[var(--text-dim)]">
+            <thead className="ui_table_heading border-b border-(--border) text-(--text-dim)">
               <tr>
                 <th className="px-4 py-4">Name</th>
                 <th className="px-4 py-4">ID</th>
@@ -201,10 +201,10 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
                 <th className="px-4 py-4">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--border)]">
+            <tbody className="divide-y divide-(--border)">
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="body_text px-4 py-8 text-center text-[var(--text-dim)]">
+                  <td colSpan={6} className="body_text px-4 py-8 text-center text-(--text-dim)">
                     No API keys created yet.
                   </td>
                 </tr>
@@ -212,11 +212,11 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
 
               {items.map((item) => (
                 <tr key={item.id}>
-                  <td className="ui_table_text_strong px-4 py-4 text-[var(--text)]">{item.name}</td>
-                  <td className="ui_mono_text px-4 py-4 text-[var(--text-dim)]">{item.id}</td>
+                  <td className="ui_table_text_strong px-4 py-4 text-(--text)">{item.name}</td>
+                  <td className="ui_mono_text px-4 py-4 text-(--text-dim)">{item.id}</td>
                   <td className="ui_table_text px-4 py-4 text-emerald-300">{item.status}</td>
-                  <td className="ui_table_text px-4 py-4 text-[var(--text-dim)]">{new Date(item.createdAt).toLocaleString()}</td>
-                  <td className="ui_table_text px-4 py-4 text-[var(--text-dim)]">
+                  <td className="ui_table_text px-4 py-4 text-(--text-dim)">{new Date(item.createdAt).toLocaleString()}</td>
+                  <td className="ui_table_text px-4 py-4 text-(--text-dim)">
                     {item.lastUsedAt ? new Date(item.lastUsedAt).toLocaleString() : 'Never'}
                   </td>
                   <td className="px-4 py-4">

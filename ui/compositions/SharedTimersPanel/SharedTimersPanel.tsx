@@ -387,7 +387,7 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
               value={customValue}
               onChange={(event) => setCustomValue(event.target.value)}
               placeholder="Custom (5, mm:ss, 90s)"
-              className="ui_input_text w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-(--text) outline-none placeholder:text-(--text-dim) focus:border-(--border-focus, var(--border))"
+              className="ui_input_text w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-(--text) outline-none placeholder:text-(--text-dim) focus:border-(--border)"
             />
             {customError && <p className="ui_caption text-rose-300">{customError}</p>}
             {errorMessage && <p className="ui_caption text-rose-300">{errorMessage}</p>}

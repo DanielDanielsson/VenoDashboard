@@ -3,6 +3,7 @@
 
 @import "../../ui/components/DashboardPanel/dashboardPanel.css";
 @import "../../ui/components/NavigationLink/navigationLink.css";
+@import "../../ui/components/NumberInput/numberInput.css";
 @import "../../ui/components/SecondaryButton/secondaryButton.css";
 @import "../../ui/compositions/AppShell/appShell.css";
 @import "../../ui/compositions/LiveGlucosePanel/liveGlucosePanel.css";

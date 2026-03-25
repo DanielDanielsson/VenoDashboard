@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { twMerge } from 'tailwind-merge';
 import type { NumberInputProps } from './NumberInput.types';
+import './numberInput.css';
 
 export const NumberInput = ({
   label,
@@ -25,7 +26,7 @@ export const NumberInput = ({
       inputMode="numeric"
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="ui_caption_strong w-16 rounded-[4px] border border-[var(--color-secondary-button-inactive-border)] bg-transparent px-2 py-0.5 font-mono text-(--text) transition-colors focus:border-[var(--color-secondary-button-active-border)] focus:outline-none"
+      className="ui_mono_text w-16 rounded-[4px] border border-number-input-border bg-number-input-bg px-2 py-0.5 text-number-input-text transition-colors focus:border-number-input-focus-border focus:outline-none"
       aria-label={ariaLabel ?? label}
     />
   </label>
