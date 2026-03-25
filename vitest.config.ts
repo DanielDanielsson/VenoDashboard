@@ -5,11 +5,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
-      '@content': path.resolve(__dirname, 'content')
+      '@content': path.resolve(__dirname, 'content'),
+      '@ui': path.resolve(__dirname, 'ui')
     }
   },
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts']
+    include: ['tests/**/*.test.ts', 'ui/**/*.spec.ts', 'ui/**/*.spec.tsx'],
+    setupFiles: ['./tests/setup.ts']
   }
 });
