@@ -1450,12 +1450,11 @@ export function GlucoseChart({
       />
       {hoveredPoint && (
         <div
+          className="rounded border border-border-strong bg-surface-strong"
           style={{
             position: 'absolute',
             left: Math.min(hoverPos.x + 12, containerWidth - 180),
             top: Math.max(8, hoverPos.y - 82),
-            background: 'var(--surface-strong)',
-            border: '1px solid var(--border-strong)',
             borderRadius: 'var(--radius)',
             padding: '8px 12px',
             pointerEvents: 'none',
@@ -1465,39 +1464,39 @@ export function GlucoseChart({
           }}
         >
           <p className="ui_mono_value_lg" style={{ margin: 0, color: getGlucoseColor(hoveredPoint.valueMmolL, colorMode, 1, isDark) }}>
-            {hoveredPoint.valueMmolL.toFixed(1)} <span className="ui_caption" style={{ color: 'var(--text-soft)' }}>mmol/L</span>
+            {hoveredPoint.valueMmolL.toFixed(1)} <span className="ui_caption text-text-soft">mmol/L</span>
           </p>
-          <p className="ui_caption" style={{ margin: '4px 0 0', color: 'var(--text-dim)' }}>
+          <p className="ui_caption text-text-dim" style={{ margin: '4px 0 0' }}>
             {new Date(hoveredPoint.timestamp).toLocaleString([], {
               month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
             })}
           </p>
-          <p className="ui_micro_label" style={{ margin: '2px 0 0', color: 'var(--text-soft)' }}>
+          <p className="ui_micro_label text-text-soft" style={{ margin: '2px 0 0' }}>
             {hoveredPoint.source}
           </p>
           {hoveredBasalPoint && (
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
+            <div className="mt-2 border-t border-border pt-2">
+              <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
                 Basal
               </p>
               <p className="ui_mono_value_md" style={{ margin: '3px 0 0', color: 'rgba(186, 230, 253, 0.96)' }}>
                 {hoveredBasalPoint.basalRateUnitsPerHour.toFixed(1)}{' '}
-                <span className="ui_caption" style={{ color: 'var(--text-soft)' }}>U/hr</span>
+                <span className="ui_caption text-text-soft">U/hr</span>
               </p>
-              <p className="ui_caption" style={{ margin: '2px 0 0', color: 'var(--text-dim)' }}>
+              <p className="ui_caption text-text-dim" style={{ margin: '2px 0 0' }}>
                 {hoveredBasalPoint.eventName}
               </p>
             </div>
           )}
           {hoveredStepBucket && (
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
+            <div className="mt-2 border-t border-border pt-2">
+              <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
                 Steps
               </p>
               <p className="ui_mono_value_md" style={{ margin: '3px 0 0', color: 'rgba(253, 224, 71, 0.96)' }}>
                 {hoveredStepBucket.stepCount.toLocaleString()}
               </p>
-              <p className="ui_caption" style={{ margin: '2px 0 0', color: 'var(--text-dim)' }}>
+              <p className="ui_caption text-text-dim" style={{ margin: '2px 0 0' }}>
                 {new Date(hoveredStepBucket.bucketStart).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit'
@@ -1511,8 +1510,8 @@ export function GlucoseChart({
             </div>
           )}
           {hoveredEventItems.length > 0 && (
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
+            <div className="mt-2 border-t border-border pt-2">
+              <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
                 Tandem events
               </p>
               <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
@@ -1524,7 +1523,7 @@ export function GlucoseChart({
                       key={`${event.timestamp}:${event.eventName}`}
                       style={{ display: 'grid', gap: 2 }}
                     >
-                      <p className="body_text" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text)' }}>
+                      <p className="body_text text-text" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span
                           style={{
                             width: 8,
@@ -1537,12 +1536,12 @@ export function GlucoseChart({
                         />
                         <span>{visual.label}</span>
                         {summary && (
-                          <span className="ui_mono_text" style={{ color: 'var(--text-soft)' }}>
+                          <span className="ui_mono_text text-text-soft">
                             {summary}
                           </span>
                         )}
                       </p>
-                      <p className="ui_caption" style={{ margin: 0, color: 'var(--text-dim)' }}>
+                      <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
                         {new Date(event.timestamp).toLocaleTimeString([], {
                           hour: '2-digit',
                           minute: '2-digit'
@@ -1555,22 +1554,22 @@ export function GlucoseChart({
             </div>
           )}
           {hoveredIobValue !== null && (
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
+            <div className="mt-2 border-t border-border pt-2">
+              <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
                 IOB
               </p>
               <p className="ui_mono_value_md" style={{ margin: '3px 0 0', color: isDark ? 'rgba(167, 139, 250, 0.9)' : 'rgba(109, 40, 217, 0.85)' }}>
                 {hoveredIobValue.toFixed(2)}{' '}
-                <span className="ui_caption" style={{ color: 'var(--text-soft)' }}>U</span>
+                <span className="ui_caption text-text-soft">U</span>
               </p>
             </div>
           )}
           {hoveredSuspendInterval && (
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+            <div className="mt-2 border-t border-border pt-2">
               <p className="ui_micro_label" style={{ margin: 0, color: isDark ? 'rgba(251, 113, 133, 0.9)' : 'rgba(190, 18, 60, 0.85)' }}>
                 Suspended
               </p>
-              <p className="ui_caption" style={{ margin: '4px 0 0', color: 'var(--text-dim)' }}>
+              <p className="ui_caption text-text-dim" style={{ margin: '4px 0 0' }}>
                 {new Date(hoveredSuspendInterval.suspendMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 {' → '}
                 {hoveredSuspendInterval.resumeMs

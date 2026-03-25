@@ -12,7 +12,7 @@
     .theme-dark {
         --color-dashboard-panel-bg: var(--color-base-panel-dark-bright);
         --color-dashboard-panel-header-bg: var(--color-base-surface-panel-dark-tint);
-        --color-dashboard-panel-border: var(--color-base-ink-soft);
+        --color-dashboard-panel-border: var(--color-base-border-cool-strong);
         --color-dashboard-panel-title: var(--color-base-ink-soft);
     }
 
@@ -26,7 +26,7 @@
     .theme-dashboard-panel-dark {
         --color-dashboard-panel-bg: var(--color-base-panel-dark-bright);
         --color-dashboard-panel-header-bg: var(--color-base-surface-panel-dark-tint);
-        --color-dashboard-panel-border: var(--color-base-ink-soft);
+        --color-dashboard-panel-border: var(--color-base-border-cool-strong);
         --color-dashboard-panel-title: var(--color-base-ink-soft);
     }
 }

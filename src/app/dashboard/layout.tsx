@@ -9,10 +9,10 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   const session = await getOwnerSession();
 
   return (
-    <div className="min-h-screen bg-(--bg)">
+    <div className="min-h-screen bg-bg">
       <MobileBanner />
       <SideBarNavigation isOwner={Boolean(session)} />
-      <main className="md:ml-[230px] px-4 pt-(--spacing-dashboard-top) pb-20 md:pb-8">
+      <main className="px-4 pb-20 pt-dashboard-top md:ml-[230px] md:pb-8">
         <DynamicFavicon />
         {session ? <DashboardNotificationsBridge /> : null}
         <div className="dashboard-fullwidth-container section-stack">

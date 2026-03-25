@@ -338,12 +338,12 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
     <DashboardPanel
       title="Timers"
       headerRight={
-        <span className="ui_caption text-(--text-dim)">{timers.length} total</span>
+        <span className="ui_caption text-text-dim">{timers.length} total</span>
       }
     >
       <div className="flex flex-1 flex-col">
         {timers.length === 0 && !showStartForm ? (
-          <p className="body_text text-(--text-dim)">No active timers</p>
+          <p className="body_text text-text-dim">No active timers</p>
         ) : (
           <div className="flex flex-col gap-2">
             {timers.map((timer) => {
@@ -351,10 +351,10 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
               const isDone = remaining <= 0;
 
                 return (
-                  <div key={timer.id} className="flex items-center justify-between gap-3 rounded-[4px] border border-(--border) bg-(--surface-muted) px-3 py-2.5">
+                  <div key={timer.id} className="flex items-center justify-between gap-3 rounded-[4px] border border-border bg-surface-muted px-3 py-2.5">
                     <div className="min-w-0">
-                    <p className="ui_caption text-(--text-dim)">{formatDurationLabel(timer.durationSeconds)}</p>
-                    <p className={`ui_mono_text_strong tabular-nums ${isDone ? 'text-amber-200' : 'text-(--text)'}`}>
+                    <p className="ui_caption text-text-dim">{formatDurationLabel(timer.durationSeconds)}</p>
+                    <p className={isDone ? 'ui_mono_text_strong tabular-nums text-amber-200' : 'ui_mono_text_strong tabular-nums text-text'}>
                       {isDone ? 'Done' : formatCountdown(timer.fireAt, nowMs)}
                     </p>
                   </div>
@@ -387,7 +387,7 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
               value={customValue}
               onChange={(event) => setCustomValue(event.target.value)}
               placeholder="Custom (5, mm:ss, 90s)"
-              className="ui_input_text w-full rounded-lg border border-(--border) bg-(--surface-muted) px-3 py-2 text-(--text) outline-none placeholder:text-(--text-dim) focus:border-(--border)"
+              className="ui_input_text w-full rounded-lg border border-border bg-surface-muted px-3 py-2 text-text outline-none placeholder:text-text-dim focus:border-border"
             />
             {customError && <p className="ui_caption text-rose-300">{customError}</p>}
             {errorMessage && <p className="ui_caption text-rose-300">{errorMessage}</p>}

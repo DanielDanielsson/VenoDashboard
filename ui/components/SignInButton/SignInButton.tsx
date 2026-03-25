@@ -46,37 +46,37 @@ export function SignInButton({ callbackUrl = '/dashboard' }: SignInButtonProps) 
       <button
         type="button"
         onClick={() => router.push('/dashboard')}
-        className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-[4px] text-(--text-dim) transition-colors hover:text-(--text)"
+        className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-[4px] text-text-dim transition-colors hover:text-text"
         aria-label="Close"
       >
         ✕
       </button>
-      <p className="ui_micro_label text-(--text-soft)">Admin access</p>
-      <h1 className="section_title mt-3 text-(--text)">Sign in to manage PulseGlucose.</h1>
-      <p className="ui_helper_text mt-2 text-(--text-dim)">
+      <p className="ui_micro_label text-text-soft">Admin access</p>
+      <h1 className="section_title mt-3 text-text">Sign in to manage PulseGlucose.</h1>
+      <p className="ui_helper_text mt-2 text-text-dim">
         Demo visitors can browse the dashboard. Admin actions like settings, timers, and API keys
         require sign in.
       </p>
 
       <div className="mt-6 grid gap-4">
         <label className="grid gap-1.5">
-          <span className="ui_micro_label text-(--text-dim)">Username</span>
+          <span className="ui_micro_label text-text-dim">Username</span>
           <input
             value={username}
             onChange={(event) => setUsername(event.target.value)}
             autoComplete="username"
-            className="ui_input_text w-full rounded-[4px] border border-secondary-button-inactive-border bg-transparent px-3 py-2 text-(--text) outline-none placeholder:text-(--text-dim) focus:border-secondary-button-active-border"
+            className="ui_input_text w-full rounded-[4px] border border-secondary-button-inactive-border bg-transparent px-3 py-2 text-text outline-none placeholder:text-text-dim focus:border-secondary-button-active-border"
           />
         </label>
 
         <label className="grid gap-1.5">
-          <span className="ui_micro_label text-(--text-dim)">Password</span>
+          <span className="ui_micro_label text-text-dim">Password</span>
           <input
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"
-            className="ui_input_text w-full rounded-[4px] border border-secondary-button-inactive-border bg-transparent px-3 py-2 text-(--text) outline-none placeholder:text-(--text-dim) focus:border-secondary-button-active-border"
+            className="ui_input_text w-full rounded-[4px] border border-secondary-button-inactive-border bg-transparent px-3 py-2 text-text outline-none placeholder:text-text-dim focus:border-secondary-button-active-border"
           />
         </label>
 

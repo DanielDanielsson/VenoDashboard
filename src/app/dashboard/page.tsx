@@ -140,12 +140,12 @@ export default async function DashboardPage() {
         style={{ minHeight: 'calc(var(--spacing-dashboard-content-top) - var(--spacing-dashboard-top) - 1.25rem)' }}
       >
         <div>
-        <h1 className="page_title text-(--text)">
+        <h1 className="page_title text-text">
           {session
             ? greetingName ? `Hi, ${greetingName}!` : 'Hi!'
             : 'Welcome, visitor!'}
         </h1>
-        <p className="page_subtitle mt-1 text-(--text-dim)">
+        <p className="page_subtitle mt-1 text-text-dim">
           {session
             ? "Here\u0027s your glucose overview for today!"
             : "Here\u0027s Daniel\u0027s glucose overview for today!"}
@@ -164,19 +164,19 @@ export default async function DashboardPage() {
 
         <DashboardPanel
           title="Connections"
-          headerRight={<span className="ui_caption_strong text-(--text-dim)">{connections.length} total</span>}
+          headerRight={<span className="ui_caption_strong text-text-dim">{connections.length} total</span>}
         >
           <div className="flex flex-col gap-3">
             {connections.map((conn) => (
               <div key={conn.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${conn.connected ? 'bg-success' : 'bg-(--text-soft)'}`} />
+                  <span className={conn.connected ? 'h-2 w-2 rounded-full bg-success' : 'h-2 w-2 rounded-full bg-text-soft'} />
                   <div>
-                    <p className="body_text_strong text-(--text)">{conn.name}</p>
-                    <p className="ui_caption text-(--text-dim)">{conn.type}</p>
+                    <p className="body_text_strong text-text">{conn.name}</p>
+                    <p className="ui_caption text-text-dim">{conn.type}</p>
                   </div>
                 </div>
-                <span className="ui_caption text-(--text-dim)">
+                <span className="ui_caption text-text-dim">
                   {conn.connected ? `${conn.age} ago` : 'Not connected'}
                 </span>
               </div>

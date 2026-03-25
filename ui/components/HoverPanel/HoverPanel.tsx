@@ -48,7 +48,7 @@ export const HoverPanel = ({
           >
             <p className="body_text text-text">{body}</p>
             {sourceValue ? (
-              <div className="mt-3 border-t pt-3" style={{ borderColor: 'var(--border)' }}>
+              <div className="mt-3 border-t border-border pt-3">
                 <p className="ui_micro_label text-text-soft">{sourceLabel}</p>
                 <p className="body_text mt-1 text-text">{sourceValue}</p>
               </div>

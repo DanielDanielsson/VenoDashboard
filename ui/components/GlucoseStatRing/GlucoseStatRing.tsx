@@ -57,13 +57,12 @@ export function GlucoseStatRing({ label, percentage, color, size = 'md' }: Gluco
           inset: 0,
           display: 'grid',
           placeItems: 'center',
-          color: 'var(--text)'
-        }} className={config.valueClassName}>
+        }} className={`${config.valueClassName} text-text`}>
           {normalized}%
         </div>
       </div>
       <div style={{ display: 'grid', justifyItems: 'center', gap: 2 }}>
-        <div className={config.labelClassName} style={{ color: 'var(--text-soft)', textAlign: 'center' }}>
+        <div className={`${config.labelClassName} text-text-soft`} style={{ textAlign: 'center' }}>
           {label}
         </div>
       </div>

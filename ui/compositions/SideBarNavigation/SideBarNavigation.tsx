@@ -20,7 +20,7 @@ const DASHBOARD_LINKS: ReadonlyArray<{
 export const SideBarNavigation = ({ isOwner = false }: { isOwner?: boolean }) => {
   return (
     <nav className="fixed left-0 top-0 hidden h-screen w-[230px] flex-col border-r border-nav-link-text/50 p-4 md:flex">
-      <Icon icon="veno-logo" title="Veno" twStyles="mx-auto h-[100px] w-32 text-(--text)" />
+      <Icon icon="veno-logo" title="Veno" twStyles="mx-auto h-[100px] w-32 text-text" />
 
       <ul className="mt-6 flex flex-col gap-2">
         {DASHBOARD_LINKS.map((link) => {
@@ -47,20 +47,20 @@ export const SideBarNavigation = ({ isOwner = false }: { isOwner?: boolean }) =>
         })}
       </ul>
 
-      <ul className="mt-3 flex flex-col gap-0.5 border-t border-(--border) pt-3 px-1">
+      <ul className="mt-3 flex flex-col gap-0.5 border-t border-border px-1 pt-3">
         <li>
-          <Link href="/dashboard/about" className="body_text flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
+          <Link href="/dashboard/about" className="body_text flex items-center rounded px-2 py-1.5 text-text-soft transition-colors hover:text-text">
             About
           </Link>
         </li>
         <li>
-          <Link href="https://github.com/DanielDanielsson/VenoDashboard" target="_blank" rel="noopener noreferrer" className="body_text flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
+          <Link href="https://github.com/DanielDanielsson/VenoDashboard" target="_blank" rel="noopener noreferrer" className="body_text flex items-center rounded px-2 py-1.5 text-text-soft transition-colors hover:text-text">
             GitHub
           </Link>
         </li>
         {!isOwner ? (
           <li>
-            <Link href="/login" className="body_text flex items-center rounded px-2 py-1.5 text-(--text-soft) transition-colors hover:text-(--text)">
+            <Link href="/login" className="body_text flex items-center rounded px-2 py-1.5 text-text-soft transition-colors hover:text-text">
               Admin sign in
             </Link>
           </li>

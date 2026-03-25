@@ -51,6 +51,10 @@ function drawFaviconDataUrl(valueMmolL: number, colorOverride?: string): string 
   return canvas.toDataURL('image/png');
 }
 
+function getStaleFaviconColor(): string {
+  return getComputedStyle(document.documentElement).getPropertyValue('--color-base-white').trim() || STALE_FAVICON_COLOR;
+}
+
 function setFavicon(dataUrl: string) {
   if (!dataUrl) return;
   let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
@@ -80,7 +84,7 @@ export function DynamicFavicon() {
       clearStaleTimeout();
 
       if (isDynamicFaviconReadingStale(latestReading.timestamp)) {
-        setFavicon(drawFaviconDataUrl(latestReading.valueMmolL, STALE_FAVICON_COLOR));
+        setFavicon(drawFaviconDataUrl(latestReading.valueMmolL, getStaleFaviconColor()));
         return;
       }
 
@@ -89,7 +93,7 @@ export function DynamicFavicon() {
       const remainingMs = FAVICON_STALE_MS - getReadingAgeMs(latestReading.timestamp);
       staleTimeoutId = window.setTimeout(() => {
         if (!latestReading) return;
-        setFavicon(drawFaviconDataUrl(latestReading.valueMmolL, STALE_FAVICON_COLOR));
+        setFavicon(drawFaviconDataUrl(latestReading.valueMmolL, getStaleFaviconColor()));
       }, Math.max(remainingMs, 0) + 1);
     }
 

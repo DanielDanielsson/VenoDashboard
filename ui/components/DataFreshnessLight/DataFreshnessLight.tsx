@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react';
 type FreshnessStatus = 'fresh' | 'aging' | 'stale';
 
 const STATUS_COLOR: Record<FreshnessStatus, string> = {
-  fresh: '#10b981',
-  aging: '#f59e0b',
-  stale: '#ef4444',
+  fresh: 'var(--success)',
+  aging: 'var(--warning)',
+  stale: 'var(--error)',
 };
 
 function getStatus(ageMs: number): FreshnessStatus {
@@ -57,7 +57,6 @@ export function DataFreshnessLight({ timestamp }: DataFreshnessLightProps) {
 
   const textStyle: React.CSSProperties = {
     fontSize: 11,
-    color: 'var(--color-dashboard-panel-title)',
     fontWeight: 500,
     letterSpacing: '0.04em',
     fontVariantNumeric: 'tabular-nums',
@@ -65,7 +64,7 @@ export function DataFreshnessLight({ timestamp }: DataFreshnessLightProps) {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span suppressHydrationWarning style={{ display: 'flex', alignItems: 'center', gap: '0.25em' }}>
+      <span suppressHydrationWarning className="text-dashboard-panel-title" style={{ display: 'flex', alignItems: 'center', gap: '0.25em' }}>
         {prefix && <span style={textStyle}>{prefix}</span>}
         {seconds !== null && (
           <span suppressHydrationWarning style={{ ...textStyle, display: 'inline-block', width: '3ch', textAlign: 'right' }}>

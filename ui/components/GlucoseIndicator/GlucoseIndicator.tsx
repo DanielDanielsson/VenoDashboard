@@ -17,12 +17,12 @@ interface GlucoseIndicatorProps {
 const STALE_MS = 15 * 60 * 1000;
 
 const RANGE_COLORS = {
-  low: { dark: '#ef4444', light: '#dc2626' },
-  normal: { dark: '#10b981', light: '#059669' },
-  high: { dark: '#a855f7', light: '#7e22ce' }
+  low: { dark: 'var(--color-base-glucose-low-dark)', light: 'var(--color-base-glucose-low-light)' },
+  normal: { dark: 'var(--color-base-accent-bright)', light: 'var(--color-base-accent)' },
+  high: { dark: 'var(--color-base-glucose-high-dark)', light: 'var(--color-base-glucose-high-light)' }
 } as const;
 
-const STALE_COLOR = { dark: 'rgba(248,250,252,0.25)', light: '#94a3b8' } as const;
+const STALE_COLOR = { dark: 'rgb(248 250 252 / 0.25)', light: 'var(--color-base-ink-soft)' } as const;
 
 const SIZE_CONFIG = {
   sm: {
@@ -104,7 +104,7 @@ export function GlucoseIndicator({
   const rotation = TREND_ROTATION[direction];
 
   const displayValue = isStale ? '--' : value.toFixed(1);
-  const textFill = theme === 'dark' ? '#f1f5f9' : color;
+  const textFill = theme === 'dark' ? 'var(--color-base-white-frost)' : color;
 
   useEffect(() => {
     const apply = () => {
@@ -147,7 +147,7 @@ export function GlucoseIndicator({
           left: `${CIRCLE_CENTER_X * 100}%`,
           transform: 'translate(-50%, -50%)',
           fontSize: cfg.fontSize,
-          color: isStale ? 'rgba(241,245,249,0.6)' : textFill,
+          color: isStale ? 'rgb(241 245 249 / 0.6)' : textFill,
           fontWeight: 700,
           fontFamily: 'var(--font-plex-mono), monospace',
           letterSpacing: '-0.04em'
@@ -156,11 +156,11 @@ export function GlucoseIndicator({
         </span>
       </div>
 
-      <span className={cfg.unitClassName} style={{ color: 'var(--text-soft)' }}>
+      <span className={`${cfg.unitClassName} text-text-soft`}>
         {unit}
       </span>
       {showAge && timestamp && (
-        <span className={cfg.ageClassName} style={{ color: 'var(--text-dim)' }}>
+        <span className={`${cfg.ageClassName} text-text-dim`}>
           {formatAge(timestamp, nowMs)}
         </span>
       )}

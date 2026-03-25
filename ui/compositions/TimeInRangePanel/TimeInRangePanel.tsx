@@ -8,11 +8,11 @@ import type { GlucoseStats } from '@/lib/glucose/metrics';
 import type { GlucoseApiResponse } from '@/lib/glucose/types';
 
 const SEGMENTS = [
-  { key: 'veryLow' as const, label: 'Very Low', color: '#ef4444' },
-  { key: 'low' as const, label: 'Low', color: '#fb7185' },
-  { key: 'inRange' as const, label: 'In Range', color: '#11b981' },
-  { key: 'high' as const, label: 'High', color: '#a855f7' },
-  { key: 'veryHigh' as const, label: 'Very High', color: '#7c3aed' },
+  { key: 'veryLow' as const, label: 'Very Low', color: 'var(--color-base-glucose-low-dark)' },
+  { key: 'low' as const, label: 'Low', color: 'var(--color-base-error-dark)' },
+  { key: 'inRange' as const, label: 'In Range', color: 'var(--color-base-accent-bright)' },
+  { key: 'high' as const, label: 'High', color: 'var(--color-base-glucose-high-dark)' },
+  { key: 'veryHigh' as const, label: 'Very High', color: 'var(--color-base-glucose-very-high-dark)' },
 ] as const;
 
 const TIME_RANGES = [
@@ -120,7 +120,7 @@ export function TimeInRangePanel() {
                 padding: '2px 8px',
                 borderRadius: 4,
                 border: '1px solid',
-                borderColor: selectedRange === i ? 'var(--text)' : 'rgba(148,163,184,0.3)',
+                borderColor: selectedRange === i ? 'var(--text)' : 'var(--color-base-border-cool-input)',
                 background: selectedRange === i ? 'var(--text)' : 'transparent',
                 color: selectedRange === i ? 'var(--bg)' : 'var(--text-soft)',
                 fontSize: 11,
@@ -167,9 +167,9 @@ export function TimeInRangePanel() {
                   }}
                 />
                 <span
+                  className="ui_micro_label text-text-soft"
                   style={{
                     fontSize: 10,
-                    color: 'var(--text-soft)',
                     letterSpacing: '0.06em',
                     textTransform: 'uppercase',
                     fontWeight: 600,
@@ -179,10 +179,10 @@ export function TimeInRangePanel() {
                 </span>
               </div>
               <span
+                className="text-text"
                 style={{
                   fontSize: 13,
                   fontWeight: 700,
-                  color: 'var(--text)',
                   fontFamily: 'var(--font-plex-mono), monospace',
                   lineHeight: 1,
                 }}

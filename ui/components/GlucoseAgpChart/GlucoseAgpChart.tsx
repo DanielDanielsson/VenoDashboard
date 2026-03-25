@@ -572,14 +572,12 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
             }}
           >
             <div
+              className="rounded border border-border-strong bg-surface-strong text-text-dim"
               style={{
                 maxWidth: 320,
                 padding: '0.9rem 1rem',
                 borderRadius: 'var(--radius)',
-                border: '1px solid var(--border-strong)',
-                background: 'color-mix(in srgb, var(--surface-strong) 88%, transparent)',
                 backdropFilter: 'blur(10px)',
-                color: 'var(--text-dim)'
               }}
             >
               <span className="ui_helper_text">
@@ -591,12 +589,11 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
 
         {!isDisabled && hoveredBucket && (
           <div
+            className="rounded border border-border-strong bg-surface-strong"
             style={{
               position: 'absolute',
               left: Math.min(hoverPos.x + 14, Math.max(12, containerWidth - 210)),
               top: Math.max(8, hoverPos.y - 78),
-              background: 'var(--surface-strong)',
-              border: '1px solid var(--border-strong)',
               borderRadius: 'var(--radius)',
               padding: '10px 12px',
               pointerEvents: 'none',
@@ -605,16 +602,16 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
               minWidth: 184
             }}
           >
-            <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
+            <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
               {formatHourLabel(hoveredBucket.minuteOfDay)}
             </p>
-            <p className="ui_mono_value_md" style={{ margin: '6px 0 0', color: 'var(--text)' }}>
+            <p className="ui_mono_value_md text-text" style={{ margin: '6px 0 0' }}>
               Median {hoveredBucket.p50?.toFixed(1) ?? '—'}
             </p>
-            <p className="ui_caption" style={{ margin: '6px 0 0', color: 'var(--text-dim)' }}>
+            <p className="ui_caption text-text-dim" style={{ margin: '6px 0 0' }}>
               50% band {hoveredBucket.p25?.toFixed(1) ?? '—'} to {hoveredBucket.p75?.toFixed(1) ?? '—'}
             </p>
-            <p className="ui_caption" style={{ margin: '2px 0 0', color: 'var(--text-dim)' }}>
+            <p className="ui_caption text-text-dim" style={{ margin: '2px 0 0' }}>
               80% band {hoveredBucket.p10?.toFixed(1) ?? '—'} to {hoveredBucket.p90?.toFixed(1) ?? '—'}
             </p>
           </div>

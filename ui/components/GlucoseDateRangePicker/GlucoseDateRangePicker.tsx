@@ -257,6 +257,7 @@ export function GlucoseDateRangePicker({ value, onApply }: GlucoseDateRangePicke
 
       {isOpen && (
         <div
+          className="border border-border-strong bg-surface-strong text-text"
           style={{
             position: 'absolute',
             top: 'calc(100% + 10px)',
@@ -264,8 +265,6 @@ export function GlucoseDateRangePicker({ value, onApply }: GlucoseDateRangePicke
             zIndex: 20,
             width: 'min(100vw - 24px, 580px)',
             borderRadius: 'var(--radius-xl)',
-            border: '1px solid var(--border-strong)',
-            background: 'var(--surface-strong)',
             padding: 16,
             boxShadow: '0 20px 60px rgba(0, 0, 0, 0.35)',
             backdropFilter: 'blur(18px)'
@@ -273,10 +272,10 @@ export function GlucoseDateRangePicker({ value, onApply }: GlucoseDateRangePicke
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div>
-              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
+              <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
                 Custom range
               </p>
-              <p className="ui_helper_text" style={{ margin: '4px 0 0', color: 'var(--text-dim)' }}>
+              <p className="ui_helper_text text-text-dim" style={{ margin: '4px 0 0' }}>
                 Pick start and end dates to filter the timeline.
               </p>
             </div>
@@ -312,29 +311,19 @@ export function GlucoseDateRangePicker({ value, onApply }: GlucoseDateRangePicke
             marginTop: 16,
             marginBottom: 16
           }}>
-            <div style={{
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)',
-              padding: '10px 12px',
-              background: 'var(--surface)'
-            }}>
-              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
+            <div className="rounded border border-border bg-surface px-3 py-2.5">
+              <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
                 From
               </p>
-              <p className="body_text" style={{ margin: '6px 0 0', color: 'var(--text)' }}>
+              <p className="body_text text-text" style={{ margin: '6px 0 0' }}>
                 {formatFullDate(draftStart)}
               </p>
             </div>
-            <div style={{
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)',
-              padding: '10px 12px',
-              background: 'var(--surface)'
-            }}>
-              <p className="ui_micro_label" style={{ margin: 0, color: 'var(--text-soft)' }}>
+            <div className="rounded border border-border bg-surface px-3 py-2.5">
+              <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
                 To
               </p>
-              <p className="body_text" style={{ margin: '6px 0 0', color: 'var(--text)' }}>
+              <p className="body_text text-text" style={{ margin: '6px 0 0' }}>
                 {formatFullDate(draftEnd)}
               </p>
             </div>

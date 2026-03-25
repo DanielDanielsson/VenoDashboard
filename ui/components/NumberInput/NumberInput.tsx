@@ -14,7 +14,7 @@ export const NumberInput = ({
 }: NumberInputProps): ReactElement => (
   <label
     className={twMerge(
-      'ui_micro_label inline-flex items-center gap-1.5 text-(--text-soft)',
+      'ui_micro_label inline-flex items-center gap-1.5 text-text-soft',
       twStyles,
     )}
   >

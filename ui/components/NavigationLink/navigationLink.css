@@ -3,11 +3,11 @@
 
 @layer theme {
     :root {
-        --color-nav-link-bg: #ddd6ca;
-        --color-nav-link-bg-hover: #ddd7cc;
-        --color-nav-link-text: #4a4038;
-        --color-nav-link-text-hover: #0c1222;
-        --color-nav-link-corner: #ddd6ca;
+        --color-nav-link-bg: var(--color-base-surface-panel-light-strong);
+        --color-nav-link-bg-hover: var(--color-base-surface-panel-light-muted);
+        --color-nav-link-text: var(--color-base-text-warm-nav);
+        --color-nav-link-text-hover: var(--color-base-ink);
+        --color-nav-link-corner: var(--color-base-surface-panel-light-strong);
         --color-nav-link-corner-hover: var(--color-base-success);
     }
 
@@ -15,17 +15,17 @@
         --color-nav-link-bg: var(--color-base-night-strong);
         --color-nav-link-bg-hover: var(--color-base-night-strong);
         --color-nav-link-text: var(--color-base-ink-soft);
-        --color-nav-link-text-hover: #e8edf5;
+        --color-nav-link-text-hover: var(--color-base-white-soft);
         --color-nav-link-corner: var(--color-base-night-strong);
         --color-nav-link-corner-hover: var(--color-base-success-dark);
     }
 
     .theme-nav-link-light {
-        --color-nav-link-bg: #ddd6ca;
-        --color-nav-link-bg-hover: #ddd7cc;
-        --color-nav-link-text: #4a4038;
-        --color-nav-link-text-hover: #0c1222;
-        --color-nav-link-corner: #ddd6ca;
+        --color-nav-link-bg: var(--color-base-surface-panel-light-strong);
+        --color-nav-link-bg-hover: var(--color-base-surface-panel-light-muted);
+        --color-nav-link-text: var(--color-base-text-warm-nav);
+        --color-nav-link-text-hover: var(--color-base-ink);
+        --color-nav-link-corner: var(--color-base-surface-panel-light-strong);
         --color-nav-link-corner-hover: var(--color-base-success);
     }
 
@@ -33,7 +33,7 @@
         --color-nav-link-bg: var(--color-base-night-strong);
         --color-nav-link-bg-hover: var(--color-base-night-strong);
         --color-nav-link-text: var(--color-base-ink-soft);
-        --color-nav-link-text-hover: #e8edf5;
+        --color-nav-link-text-hover: var(--color-base-white-soft);
         --color-nav-link-corner: var(--color-base-night-strong);
         --color-nav-link-corner-hover: var(--color-base-success-dark);
     }

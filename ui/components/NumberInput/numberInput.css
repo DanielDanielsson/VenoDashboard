@@ -4,29 +4,29 @@
 @layer theme {
     :root {
         --color-number-input-bg: transparent;
-        --color-number-input-border: rgb(90 70 50 / 0.25);
+        --color-number-input-border: var(--color-base-border-warm-input);
         --color-number-input-focus-border: var(--color-base-ink);
         --color-number-input-text: var(--text);
     }
 
     .theme-dark {
         --color-number-input-bg: transparent;
-        --color-number-input-border: rgba(148, 163, 184, 0.3);
-        --color-number-input-focus-border: #e8edf5;
+        --color-number-input-border: var(--color-base-border-cool-input);
+        --color-number-input-focus-border: var(--color-base-white-soft);
         --color-number-input-text: var(--text);
     }
 
     .theme-number-input-light {
         --color-number-input-bg: transparent;
-        --color-number-input-border: rgb(90 70 50 / 0.25);
+        --color-number-input-border: var(--color-base-border-warm-input);
         --color-number-input-focus-border: var(--color-base-ink);
         --color-number-input-text: var(--text);
     }
 
     .theme-number-input-dark {
         --color-number-input-bg: transparent;
-        --color-number-input-border: rgba(148, 163, 184, 0.3);
-        --color-number-input-focus-border: #e8edf5;
+        --color-number-input-border: var(--color-base-border-cool-input);
+        --color-number-input-focus-border: var(--color-base-white-soft);
         --color-number-input-text: var(--text);
     }
 }

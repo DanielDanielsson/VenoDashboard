@@ -4,19 +4,37 @@
 
   --color-base-paper: #f0ebe2;
   --color-base-paper-strong: #e6e0d5;
+  --color-base-paper-overlay: rgb(246 241 234 / 0.85);
+  --color-base-paper-elevated: rgb(234 228 219 / 0.96);
+  --color-base-paper-surface: rgb(242 237 229 / 0.72);
+  --color-base-paper-surface-strong: rgb(248 244 237 / 0.9);
   --color-base-night: #11161f;
   --color-base-night-strong: #171d26;
   --color-base-panel-dark-bright: #1e2530;
+  --color-base-night-overlay: rgb(10 15 25 / 0.88);
+  --color-base-night-elevated: rgb(8 12 20 / 0.96);
+  --color-base-night-surface: rgb(15 23 40 / 0.5);
+  --color-base-night-surface-muted: rgb(15 23 42 / 0.36);
 
   --color-base-ink: #0c1222;
   --color-base-ink-muted: #475569;
   --color-base-ink-soft: #94a3b8;
+  --color-base-ink-soft-strong: #64748b;
   --color-base-white: #ffffff;
+  --color-base-white-soft: #e8edf5;
+  --color-base-white-dim: #c0ccd8;
+  --color-base-white-muted: #8898ab;
 
   --color-base-accent: #059669;
   --color-base-accent-strong: #047857;
   --color-base-accent-bright: #11b981;
   --color-base-accent-bright-strong: #34d399;
+  --color-base-accent-soft-light: rgb(5 150 105 / 0.1);
+  --color-base-accent-soft-dark: rgb(17 185 129 / 0.08);
+  --color-base-accent-glow-light: rgb(5 150 105 / 0.15);
+  --color-base-accent-glow-dark: rgb(17 185 129 / 0.12);
+  --color-base-accent-border-light: rgb(5 150 105 / 0.3);
+  --color-base-accent-border-dark: rgb(17 185 129 / 0.28);
 
   --color-base-success: #4aa87a;
   --color-base-success-dark: #61c594;
@@ -24,13 +42,47 @@
   --color-base-warning-dark: #fbbf24;
   --color-base-error: #e11d48;
   --color-base-error-dark: #fb7185;
+  --color-base-warning-strong: #ca8a04;
+  --color-base-error-strong: #be123c;
+  --color-base-glucose-low-light: #dc2626;
+  --color-base-glucose-low-dark: #ef4444;
+  --color-base-glucose-high-light: #7e22ce;
+  --color-base-glucose-high-dark: #a855f7;
+  --color-base-glucose-very-high-light: #6b21a8;
+  --color-base-glucose-very-high-dark: #7c3aed;
+  --color-base-white-frost: #f1f5f9;
+  --color-base-success-soft-light: rgb(5 150 105 / 0.12);
+  --color-base-success-soft-dark: rgb(97 197 148 / 0.1);
+  --color-base-warning-soft-light: rgb(180 83 9 / 0.1);
+  --color-base-warning-soft-dark: rgb(251 191 36 / 0.1);
+  --color-base-error-soft-light: rgb(190 18 60 / 0.08);
+  --color-base-error-soft-dark: rgb(251 113 133 / 0.08);
 
   --color-base-surface-panel-light: #e8e2d8;
+  --color-base-surface-panel-light-strong: #ddd6ca;
   --color-base-surface-panel-light-muted: #ddd7cc;
   --color-base-surface-panel-dark-tint: color-mix(in srgb, white 7%, var(--color-base-panel-dark-bright));
 
+  --color-base-border-warm-subtle: rgb(90 70 50 / 0.16);
   --color-base-border-warm-medium: rgb(90 70 50 / 0.22);
+  --color-base-border-warm-strong: rgb(90 70 50 / 0.28);
+  --color-base-border-warm-input: rgb(90 70 50 / 0.25);
+  --color-base-border-cool-subtle: rgb(148 163 184 / 0.1);
+  --color-base-border-cool-strong: rgb(148 163 184 / 0.18);
+  --color-base-border-cool-input: rgba(148, 163, 184, 0.3);
 
   --color-base-text-warm-strong: #4a3f35;
+  --color-base-text-warm-nav: #4a4038;
   --color-base-text-warm-body: #5b5149;
+  --color-base-text-warm-soft: #6b6055;
+
+  --color-base-shadow-warm-sm: 0 1px 2px rgb(70 50 30 / 0.06);
+  --color-base-shadow-warm-md: 0 4px 24px rgb(70 50 30 / 0.09), 0 1px 2px rgb(70 50 30 / 0.06);
+  --color-base-shadow-warm-lg: 0 12px 48px rgb(70 50 30 / 0.12), 0 2px 8px rgb(70 50 30 / 0.07);
+  --color-base-shadow-dark-sm: 0 1px 2px rgb(0 0 0 / 0.2);
+  --color-base-shadow-dark-md: 0 4px 24px rgb(0 0 0 / 0.2), 0 1px 2px rgb(0 0 0 / 0.15);
+  --color-base-shadow-dark-lg: 0 16px 64px rgb(0 0 0 / 0.3), 0 2px 8px rgb(0 0 0 / 0.2);
+
+  --color-base-grid-warm: rgb(70 50 30 / 0.04);
+  --color-base-grid-cool: rgb(148 163 184 / 0.04);
 }
