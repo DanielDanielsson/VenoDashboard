@@ -251,13 +251,42 @@ These read from `PULSE_API_BASE_URL`. If that env var is wrong, CI style validat
 
 Mirror CI before pushing.
 
-Run at minimum:
+Preferred:
+
+1. run `npm run ci:local`
+
+This is the one-command local equivalent of the current GitHub Actions workflow.
+
+If you need to run checks individually, use:
 
 1. `npm run lint`
 2. `npm run typecheck`
 3. `npm run test`
 4. `PULSE_API_BASE_URL=https://api.venoplatform.com npm run contracts:validate`
 5. `npm run test:links`
+6. `PULSE_API_BASE_URL=https://api.venoplatform.com npm run build`
+7. `npm run test:e2e`
+
+## Component Testing Rules
+
+Component tests are a requirement, not a nice to have.
+
+Rules:
+
+1. every folder in `ui/base` and `ui/components` should have a colocated `ComponentName.spec.tsx` or `ComponentName.spec.ts` file when the component is active
+2. tests should verify behavior, state, side effects, emitted events, or meaningful rendering contracts
+3. do not add low-value snapshot tests or layout-only tests just to increase count
+4. if a component is only a tiny pass-through primitive, test the contract that actually matters
+5. if a component introduces logic, interactivity, async work, theme switching, routing, timers, storage, or external events, it should have a focused unit test
+6. composition tests are useful when page-level logic exists, but the base and component layers come first
+
+Current test discovery includes:
+
+1. `tests/**/*.test.ts`
+2. `ui/**/*.spec.ts`
+3. `ui/**/*.spec.tsx`
+
+So running `npm run test` already covers the colocated component specs.
 6. `PULSE_API_BASE_URL=https://api.venoplatform.com npm run build`
 
 Also run when practical:
