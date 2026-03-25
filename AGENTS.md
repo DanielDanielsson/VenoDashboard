@@ -21,6 +21,18 @@ Do not treat this repo as the source of truth for glucose ingestion or storage. 
 3. `ui/compositions` contains higher level dashboard sections and page level compositions.
 4. `src/lib` contains auth, API clients, data shaping, caching, and server side helpers.
 5. `src/styles/config` is the canonical home for theme and font utilities.
+6. `.claude/skills` contains repo-local skills that apply only to `VenoDashboard`
+
+## Local Agent Context
+
+This repo is intended to be usable on its own.
+
+Repo-specific guidance should live here:
+
+1. `AGENTS.md` for always-on repo rules
+2. `.claude/skills` for focused local workflows like theming
+
+Do not assume the parent `PulseGlucose` workspace structure is available when writing repo-local guidance for `VenoDashboard`.
 
 ## Routing And Auth
 
