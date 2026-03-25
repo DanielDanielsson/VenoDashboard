@@ -111,6 +111,8 @@ The preferred component theming pattern is the `DashboardPanel` pattern:
 2. that file defines theme vars under `@layer theme`
 3. vars are exposed through `@theme inline`
 4. the TSX uses named Tailwind classes, not arbitrary `[var(...)]` classes
+5. if a component can inherit the page theme through CSS variables, do that by default
+6. explicit `theme` props are overrides only, not something to pass routinely
 
 Examples:
 
@@ -127,6 +129,50 @@ Examples to avoid:
 3. arbitrary text color utilities
 
 Use named classes from the component theme file instead.
+
+### Design Tokens And Color Ownership
+
+All raw color values belong in:
+
+1. `src/styles/config/colors.css`
+
+Rules:
+
+1. `colors.css` should only contain shared design tokens, never component specific token names
+2. all shared color tokens must start with `--color-base-`
+3. the same raw color should not be duplicated across multiple token names
+4. if two components need the same color, they should both map from the same base token
+5. component CSS files should map local component vars from base tokens in `colors.css`
+6. component CSS files may define component scoped vars like `--color-dashboard-panel-bg`, but those should be mappings, not raw literals
+7. shadow tokens that participate in the design system should follow the same pattern and live in `colors.css`
+
+Example pattern:
+
+1. `colors.css` defines a base token such as `--color-base-surface-panel-light`
+2. `dashboardPanel.css` maps `--color-dashboard-panel-bg` from that base token
+3. TSX uses `bg-dashboard-panel-bg`
+
+Do not put raw color literals in component theme files when a base token can own that value.
+
+### Reuse Before Reinventing
+
+When building interactive UI pieces:
+
+1. prefer reusing existing base or shared components before making a new visual shell
+2. if a floating panel can reuse `DashboardPanel`, prefer that over creating a parallel panel system
+3. if a trigger can reuse `ui/base/Button`, use it instead of rendering a raw `<button>`
+4. only create a new component specific theme file when existing component structure cannot be reused cleanly
+
+### Theme Inheritance
+
+Theme should normally flow from the page or document root through CSS variable inheritance.
+
+Rules:
+
+1. components should inherit the active theme automatically whenever possible
+2. avoid call site logic like `theme={isDark ? 'dark' : 'light'}` unless you are intentionally overriding inherited theme
+3. keep `theme` props available only as explicit opt in overrides
+4. if inheritance already solves the problem, do not branch on light and dark in TSX
 
 ### Generated CSS Imports
 
