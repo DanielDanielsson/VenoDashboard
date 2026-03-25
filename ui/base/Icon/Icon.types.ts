@@ -10,6 +10,7 @@ export type IconName =
   | 'moon'
   | 'home'
   | 'activity'
+  | 'info'
   | 'settings'
   | 'plug'
   | 'key'

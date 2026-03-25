@@ -4,6 +4,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import type { BasalChartPoint, ChartPoint, HealthStepChartPoint, TandemEventChartPoint } from '@/lib/glucose/types';
 import { getGlucoseColor, type GlucoseColorMode } from '@/lib/glucose/tints';
+import { HoverPanel } from '../HoverPanel';
 
 export type { ChartPoint } from '@/lib/glucose/types';
 
@@ -989,11 +990,6 @@ export function GlucoseChart({
           ctx.fillText(tick.toFixed(0), PADDING.left - 8, y);
         }
 
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-        ctx.fillStyle = textSoft;
-        ctx.fillText('Steps', 8, stepBandTop + 4);
-
         const stepFloorY = stepBandTop + stepBandHeight - 2;
         const stepFill = ctx.createLinearGradient(0, stepBandTop, 0, stepFloorY);
         stepFill.addColorStop(0, stepFillTop);
@@ -1033,7 +1029,6 @@ export function GlucoseChart({
       } else {
         ctx.textBaseline = 'top';
         ctx.fillStyle = textSoft;
-        ctx.fillText('Steps', 8, stepBandTop + 4);
       }
     }
 
@@ -1411,6 +1406,31 @@ export function GlucoseChart({
 
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+      {hasStepBand && stepBandHeight > 0 ? (
+        <div
+          style={{
+            position: 'absolute',
+            left: 8,
+            top: stepBandTop + 4,
+            zIndex: 5,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            pointerEvents: 'none',
+          }}
+        >
+          <span className="ui_chart_axis_unit" style={{ color: 'var(--text-soft)', lineHeight: 1, whiteSpace: 'nowrap' }}>
+            Steps
+          </span>
+          <div style={{ pointerEvents: 'auto' }}>
+            <HoverPanel
+              title="Steps"
+              body="The steps data comes from my phone. Each bar shows a 5 minute bucket with the number of steps recorded during that 5 minute window."
+              sourceValue="Apple HealthKit"
+            />
+          </div>
+        </div>
+      ) : null}
       <canvas
         ref={canvasRef}
         style={{
