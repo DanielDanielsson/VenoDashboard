@@ -1,21 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
   <defs>
-    <symbol id="chevron-right" viewBox="0 0 17 17">
-      <path fill-rule="evenodd" d="M9.90146 8.24995 6.32573 4.67421l.84853-.84853 4.42424 4.42427-4.42424 4.42425-.84853-.8485 3.57573-3.57575Z"/>
-    </symbol>
-    <symbol id="chevron-down" viewBox="0 0 17 17">
-      <path fill-rule="evenodd" d="m8.25001 9.40152 3.57569-3.57573.8486.84853-4.42429 4.42428-4.42427-4.42428.84853-.84853 3.57574 3.57573Z"/>
-    </symbol>
-    <symbol id="search" viewBox="0 0 12 12">
-      <path fill-rule="evenodd" d="M5.5 9.8a4.3 4.3 0 1 0 0-8.6 4.3 4.3 0 0 0 0 8.6ZM11 5.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0Z" clip-rule="evenodd"/>
-      <path d="M11.5 11.5 9.884 9.883 9 9"/>
-    </symbol>
-    <symbol id="menu" viewBox="0 0 12 12">
-      <path fill-rule="evenodd" d="M0 4.598h12v-1.2H0v1.2Zm0 4h12v-1.2H0v1.2Z" />
-    </symbol>
-    <symbol id="menu-close" viewBox="0 0 12 12">
-      <path fill-rule="evenodd" d="m7.099 6.002 4.576-4.575-.849-.849L6.25 5.154 1.675.578l-.849.849 4.576 4.575-4.576 4.576.849.849L6.25 6.85l4.576 4.576.849-.849-4.576-4.576Z" />
-    </symbol>
     <symbol id="sun" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
       <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2v2.5M12 19.5V22M4.93 4.93l1.77 1.77M17.3 17.3l1.77 1.77M2 12h2.5M19.5 12H22M4.93 19.07l1.77-1.77M17.3 6.7l1.77-1.77"/>
@@ -38,9 +22,6 @@
     <symbol id="settings" viewBox="0 0 24 24">
       <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
       <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-    </symbol>
-    <symbol id="plug" viewBox="0 0 24 24">
-      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 22v-5M9 8V2m6 6V2M7 8h10a1 1 0 0 1 1 1v3a6 6 0 0 1-12 0V9a1 1 0 0 1 1-1z"/>
     </symbol>
     <symbol id="key" viewBox="0 0 24 24">
       <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
