@@ -89,7 +89,7 @@ Rules:
 When styling inside TSX:
 
 1. prefer named Tailwind classes backed by theme tokens
-2. avoid arbitrary Tailwind classes like `text-[var(--...)]`, `bg-[var(--...)]`, and `border-[var(--...)]`
+2. avoid arbitrary Tailwind classes that inject CSS variables directly for text, background, or border color
 3. avoid inline `style` props when the same result can be expressed with existing classes
 4. use `twMerge` for conditional class logic
 

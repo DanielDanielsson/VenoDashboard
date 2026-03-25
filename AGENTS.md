@@ -122,7 +122,7 @@ The preferred component theming pattern is the `DashboardPanel` pattern:
 1. component owns a local `*.css` file
 2. that file defines theme vars under `@layer theme`
 3. vars are exposed through `@theme inline`
-4. the TSX uses named Tailwind classes, not arbitrary `[var(...)]` classes
+4. the TSX uses named Tailwind classes, not arbitrary CSS variable utility syntax
 5. if a component can inherit the page theme through CSS variables, do that by default
 6. explicit `theme` props are overrides only, not something to pass routinely
 
