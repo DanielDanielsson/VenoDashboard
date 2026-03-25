@@ -48,7 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className="theme-dark" suppressHydrationWarning>
       <head>
-        <link as="image/svg+xml" href="/static_assets/iconSprite.svg" rel="preload" />
+        <link as="image" type="image/svg+xml" href="/static_assets/iconSprite.svg" rel="preload" />
       </head>
       <body className="antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />

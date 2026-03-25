@@ -40,8 +40,13 @@ function subscribeToTheme(callback: () => void): () => void {
   };
 }
 
+function subscribeToMount(): () => void {
+  return () => undefined;
+}
+
 export function ThemeToggle() {
   const theme = useSyncExternalStore(subscribeToTheme, readThemeSnapshot, () => 'dark');
+  const isMounted = useSyncExternalStore(subscribeToMount, () => true, () => false);
   const nextTheme: Theme = theme === 'dark' ? 'light' : 'dark';
 
   function toggleTheme() {
@@ -50,18 +55,22 @@ export function ThemeToggle() {
     window.dispatchEvent(new Event(THEME_EVENT));
   }
 
+  const iconName = isMounted ? (theme === 'dark' ? 'moon' : 'sun') : 'moon';
+  const activeThemeLabel = isMounted ? theme : 'dark';
+  const nextThemeLabel = isMounted ? nextTheme : 'light';
+
   return (
     <button
       type="button"
       onClick={toggleTheme}
       className="theme-toggle"
-      aria-label={`Switch to ${nextTheme} theme`}
-      title={`Switch to ${nextTheme} theme`}
+      aria-label={`Switch to ${nextThemeLabel} theme`}
+      title={`Switch to ${nextThemeLabel} theme`}
     >
       <span className="theme-toggle__icon" aria-hidden="true">
-        <Icon icon={theme === 'dark' ? 'moon' : 'sun'} twStyles="h-[18px] w-[18px]" />
+        <Icon icon={iconName} twStyles="h-[18px] w-[18px]" />
       </span>
-      <span className="sr-only">{theme} theme active</span>
+      <span className="sr-only">{activeThemeLabel} theme active</span>
     </button>
   );
 }

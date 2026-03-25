@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import type { ImgHTMLAttributes, SyntheticEvent } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
 import { getBunnyImage } from '@/utils/getBunnyImage';
 
@@ -56,21 +56,27 @@ export const BunnyImage = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
+  const [devicePixelRatio, setDevicePixelRatio] = useState(1);
 
-  const optimalWidth = useMemo(() => {
-    const devicePixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-
+  const optimalWidth = (() => {
     if (sizes && measuredWidth !== null) {
       return calculateOptimalWidth(measuredWidth, devicePixelRatio);
     }
 
     return calculateOptimalWidth(width, devicePixelRatio);
-  }, [measuredWidth, sizes, width]);
+  })();
 
-  const imageUrl = useMemo(
-    () => getBunnyImage(imageName, optimalWidth, quality, format),
-    [format, imageName, optimalWidth, quality],
-  );
+  const imageUrl = getBunnyImage(imageName, optimalWidth, quality, format);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      setDevicePixelRatio(window.devicePixelRatio || 1);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, []);
 
   useEffect(() => {
     if (!sizes || !containerRef.current) {

@@ -36,6 +36,7 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 const GLUCOSE_CHART_COLOR_MODE_STORAGE_KEY = 'pulse-glucose-chart-color-mode';
+const DEFAULT_GLUCOSE_CHART_COLOR_MODE: GlucoseColorMode = 'threeColors';
 
 function getUpdatesKey(timestamp: string): string {
   return `/api/dashboard/glucose/updates?since=${encodeURIComponent(timestamp)}`;
@@ -59,9 +60,9 @@ function getSelectionTargetWindow(
 function getStoredChartColorMode(): GlucoseColorMode {
   try {
     const stored = globalThis.localStorage?.getItem(GLUCOSE_CHART_COLOR_MODE_STORAGE_KEY);
-    return stored === 'threeColors' || stored === 'gradient' ? stored : 'threeColors';
+    return stored === 'threeColors' || stored === 'gradient' ? stored : DEFAULT_GLUCOSE_CHART_COLOR_MODE;
   } catch {
-    return 'threeColors';
+    return DEFAULT_GLUCOSE_CHART_COLOR_MODE;
   }
 }
 
@@ -115,7 +116,7 @@ export function GlucoseAnalysisView() {
     };
   }, []);
   const [chartYMaxInput, setChartYMaxInput] = useState('25');
-  const [chartColorMode, setChartColorMode] = useState<GlucoseColorMode>(getStoredChartColorMode);
+  const [chartColorMode, setChartColorMode] = useState<GlucoseColorMode>(DEFAULT_GLUCOSE_CHART_COLOR_MODE);
 
   const isApplyingUpdatesRef = useRef(false);
   const { cache, mutate: globalMutate } = useSWRConfig();
@@ -168,6 +169,16 @@ export function GlucoseAnalysisView() {
       globalThis.dispatchEvent(new CustomEvent('pulse-glucose-latest', { detail: data.latest }));
     }
   }, [data?.latest]);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      setChartColorMode(getStoredChartColorMode());
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, []);
 
   const stats = computeGlucoseStats(data?.items ?? []);
   const newUpdatesCount = updates?.meta.newCount ?? 0;
@@ -233,16 +244,16 @@ export function GlucoseAnalysisView() {
           {hasData ? (
             <div className="flex items-end justify-center gap-6" style={{ opacity: isTransitioning ? 0.45 : 1, transition: 'opacity 200ms ease' }}>
               <div className="grid gap-4 justify-items-center pb-0.5">
-                <span className="ui_mono_value_md" style={{ color: stats.min < 4 ? lowColor : 'var(--text-dim)' }}>{stats.min.toFixed(1)}</span>
-                <span className="ui_micro_label leading-none text-(--text-soft)">Min</span>
+                <span className={stats.min < 4 ? 'ui_mono_value_md' : 'ui_mono_value_md text-text-dim'} style={stats.min < 4 ? { color: lowColor } : undefined}>{stats.min.toFixed(1)}</span>
+                <span className="ui_micro_label leading-none text-text-soft">Min</span>
               </div>
               <div className="grid gap-4 justify-items-center">
                 <span className="ui_mono_value_display" style={{ color: avgColor }}>{stats.avg.toFixed(1)}</span>
-                <span className="ui_micro_label leading-none text-(--text-soft)">Avg</span>
+                <span className="ui_micro_label leading-none text-text-soft">Avg</span>
               </div>
               <div className="grid gap-4 justify-items-center pb-0.5">
-                <span className="ui_mono_value_md" style={{ color: stats.max > 10 ? highColor : 'var(--text-dim)' }}>{stats.max.toFixed(1)}</span>
-                <span className="ui_micro_label leading-none text-(--text-soft)">Max</span>
+                <span className={stats.max > 10 ? 'ui_mono_value_md' : 'ui_mono_value_md text-text-dim'} style={stats.max > 10 ? { color: highColor } : undefined}>{stats.max.toFixed(1)}</span>
+                <span className="ui_micro_label leading-none text-text-soft">Max</span>
               </div>
             </div>
           ) : (
@@ -266,7 +277,7 @@ export function GlucoseAnalysisView() {
         <DashboardPanel title="Settings" twStyles="overflow-visible">
           <div className="grid gap-4">
             <div className="grid gap-2">
-              <span className="ui_micro_label text-(--text-soft)">Time Range</span>
+              <span className="ui_micro_label text-text-soft">Time Range</span>
               <div className="flex flex-wrap items-center gap-1">
                 {GLUCOSE_TIME_RANGES.map((timeRange) => (
                   <SecondaryButton
@@ -287,7 +298,7 @@ export function GlucoseAnalysisView() {
             </div>
             <div className="flex items-end gap-4">
               <div className="grid gap-2">
-                <span className="ui_micro_label text-(--text-soft)">Color Mode</span>
+                <span className="ui_micro_label text-text-soft">Color Mode</span>
                 <SegmentedControl
                   options={GLUCOSE_COLOR_MODES}
                   value={chartColorMode}
@@ -295,7 +306,7 @@ export function GlucoseAnalysisView() {
                 />
               </div>
               <div className="grid gap-2">
-                <span className="ui_micro_label text-(--text-soft)">Y-Axis Max</span>
+                <span className="ui_micro_label text-text-soft">Y-Axis Max</span>
                 <NumberInput
                   label="Top"
                   value={chartYMaxInput}
@@ -333,14 +344,14 @@ export function GlucoseAnalysisView() {
       <DashboardPanel
         title="Glucose Timeline"
         headerRight={
-          <span className="ui_caption tracking-wide text-(--text-soft)">⌘ + Scroll to zoom · Drag to pan</span>
+          <span className="ui_caption tracking-wide text-text-soft">⌘ + Scroll to zoom · Drag to pan</span>
         }
       >
         <div style={{ position: 'relative', minHeight: chartHeight, margin: '-1.5rem' }}>
           {isFirstLoad && (
             <div className="absolute inset-0 z-5 flex flex-col items-center justify-center gap-3">
               <div className="glucose-chart-skeleton" />
-              <p className="body_text text-(--text-soft)">Loading glucose data...</p>
+              <p className="body_text text-text-soft">Loading glucose data...</p>
             </div>
           )}
 
@@ -359,7 +370,7 @@ export function GlucoseAnalysisView() {
           )}
 
           {!error && data && data.items.length === 0 && !isLoading && (
-            <div className="body_text flex items-center justify-center text-(--text-soft)" style={{ height: chartHeight }}>
+            <div className="body_text flex items-center justify-center text-text-soft" style={{ height: chartHeight }}>
               No glucose data available for this time range.
             </div>
           )}
@@ -402,7 +413,7 @@ export function GlucoseAnalysisView() {
               </div>
             </div>
           ) : (
-            <div className="body_text flex items-center justify-center text-(--text-soft)" style={{ height: 400 }}>
+            <div className="body_text flex items-center justify-center text-text-soft" style={{ height: 400 }}>
               {isFirstLoad ? '' : 'No data available.'}
             </div>
           )}
