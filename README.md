@@ -2,14 +2,8 @@
   <img src="./public/static_assets/veno-logo-readme.svg" alt="Veno logo" width="260" />
 </p>
 
-<h1 align="center">VenoDashboard</h1>
-
 <p align="center">
   Demo-first glucose dashboard for the Veno platform.
-</p>
-
-<p align="center">
-  <a href="https://app.venoplatform.com/dashboard">Live demo</a>
 </p>
 
 ## MVP Demo
