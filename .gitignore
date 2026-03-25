@@ -31,3 +31,4 @@ next-env.d.ts
 # tests
 /playwright-report
 /test-results
+/.playwright-mcp
