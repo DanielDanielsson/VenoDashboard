@@ -12,11 +12,11 @@
     }
 
     .theme-dark {
-        --color-nav-link-bg: var(--color-base-panel-dark);
+        --color-nav-link-bg: var(--color-base-night-strong);
         --color-nav-link-bg-hover: var(--color-base-night-strong);
         --color-nav-link-text: var(--color-base-ink-soft);
         --color-nav-link-text-hover: #e8edf5;
-        --color-nav-link-corner: var(--color-base-panel-dark);
+        --color-nav-link-corner: var(--color-base-night-strong);
         --color-nav-link-corner-hover: var(--color-base-success-dark);
     }
 
@@ -30,11 +30,11 @@
     }
 
     .theme-nav-link-dark {
-        --color-nav-link-bg: var(--color-base-panel-dark);
+        --color-nav-link-bg: var(--color-base-night-strong);
         --color-nav-link-bg-hover: var(--color-base-night-strong);
         --color-nav-link-text: var(--color-base-ink-soft);
         --color-nav-link-text-hover: #e8edf5;
-        --color-nav-link-corner: var(--color-base-panel-dark);
+        --color-nav-link-corner: var(--color-base-night-strong);
         --color-nav-link-corner-hover: var(--color-base-success-dark);
     }
 }

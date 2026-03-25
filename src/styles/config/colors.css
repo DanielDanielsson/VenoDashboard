@@ -6,7 +6,6 @@
   --color-base-paper-strong: #e6e0d5;
   --color-base-night: #11161f;
   --color-base-night-strong: #171d26;
-  --color-base-panel-dark: #171d26;
   --color-base-panel-dark-bright: #1e2530;
 
   --color-base-ink: #0c1222;
@@ -25,4 +24,13 @@
   --color-base-warning-dark: #fbbf24;
   --color-base-error: #e11d48;
   --color-base-error-dark: #fb7185;
+
+  --color-base-surface-panel-light: #e8e2d8;
+  --color-base-surface-panel-light-muted: #ddd7cc;
+  --color-base-surface-panel-dark-tint: color-mix(in srgb, white 7%, var(--color-base-panel-dark-bright));
+
+  --color-base-border-warm-medium: rgb(90 70 50 / 0.22);
+
+  --color-base-text-warm-strong: #4a3f35;
+  --color-base-text-warm-body: #5b5149;
 }
