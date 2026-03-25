@@ -16,8 +16,8 @@ const LOW_COLOR_DARK   = '#fb7185';
 const LOW_COLOR_LIGHT  = '#be123c';
 const NORMAL_COLOR_DARK   = '#34d399';
 const NORMAL_COLOR_LIGHT  = '#059669';
-const HIGH_COLOR_DARK  = '#fbbf24';
-const HIGH_COLOR_LIGHT = '#ca8a04';
+const HIGH_COLOR_DARK  = '#a855f7';
+const HIGH_COLOR_LIGHT = '#7e22ce';
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const normalized = hex.replace('#', '');
@@ -70,4 +70,3 @@ export function getGlucoseColor(valueMmolL: number, mode: GlucoseColorMode, alph
 
   return `hsla(${getGlucoseHue(valueMmolL)} 60% 54% / ${alpha})`;
 }
-

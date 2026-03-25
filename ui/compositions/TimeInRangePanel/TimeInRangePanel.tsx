@@ -11,8 +11,8 @@ const SEGMENTS = [
   { key: 'veryLow' as const, label: 'Very Low', color: '#ef4444' },
   { key: 'low' as const, label: 'Low', color: '#fb7185' },
   { key: 'inRange' as const, label: 'In Range', color: '#11b981' },
-  { key: 'high' as const, label: 'High', color: '#fbbf24' },
-  { key: 'veryHigh' as const, label: 'Very High', color: '#a855f7' },
+  { key: 'high' as const, label: 'High', color: '#a855f7' },
+  { key: 'veryHigh' as const, label: 'Very High', color: '#7c3aed' },
 ] as const;
 
 const TIME_RANGES = [

@@ -210,7 +210,8 @@ export function GlucoseAnalysisView() {
   ]);
 
   const lowColor  = isDark ? '#fb7185' : '#be123c';
-  const highColor = isDark ? '#fbbf24' : '#ca8a04';
+  const highColor = isDark ? '#a855f7' : '#7e22ce';
+  const veryHighColor = isDark ? '#7c3aed' : '#6b21a8';
   const normColor = isDark ? '#34d399' : '#059669';
   const avgColor  = stats.avg < 4 ? lowColor : stats.avg > 10 ? highColor : normColor;
 
@@ -313,8 +314,8 @@ export function GlucoseAnalysisView() {
               <GlucoseStatRing label="Very low" percentage={stats.veryLow.percentage} color={isDark ? '#e11d48' : '#be123c'} size="sm" />
               <GlucoseStatRing label="Low" percentage={stats.low.percentage} color={isDark ? '#fb7185' : '#be123c'} size="md" />
               <GlucoseStatRing label="In range" percentage={stats.inRange.percentage} color={isDark ? '#34d399' : '#059669'} size="lg" />
-              <GlucoseStatRing label="High" percentage={stats.high.percentage} color={isDark ? '#fbbf24' : '#ca8a04'} size="md" />
-              <GlucoseStatRing label="Very high" percentage={stats.veryHigh.percentage} color={isDark ? '#f97316' : '#c2410c'} size="sm" />
+              <GlucoseStatRing label="High" percentage={stats.high.percentage} color={isDark ? '#a855f7' : '#7e22ce'} size="md" />
+              <GlucoseStatRing label="Very high" percentage={stats.veryHigh.percentage} color={veryHighColor} size="sm" />
             </div>
           ) : (
             <div className="flex items-end justify-center gap-3">

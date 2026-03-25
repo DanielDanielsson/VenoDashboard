@@ -19,7 +19,7 @@ const STALE_MS = 15 * 60 * 1000;
 const RANGE_COLORS = {
   low: { dark: '#ef4444', light: '#dc2626' },
   normal: { dark: '#10b981', light: '#059669' },
-  high: { dark: '#eab308', light: '#ca8a04' }
+  high: { dark: '#a855f7', light: '#7e22ce' }
 } as const;
 
 const STALE_COLOR = { dark: 'rgba(248,250,252,0.25)', light: '#94a3b8' } as const;
