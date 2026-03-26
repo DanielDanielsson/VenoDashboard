@@ -30,6 +30,27 @@
       <path d="M125.711 125.711C153.097 98.3253 153.097 53.9246 125.711 26.5391C98.3256 -0.846376 53.9249 -0.846376 26.5394 26.5391C-0.84609 53.9246 -0.846104 98.3253 26.5394 125.711L22.2967 129.953L21.6048 129.253C-7.20186 99.7071 -7.20159 52.5419 21.6055 22.996L22.2967 22.2965C52.0254 -7.43216 100.225 -7.43216 129.954 22.2965L130.645 22.996C159.681 52.7765 159.45 100.457 129.954 129.953L129.254 130.645C99.4737 159.68 51.7932 159.45 22.2967 129.953L26.5394 125.711C53.9249 153.096 98.3256 153.096 125.711 125.711Z" fill="currentColor"/>
       <path d="M183.914 76.3893L127.872 20.3469C168.804 66.0228 146.708 112.027 129.84 130.17L183.914 76.3893Z" fill="currentColor"/>
     </symbol>
+    <symbol id="server" viewBox="0 0 24 24">
+      <rect x="4" y="4" width="16" height="6" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <rect x="4" y="14" width="16" height="6" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="8" cy="7" r="1" fill="currentColor"/>
+      <circle cx="8" cy="17" r="1" fill="currentColor"/>
+      <path d="M11 7h5M11 17h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="desktop" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M9 20h6M12 16v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="smartphone" viewBox="0 0 24 24">
+      <rect x="7" y="2.5" width="10" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M10 5.5h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="12" cy="18" r="1" fill="currentColor"/>
+    </symbol>
+    <symbol id="lightbulb" viewBox="0 0 24 24">
+      <path d="M9 18h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M10 21h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M8.5 14.5C7.6 13.7 7 12.5 7 11.1C7 8.3 9.2 6 12 6C14.8 6 17 8.3 17 11.1C17 12.5 16.4 13.7 15.5 14.5C14.8 15.1 14.4 15.8 14.4 16.6V17H9.6V16.6C9.6 15.8 9.2 15.1 8.5 14.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+    </symbol>
     <symbol id="veno-logo" viewBox="0 0 166 47">
       <path d="M161.681 26.3408C161.681 17.3163 154.365 10.0002 145.341 10C136.316 10 129 17.3162 129 26.3408C129 35.3653 136.316 42.6807 145.341 42.6807V46.6807L144.815 46.6748C133.999 46.4007 125.281 37.682 125.007 26.8652L125 26.3408C125 15.1071 134.107 6 145.341 6L145.865 6.00684C156.857 6.28514 165.681 15.2825 165.681 26.3408L165.675 26.8652C165.397 37.8564 156.399 46.6805 145.341 46.6807V42.6807C154.365 42.6805 161.681 35.3652 161.681 26.3408Z" fill="var(--accent)"/>
       <path d="M165.756 6.02498H144.579C160.942 6.92118 165.46 19.7881 165.7 26.403L165.756 6.02498Z" fill="var(--accent)"/>

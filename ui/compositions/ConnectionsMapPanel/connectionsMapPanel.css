@@ -1,0 +1,114 @@
+@layer theme {
+    :root {
+        --color-connection-map-node-bg: var(--color-base-paper-surface-strong);
+        --color-connection-map-node-border: var(--color-base-border-warm-medium);
+        --color-connection-map-line: var(--color-base-border-warm-medium);
+        --color-connection-map-line-live: var(--color-base-accent-strong);
+        --color-connection-map-line-stale: var(--color-base-warning);
+        --color-connection-map-line-fault: var(--color-base-error);
+        --color-connection-map-node-shadow: var(--color-base-shadow-warm-md);
+    }
+
+    .theme-dark {
+        --color-connection-map-node-bg: color-mix(in srgb, var(--color-base-panel-dark-bright) 92%, white 8%);
+        --color-connection-map-node-border: var(--color-base-border-cool-subtle);
+        --color-connection-map-line: var(--color-base-border-cool-strong);
+        --color-connection-map-line-live: var(--color-base-accent-bright-strong);
+        --color-connection-map-line-stale: var(--color-base-warning-dark);
+        --color-connection-map-line-fault: var(--color-base-error-dark);
+        --color-connection-map-node-shadow: var(--color-base-shadow-dark-lg);
+    }
+}
+
+@theme inline {
+    --color-connection-map-node-bg: var(--color-connection-map-node-bg);
+    --color-connection-map-node-border: var(--color-connection-map-node-border);
+    --color-connection-map-line: var(--color-connection-map-line);
+    --color-connection-map-line-live: var(--color-connection-map-line-live);
+    --color-connection-map-line-stale: var(--color-connection-map-line-stale);
+    --color-connection-map-line-fault: var(--color-connection-map-line-fault);
+}
+
+@keyframes connection-map-flow {
+    from {
+        stroke-dashoffset: 20;
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes connection-map-pulse {
+    0%, 100% {
+        opacity: 0.45;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.12);
+    }
+}
+
+.connection-map-edge {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+
+.connection-map-edge-live {
+    stroke: var(--color-connection-map-line-live);
+    stroke-dasharray: 12 10;
+    animation: connection-map-flow 1.4s linear infinite;
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--color-connection-map-line-live) 35%, transparent));
+}
+
+.connection-map-edge-stale {
+    stroke: var(--color-connection-map-line-stale);
+    stroke-dasharray: 8 10;
+    animation: connection-map-flow 2.8s linear infinite;
+    opacity: 0.92;
+}
+
+.connection-map-edge-fault {
+    stroke: var(--color-connection-map-line-fault);
+    stroke-dasharray: 4 9;
+    opacity: 0.96;
+}
+
+.connection-map-edge-inactive {
+    stroke: var(--color-connection-map-line);
+    opacity: 0.58;
+}
+
+.connection-map-beacon {
+    animation: connection-map-pulse 1.8s ease-in-out infinite;
+    transform-origin: center;
+}
+
+.connection-map-node-card {
+    box-shadow: var(--color-connection-map-node-shadow);
+}
+
+.connection-map-flow-shell {
+    height: 680px;
+    overflow: hidden;
+    border: 1px solid var(--color-connection-map-node-border);
+    border-radius: 28px;
+    background: color-mix(in srgb, var(--color-connection-map-node-bg) 90%, transparent);
+}
+
+.connection-map-flow {
+    height: 100%;
+    width: 100%;
+    background:
+        radial-gradient(circle at top, color-mix(in srgb, var(--color-connection-map-line-live) 9%, transparent), transparent 38%),
+        transparent;
+}
+
+.connection-map-flow .react-flow__renderer {
+    background: transparent;
+}
+
+.connection-map-flow .react-flow__attribution {
+    display: none;
+}

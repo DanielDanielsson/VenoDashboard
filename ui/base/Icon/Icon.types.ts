@@ -9,6 +9,10 @@ export type IconName =
   | 'settings'
   | 'key'
   | 'glucose'
+  | 'server'
+  | 'desktop'
+  | 'smartphone'
+  | 'lightbulb'
   | 'veno-logo';
 
 export type IconProps = Stylable & {

@@ -1,5 +1,5 @@
 import { DashboardErrorState } from '@ui/components/DashboardErrorState/DashboardErrorState';
-import { DashboardPanel } from '@ui/components/DashboardPanel';
+import { ConnectionsMapPanel } from '@ui/compositions/ConnectionsMapPanel';
 import { LiveGlucosePanel } from '@ui/compositions/LiveGlucosePanel';
 import { SharedTimersPanel } from '@ui/compositions/SharedTimersPanel/SharedTimersPanel';
 import { TimeInRangePanel } from '@ui/compositions/TimeInRangePanel';
@@ -9,56 +9,18 @@ import {
   PulseApiClientError,
   fetchAdminHealthSteps,
   fetchApiStatus,
-  fetchConsumerProfile
+  fetchConsumerProfile,
+  listApiKeys,
 } from '@/lib/pulse-api/client';
 import {
   fetchTandemBasalHistory,
   fetchTandemEventHistory
 } from '@/lib/pulse-api/glucose';
-
-function formatLag(value: number | null | undefined): string {
-  if (value == null) {
-    return 'n/a';
-  }
-
-  const roundedMinutes = Math.max(0, Math.round(value));
-  const days = Math.floor(roundedMinutes / (24 * 60));
-  const hours = Math.floor((roundedMinutes % (24 * 60)) / 60);
-  const minutes = roundedMinutes % 60;
-
-  if (days > 0) {
-    return `${days}d ${hours}h`;
-  }
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-
-  return `${minutes}m`;
-}
-
-function getLatestIsoTimestamp(values: Array<string | null | undefined>): string | null {
-  let latestMs = Number.NEGATIVE_INFINITY;
-  let latestIso: string | null = null;
-
-  for (const value of values) {
-    if (!value) {
-      continue;
-    }
-
-    const timestampMs = new Date(value).getTime();
-    if (Number.isNaN(timestampMs)) {
-      continue;
-    }
-
-    if (timestampMs > latestMs) {
-      latestMs = timestampMs;
-      latestIso = new Date(timestampMs).toISOString();
-    }
-  }
-
-  return latestIso;
-}
+import {
+  buildConnectionMapSnapshot,
+  getLatestHealthStepBucketEnd,
+  getLatestTandemActivityAt,
+} from '@/lib/dashboard/connection-map';
 
 export default async function DashboardPage() {
   const session = await getOwnerSession();
@@ -70,8 +32,7 @@ export default async function DashboardPage() {
   const healthStepsTo = now.toISOString();
   const recentTandemFrom = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
   const recentTandemTo = now.toISOString();
-  let latestHealthStepBucketEnd: string | null = null;
-  let latestTandemActivityAt: string | null = null;
+  let initialConnectionSnapshot = null;
 
   if (session) {
     try {
@@ -85,20 +46,24 @@ export default async function DashboardPage() {
   }
 
   try {
-    const [statusReport, healthSteps, tandemBasal, tandemEvents] = await Promise.all([
+    const [statusReport, healthSteps, tandemBasal, tandemEvents, apiKeys] = await Promise.all([
       fetchApiStatus(),
       fetchAdminHealthSteps(healthStepsFrom, healthStepsTo).catch(() => ({ items: [] })),
       fetchTandemBasalHistory(recentTandemFrom, recentTandemTo, 5000).catch(() => ({ items: [], meta: { from: recentTandemFrom, to: recentTandemTo, limit: 5000, returned: 0 } })),
-      fetchTandemEventHistory(recentTandemFrom, recentTandemTo, 5000).catch(() => ({ items: [], meta: { from: recentTandemFrom, to: recentTandemTo, limit: 5000, returned: 0 } }))
+      fetchTandemEventHistory(recentTandemFrom, recentTandemTo, 5000).catch(() => ({ items: [], meta: { from: recentTandemFrom, to: recentTandemTo, limit: 5000, returned: 0 } })),
+      listApiKeys().catch(() => ({ items: [] })),
     ]);
     report = statusReport;
-    latestHealthStepBucketEnd = getLatestIsoTimestamp(
-      healthSteps.items.map((item) => item.bucketEnd)
-    );
-    latestTandemActivityAt = getLatestIsoTimestamp([
-      ...tandemBasal.items.map((item) => item.timestamp),
-      ...tandemEvents.items.map((item) => item.timestamp)
-    ]);
+    initialConnectionSnapshot = buildConnectionMapSnapshot({
+      report: statusReport,
+      latestHealthStepBucketEnd: getLatestHealthStepBucketEnd(healthSteps.items),
+      latestTandemActivityAt: getLatestTandemActivityAt({
+        basalTimestamps: tandemBasal.items.map((item) => item.timestamp),
+        eventTimestamps: tandemEvents.items.map((item) => item.timestamp),
+      }),
+      apiKeys: apiKeys.items,
+      now,
+    });
   } catch (error) {
     if (error instanceof PulseApiClientError) {
       message = error.message;
@@ -113,19 +78,6 @@ export default async function DashboardPage() {
     return <DashboardErrorState title="Dashboard unavailable" message={message || 'Failed to load dashboard'} />;
   }
 
-  const healthKitAgeMinutes = latestHealthStepBucketEnd
-    ? (now.getTime() - new Date(latestHealthStepBucketEnd).getTime()) / (60 * 1000)
-    : null;
-  const tandemAgeMinutes = latestTandemActivityAt
-    ? (now.getTime() - new Date(latestTandemActivityAt).getTime()) / (60 * 1000)
-    : report.tandem.latestReadingAgeMinutes;
-
-  const connections = [
-    { name: 'Dexcom official API', type: 'Official glucose', connected: report.official.connected, age: formatLag(report.official.latestReadingAgeMinutes) },
-    { name: 'Dexcom share API', type: 'Share glucose', connected: report.share.connected, age: formatLag(report.share.latestReadingAgeMinutes) },
-    { name: 'Tandem', type: 'Pump', connected: report.tandem.connected, age: formatLag(tandemAgeMinutes) },
-    { name: 'Apple HealthKit', type: 'Steps', connected: latestHealthStepBucketEnd != null, age: formatLag(healthKitAgeMinutes) },
-  ];
   let latestSource = null;
   if (report.official.latestReading) {
     latestSource = report.official;
@@ -162,27 +114,11 @@ export default async function DashboardPage() {
 
         <TimeInRangePanel />
 
-        <DashboardPanel
-          title="Connections"
-          headerRight={<span className="ui_caption_strong text-text-dim">{connections.length} total</span>}
-        >
-          <div className="flex flex-col gap-3">
-            {connections.map((conn) => (
-              <div key={conn.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={conn.connected ? 'h-2 w-2 rounded-full bg-success' : 'h-2 w-2 rounded-full bg-text-soft'} />
-                  <div>
-                    <p className="body_text_strong text-text">{conn.name}</p>
-                    <p className="ui_caption text-text-dim">{conn.type}</p>
-                  </div>
-                </div>
-                <span className="ui_caption text-text-dim">
-                  {conn.connected ? `${conn.age} ago` : 'Not connected'}
-                </span>
-              </div>
-            ))}
+        {initialConnectionSnapshot ? (
+          <div className="md:col-span-3">
+            <ConnectionsMapPanel initialSnapshot={initialConnectionSnapshot} />
           </div>
-        </DashboardPanel>
+        ) : null}
       </div>
     </div>
   );

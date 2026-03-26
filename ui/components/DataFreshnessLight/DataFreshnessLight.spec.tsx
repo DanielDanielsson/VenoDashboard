@@ -26,4 +26,10 @@ describe('DataFreshnessLight', () => {
 
     expect(screen.getByText('10s')).toBeInTheDocument();
   });
+
+  test('shows a fallback label when no timestamp is provided', () => {
+    render(<DataFreshnessLight fallbackLabel="Rendering now" autoUpdateEventName={null} status="fresh" />);
+
+    expect(screen.getByText('Rendering now')).toBeInTheDocument();
+  });
 });
