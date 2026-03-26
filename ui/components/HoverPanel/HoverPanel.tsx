@@ -29,11 +29,11 @@ export const HoverPanel = ({
       <Button
         ariaLabel={ariaLabel ?? title ?? 'More information'}
         twStyles={twMerge(
-          'inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-text-soft transition-opacity hover:opacity-100 focus:opacity-100 focus:outline-none',
+          'inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full p-1 text-text-soft transition-opacity hover:opacity-100 focus:opacity-100 focus:outline-none',
           isOpen ? 'opacity-100' : 'opacity-90',
         )}
       >
-        <Icon icon="info" twStyles="h-4 w-4" />
+        <Icon icon="info" twStyles="h-5 w-5" />
       </Button>
 
       {isOpen ? (
@@ -44,7 +44,7 @@ export const HoverPanel = ({
           <DashboardPanel
             title={title ?? 'Info'}
             theme={theme}
-            twStyles="overflow-hidden rounded-lg rounded-tr-none shadow-lg"
+            twStyles="overflow-hidden rounded-lg rounded-tr-none shadow-2xl"
           >
             <p className="body_text text-text">{body}</p>
             {sourceValue ? (

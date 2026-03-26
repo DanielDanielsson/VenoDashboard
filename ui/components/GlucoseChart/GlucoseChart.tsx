@@ -1414,8 +1414,7 @@ export function GlucoseChart({
             top: stepBandTop + 4,
             zIndex: 5,
             display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
+            alignItems: 'flex-start',
             pointerEvents: 'none',
           }}
         >
@@ -1427,6 +1426,7 @@ export function GlucoseChart({
               title="Steps"
               body="The steps data comes from my phone. Each bar shows a 5 minute bucket with the number of steps recorded during that 5 minute window."
               sourceValue="Apple HealthKit"
+              twStyles="-ml-0.5 -mt-2"
             />
           </div>
         </div>
