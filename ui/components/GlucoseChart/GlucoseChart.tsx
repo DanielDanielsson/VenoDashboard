@@ -16,6 +16,11 @@ interface GlucoseChartProps {
   height?: number;
   yMax?: number;
   colorMode: GlucoseColorMode;
+  editable?: boolean;
+  selectedReadingIds?: string[];
+  previewReadingValues?: Record<string, number>;
+  onPointSelect?: (point: ChartPoint, additive: boolean) => void;
+  onCorrectionPreviewChange?: (items: Array<{ readingId: string; valueMmolL: number }>) => void;
 }
 
 const LOW_THRESHOLD = 4.0;
@@ -34,6 +39,8 @@ const EVENT_LANE_COUNT = 3;
 const EVENT_HOVER_WINDOW_MS = 3 * 60 * 1000;
 const MAX_PX_PER_MS = 0.04;
 const FIT_ALL_EPSILON = 0.001;
+const CORRECTED_COLOR_DARK = '#f472b6';
+const CORRECTED_COLOR_LIGHT = '#db2777';
 const TICK_INTERVALS_MS = [
   30 * 60 * 1000,
   60 * 60 * 1000,
@@ -212,6 +219,28 @@ function snapStrokeCoord(value: number): number {
 
 function snapFillCoord(value: number): number {
   return Math.round(value);
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const normalized = hex.replace('#', '');
+  const value = Number.parseInt(normalized, 16);
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getRenderedReadingColor(
+  point: Pick<ChartPoint, 'valueMmolL' | 'isCorrected'> & { isPreviewCorrection?: boolean },
+  colorMode: GlucoseColorMode,
+  isDark: boolean,
+  alpha = 1
+): string {
+  if (point.isCorrected || point.isPreviewCorrection) {
+    return hexToRgba(isDark ? CORRECTED_COLOR_DARK : CORRECTED_COLOR_LIGHT, alpha);
+  }
+
+  return getGlucoseColor(point.valueMmolL, colorMode, alpha, isDark);
 }
 
 function getHoveredBasalPoint(
@@ -408,6 +437,15 @@ const GLUCOSE_ICON_PATH1 = 'M125.711 125.711C153.097 98.3253 153.097 53.9246 125
 const GLUCOSE_ICON_PATH2 = 'M183.914 76.3893L127.872 20.3469C168.804 66.0228 146.708 112.027 129.84 130.17L183.914 76.3893Z';
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+const GLUCOSE_POINT_HIT_RADIUS_PX = 14;
+
+function roundPreviewValue(value: number): number {
+  return Number(value.toFixed(1));
+}
+
+function clampPreviewValue(value: number, yMax: number): number {
+  return clamp(roundPreviewValue(value), 0.1, Math.max(yMax, Y_MIN));
+}
 
 function drawTandemMarker(
   ctx: CanvasRenderingContext2D,
@@ -459,7 +497,12 @@ export function GlucoseChart({
   stepData = [],
   height = 400,
   yMax = 25,
-  colorMode
+  colorMode,
+  editable = false,
+  selectedReadingIds = [],
+  previewReadingValues = {},
+  onPointSelect,
+  onCorrectionPreviewChange
 }: GlucoseChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -467,13 +510,18 @@ export function GlucoseChart({
   const scrollRef = useRef(0);
   const pxPerMsRef = useRef(0);
   const isDraggingRef = useRef(false);
+  const dragModeRef = useRef<'pan' | 'edit' | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef(0);
   const dragScrollRef = useRef(0);
+  const dragMovedRef = useRef(false);
+  const editDragRef = useRef<{ readingId: string; baselineValueMmolL: number; index: number } | null>(null);
   const rafRef = useRef<number>(0);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hoveredTimestampMs, setHoveredTimestampMs] = useState<number | null>(null);
   const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
+  const [draggedReadingId, setDraggedReadingId] = useState<string | null>(null);
+  const [isEditDragging, setIsEditDragging] = useState(false);
   const dataSignatureRef = useRef('');
   const [isDark, setIsDark] = useState(() =>
     typeof document !== 'undefined'
@@ -508,6 +556,23 @@ export function GlucoseChart({
   }, []);
 
   const timestamps = data.map((point) => new Date(point.timestamp).getTime());
+  const renderedData = data.map((point) => {
+    const readingId = point.readingId;
+    const previewValue = readingId ? previewReadingValues[readingId] : undefined;
+
+    if (previewValue === undefined) {
+      return {
+        ...point,
+        isPreviewCorrection: false
+      };
+    }
+
+    return {
+      ...point,
+      valueMmolL: previewValue,
+      isPreviewCorrection: true
+    };
+  });
   const basalTimestamps = basalData.map((point) => new Date(point.timestamp).getTime());
   const timeStartMs = timestamps[0] ?? 0;
   const timeEndMs = timestamps[timestamps.length - 1] ?? timeStartMs;
@@ -532,7 +597,8 @@ export function GlucoseChart({
   const stepBandTop = basalBandTop + basalBandHeight + stepGap;
   const fitAllPxPerMs = chartWidth > 0 ? chartWidth / totalDurationMs : 0;
   const minPxPerMs = fitAllPxPerMs > 0 ? fitAllPxPerMs : 0;
-  const hoveredPoint = hoveredIndex === null ? null : data[hoveredIndex] ?? null;
+  const hoveredPoint = hoveredIndex === null ? null : renderedData[hoveredIndex] ?? null;
+  const selectedReadingIdSet = new Set(selectedReadingIds);
   const hoveredBasalPoint =
     hoveredPoint && basalTimestamps.length > 0
       ? getHoveredBasalPoint(
@@ -1150,7 +1216,7 @@ export function GlucoseChart({
       ctx.beginPath();
       ctx.moveTo(xForTimestamp(timestamps[startIdx]), PADDING.top + glucosePlotHeight);
       for (let i = startIdx; i <= endIdx; i++) {
-        ctx.lineTo(xForTimestamp(timestamps[i]), yForValue(data[i].valueMmolL));
+        ctx.lineTo(xForTimestamp(timestamps[i]), yForValue(renderedData[i].valueMmolL));
       }
       ctx.lineTo(xForTimestamp(timestamps[endIdx]), PADDING.top + glucosePlotHeight);
       ctx.closePath();
@@ -1164,12 +1230,26 @@ export function GlucoseChart({
 
     for (let i = startIdx; i < endIdx; i++) {
       const x1 = xForTimestamp(timestamps[i]);
-      const y1 = yForValue(data[i].valueMmolL);
+      const y1 = yForValue(renderedData[i].valueMmolL);
       const x2 = xForTimestamp(timestamps[i + 1]);
-      const y2 = yForValue(data[i + 1].valueMmolL);
-      const avgValue = (data[i].valueMmolL + data[i + 1].valueMmolL) / 2;
+      const y2 = yForValue(renderedData[i + 1].valueMmolL);
+      const lineColor =
+        renderedData[i].isCorrected ||
+        renderedData[i].isPreviewCorrection ||
+        renderedData[i + 1].isCorrected ||
+        renderedData[i + 1].isPreviewCorrection
+          ? getRenderedReadingColor(
+              {
+                valueMmolL: renderedData[i].valueMmolL,
+                isCorrected: renderedData[i].isCorrected,
+                isPreviewCorrection: renderedData[i].isPreviewCorrection || renderedData[i + 1].isPreviewCorrection
+              },
+              colorMode,
+              isDark
+            )
+          : getGlucoseColor((renderedData[i].valueMmolL + renderedData[i + 1].valueMmolL) / 2, colorMode, 1, isDark);
 
-      ctx.strokeStyle = getGlucoseColor(avgValue, colorMode, 1, isDark);
+      ctx.strokeStyle = lineColor;
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
@@ -1180,9 +1260,9 @@ export function GlucoseChart({
     if (showDots) {
       for (let i = startIdx; i <= endIdx; i++) {
         const x = xForTimestamp(timestamps[i]);
-        const y = yForValue(data[i].valueMmolL);
-        const color = getGlucoseColor(data[i].valueMmolL, colorMode, 1, isDark);
-        const isShare = data[i].source === 'share';
+        const y = yForValue(renderedData[i].valueMmolL);
+        const color = getRenderedReadingColor(renderedData[i], colorMode, isDark);
+        const isShare = renderedData[i].source === 'share';
 
         ctx.beginPath();
         ctx.arc(x, y, isShare ? 2.5 : 3, 0, Math.PI * 2);
@@ -1197,9 +1277,31 @@ export function GlucoseChart({
       }
     }
 
+    for (let i = startIdx; i <= endIdx; i++) {
+      const readingId = renderedData[i].readingId;
+      if (!readingId || !selectedReadingIdSet.has(readingId)) {
+        continue;
+      }
+
+      const x = xForTimestamp(timestamps[i]);
+      const y = yForValue(renderedData[i].valueMmolL);
+      const color = getRenderedReadingColor(renderedData[i], colorMode, isDark);
+
+      ctx.beginPath();
+      ctx.arc(x, y, 7, 0, Math.PI * 2);
+      ctx.fillStyle = style.getPropertyValue('--surface-strong').trim() || '#020817';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(x, y, 5.5, 0, Math.PI * 2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
     if (hoveredIndex !== null && hoveredIndex >= startIdx && hoveredIndex <= endIdx) {
       const hoverX = xForTimestamp(timestamps[hoveredIndex]);
-      const hoverY = yForValue(data[hoveredIndex].valueMmolL);
+      const hoverY = yForValue(renderedData[hoveredIndex].valueMmolL);
 
       ctx.setLineDash([3, 5]);
       ctx.strokeStyle = 'rgba(148, 163, 184, 0.55)';
@@ -1217,7 +1319,7 @@ export function GlucoseChart({
 
       ctx.beginPath();
       ctx.arc(hoverX, hoverY, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = getGlucoseColor(data[hoveredIndex].valueMmolL, colorMode, 1, isDark);
+      ctx.fillStyle = getRenderedReadingColor(renderedData[hoveredIndex], colorMode, isDark);
       ctx.fill();
     }
 
@@ -1244,7 +1346,7 @@ export function GlucoseChart({
     chartWidth,
     colorMode,
     containerWidth,
-    data,
+    data.length,
     eventData,
     eventGap,
     eventTrackHeight,
@@ -1269,7 +1371,9 @@ export function GlucoseChart({
     yMax,
     isDark,
     iobPoints,
-    hoveredIobValue
+    hoveredIobValue,
+    renderedData,
+    selectedReadingIds
   ]);
 
   useEffect(() => {
@@ -1309,26 +1413,145 @@ export function GlucoseChart({
     rafRef.current = requestAnimationFrame(draw);
   }, [chartWidth, clampScroll, draw, fitAllPxPerMs, minPxPerMs, timeStartMs, totalDurationMs]);
 
+  function getSelectablePointIndexAtClientPosition(clientX: number, clientY: number): number | null {
+    const canvas = canvasRef.current;
+    if (!canvas || !data.length || chartWidth <= 0 || pxPerMsRef.current <= 0) {
+      return null;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = clientX - rect.left;
+    const mouseY = clientY - rect.top;
+
+    if (
+      mouseX < PADDING.left ||
+      mouseX > PADDING.left + chartWidth ||
+      mouseY < PADDING.top ||
+      mouseY > PADDING.top + chartHeight
+    ) {
+      return null;
+    }
+
+    const targetTimeMs = timeStartMs + (mouseX - PADDING.left + scrollRef.current) / pxPerMsRef.current;
+    const nearestIndex = findNearestIndex(timestamps, targetTimeMs);
+    if (nearestIndex < 0) {
+      return null;
+    }
+
+    const xForTimestamp = (timestampMs: number): number =>
+      PADDING.left + (timestampMs - timeStartMs) * pxPerMsRef.current - scrollRef.current;
+
+    const yForValue = (value: number): number => {
+      const clamped = clamp(value, Y_MIN, yMax);
+      return PADDING.top + glucosePlotHeight * (1 - (clamped - Y_MIN) / (yMax - Y_MIN));
+    };
+
+    let bestIndex: number | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    for (let offset = -3; offset <= 3; offset += 1) {
+      const index = nearestIndex + offset;
+      if (index < 0 || index >= data.length) {
+        continue;
+      }
+
+      const point = renderedData[index];
+      if (!point?.readingId) {
+        continue;
+      }
+
+      const pointX = xForTimestamp(timestamps[index]);
+      const pointY = yForValue(point.valueMmolL);
+      const distance = Math.hypot(pointX - mouseX, pointY - mouseY);
+
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = index;
+      }
+    }
+
+    if (bestDistance > GLUCOSE_POINT_HIT_RADIUS_PX) {
+      return null;
+    }
+
+    return bestIndex;
+  }
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    const selectedIndex = getSelectablePointIndexAtClientPosition(e.clientX, e.clientY);
+    const selectedPoint = selectedIndex === null ? null : renderedData[selectedIndex];
+
     isDraggingRef.current = true;
     setIsDragging(true);
-    dragStartRef.current = e.clientX;
-    dragScrollRef.current = scrollRef.current;
+    dragMovedRef.current = false;
+
+    if (editable && selectedPoint?.readingId && selectedReadingIdSet.has(selectedPoint.readingId)) {
+      dragModeRef.current = 'edit';
+      dragStartRef.current = e.clientY;
+      editDragRef.current = {
+        readingId: selectedPoint.readingId,
+        baselineValueMmolL: selectedPoint.valueMmolL,
+        index: selectedIndex as number
+      };
+      setDraggedReadingId(selectedPoint.readingId);
+      setIsEditDragging(true);
+      setHoveredIndex(selectedIndex);
+      setHoveredTimestampMs(new Date(selectedPoint.timestamp).getTime());
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        setHoverPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      }
+    } else {
+      dragModeRef.current = 'pan';
+      dragStartRef.current = e.clientX;
+      dragScrollRef.current = scrollRef.current;
+      editDragRef.current = null;
+      setDraggedReadingId(null);
+      setIsEditDragging(false);
+    }
+
     e.preventDefault();
-  }, []);
+  }, [chartHeight, chartWidth, editable, glucosePlotHeight, renderedData, selectedReadingIdSet, timeStartMs, timestamps, yMax]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const canvas = canvasRef.current;
     if (!canvas || !data.length || chartWidth <= 0 || pxPerMsRef.current <= 0) return;
 
     if (isDraggingRef.current) {
-      const delta = dragStartRef.current - e.clientX;
-      scrollRef.current = dragScrollRef.current + delta;
-      clampScroll();
+      if (dragModeRef.current === 'edit' && editDragRef.current) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const deltaY = dragStartRef.current - e.clientY;
+        if (Math.abs(deltaY) > 2) {
+          dragMovedRef.current = true;
+        }
+
+        const valueDelta = (deltaY / glucosePlotHeight) * (yMax - Y_MIN);
+        onCorrectionPreviewChange?.(
+          [{
+            readingId: editDragRef.current.readingId,
+            valueMmolL: clampPreviewValue(editDragRef.current.baselineValueMmolL + valueDelta, yMax)
+          }]
+        );
+        setHoveredIndex(editDragRef.current.index);
+        setHoveredTimestampMs(new Date(renderedData[editDragRef.current.index]?.timestamp ?? '').getTime() || null);
+        setHoverPos({ x: mouseX, y: mouseY });
+      } else {
+        const delta = dragStartRef.current - e.clientX;
+        if (Math.abs(delta) > 4) {
+          dragMovedRef.current = true;
+        }
+        scrollRef.current = dragScrollRef.current + delta;
+        clampScroll();
+      }
+
       cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(draw);
-      setHoveredIndex(null);
-      setHoveredTimestampMs(null);
+      if (dragModeRef.current !== 'edit') {
+        setHoveredIndex(null);
+        setHoveredTimestampMs(null);
+      }
       return;
     }
 
@@ -1358,18 +1581,47 @@ export function GlucoseChart({
       setHoveredIndex(null);
       setHoveredTimestampMs(null);
     }
-  }, [chartHeight, chartWidth, clampScroll, data.length, draw, timeStartMs, timestamps]);
+  }, [chartHeight, chartWidth, clampScroll, data.length, draw, glucosePlotHeight, onCorrectionPreviewChange, timeStartMs, timestamps, yMax]);
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (dragModeRef.current === 'edit') {
+      isDraggingRef.current = false;
+      dragModeRef.current = null;
+      editDragRef.current = null;
+      setIsDragging(false);
+      setIsEditDragging(false);
+      setDraggedReadingId(null);
+      dragMovedRef.current = false;
+      return;
+    }
+
+    if (!dragMovedRef.current && editable) {
+      const selectedIndex = getSelectablePointIndexAtClientPosition(e.clientX, e.clientY);
+      const point = selectedIndex === null ? null : data[selectedIndex];
+      if (point?.readingId) {
+        onPointSelect?.(point, e.shiftKey);
+      }
+    }
+
     isDraggingRef.current = false;
+    dragModeRef.current = null;
+    editDragRef.current = null;
     setIsDragging(false);
-  }, []);
+    setIsEditDragging(false);
+    setDraggedReadingId(null);
+    dragMovedRef.current = false;
+  }, [data, editable, onPointSelect]);
 
   const handleMouseLeave = useCallback(() => {
     isDraggingRef.current = false;
+    dragModeRef.current = null;
+    editDragRef.current = null;
     setIsDragging(false);
+    setIsEditDragging(false);
+    setDraggedReadingId(null);
     setHoveredIndex(null);
     setHoveredTimestampMs(null);
+    dragMovedRef.current = false;
   }, []);
 
   useEffect(() => {
@@ -1437,7 +1689,13 @@ export function GlucoseChart({
           display: 'block',
           width: '100%',
           height,
-          cursor: isDragging ? 'grabbing' : 'grab',
+          cursor: isDragging
+            ? 'grabbing'
+            : editable && hoveredPoint?.readingId && selectedReadingIdSet.has(hoveredPoint.readingId)
+              ? 'ns-resize'
+              : editable && hoveredPoint?.readingId
+                ? 'pointer'
+                : 'grab',
           touchAction: 'none'
         }}
         onMouseDown={handleMouseDown}
@@ -1463,18 +1721,34 @@ export function GlucoseChart({
             minWidth: 140
           }}
         >
-          <p className="ui_mono_value_lg" style={{ margin: 0, color: getGlucoseColor(hoveredPoint.valueMmolL, colorMode, 1, isDark) }}>
+          <p className="ui_mono_value_lg" style={{ margin: 0, color: getRenderedReadingColor(hoveredPoint, colorMode, isDark) }}>
             {hoveredPoint.valueMmolL.toFixed(1)} <span className="ui_caption text-text-soft">mmol/L</span>
           </p>
-          <p className="ui_caption text-text-dim" style={{ margin: '4px 0 0' }}>
-            {new Date(hoveredPoint.timestamp).toLocaleString([], {
-              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-            })}
-          </p>
-          <p className="ui_micro_label text-text-soft" style={{ margin: '2px 0 0' }}>
-            {hoveredPoint.source}
-          </p>
-          {hoveredBasalPoint && (
+          {!isEditDragging || hoveredPoint.readingId !== draggedReadingId ? (
+            <>
+              <p className="ui_caption text-text-dim" style={{ margin: '4px 0 0' }}>
+                {new Date(hoveredPoint.timestamp).toLocaleString([], {
+                  month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                })}
+              </p>
+              <p className="ui_micro_label text-text-soft" style={{ margin: '2px 0 0' }}>
+                {hoveredPoint.source}
+              </p>
+              {hoveredPoint.isCorrected && hoveredPoint.originalValueMmolL != null ? (
+                <>
+                  <p className="ui_caption text-text-dim" style={{ margin: '2px 0 0' }}>
+                    corrected from {hoveredPoint.originalValueMmolL.toFixed(1)} mmol/L
+                  </p>
+                  {hoveredPoint.correctionReason ? (
+                    <p className="ui_caption text-text-dim" style={{ margin: '2px 0 0' }}>
+                      reason: {hoveredPoint.correctionReason}
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
+            </>
+          ) : null}
+          {!isEditDragging && hoveredBasalPoint ? (
             <div className="mt-2 border-t border-border pt-2">
               <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
                 Basal
@@ -1487,8 +1761,8 @@ export function GlucoseChart({
                 {hoveredBasalPoint.eventName}
               </p>
             </div>
-          )}
-          {hoveredStepBucket && (
+          ) : null}
+          {!isEditDragging && hoveredStepBucket ? (
             <div className="mt-2 border-t border-border pt-2">
               <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
                 Steps
@@ -1508,7 +1782,7 @@ export function GlucoseChart({
                 })}
               </p>
             </div>
-          )}
+          ) : null}
           {hoveredEventItems.length > 0 && (
             <div className="mt-2 border-t border-border pt-2">
               <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>

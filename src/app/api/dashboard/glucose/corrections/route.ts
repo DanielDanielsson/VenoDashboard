@@ -1,0 +1,23 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getOwnerSession } from '@/lib/auth';
+import { updateGlucoseCorrections } from '@/lib/pulse-api/glucose';
+import type { GlucoseCorrectionBatchPayload } from '@/lib/pulse-api/types';
+
+export async function PUT(request: NextRequest) {
+  const session = await getOwnerSession();
+  if (!session) {
+    return NextResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 });
+  }
+
+  const payload = (await request.json()) as GlucoseCorrectionBatchPayload;
+
+  try {
+    const response = await updateGlucoseCorrections(payload);
+    return NextResponse.json(response, { status: 200 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: { message: error instanceof Error ? error.message : 'Failed to update glucose corrections' } },
+      { status: 502 }
+    );
+  }
+}

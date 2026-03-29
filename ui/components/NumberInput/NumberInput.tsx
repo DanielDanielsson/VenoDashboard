@@ -26,7 +26,7 @@ export const NumberInput = ({
       inputMode="numeric"
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="ui_mono_text w-16 rounded-[4px] border border-number-input-border bg-number-input-bg px-2 py-0.5 text-number-input-text transition-colors focus:border-number-input-focus-border focus:outline-none"
+      className="ui_mono_text w-28 rounded-[4px] border border-number-input-border bg-number-input-bg px-2 py-0.5 text-number-input-text transition-colors focus:border-number-input-focus-border focus:outline-none"
       aria-label={ariaLabel ?? label}
     />
   </label>

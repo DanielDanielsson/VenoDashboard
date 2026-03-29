@@ -22,7 +22,7 @@ import {
 import { computeGlucoseStats } from '@/lib/glucose/metrics';
 import { GLUCOSE_TIME_RANGES } from '@/lib/glucose/time-ranges';
 import { SecondaryButton } from '@ui/components/SecondaryButton';
-import type { GlucoseApiResponse, GlucoseUpdatesResponse } from '@/lib/glucose/types';
+import type { ChartPoint, GlucoseApiResponse, GlucoseUpdatesResponse } from '@/lib/glucose/types';
 
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
@@ -74,6 +74,10 @@ function getInitialIsDark(): boolean {
   }
 }
 
+function roundCorrectionValue(value: number): number {
+  return Number(value.toFixed(1));
+}
+
 function getChartHeight(data: Pick<GlucoseApiResponse, 'basalItems' | 'eventItems' | 'stepItems'> | undefined): number {
   const glucosePlotHeight = 240;
   const paddingTop = 32;
@@ -98,7 +102,7 @@ function getChartHeight(data: Pick<GlucoseApiResponse, 'basalItems' | 'eventItem
   return totalHeight;
 }
 
-export function GlucoseAnalysisView() {
+export function GlucoseAnalysisView({ isOwner = false }: { isOwner?: boolean }) {
   const [selection, setSelection] = useState<HistorySelection>({
     kind: 'preset',
     range: '3d'
@@ -117,6 +121,11 @@ export function GlucoseAnalysisView() {
   }, []);
   const [chartYMaxInput, setChartYMaxInput] = useState('25');
   const [chartColorMode, setChartColorMode] = useState<GlucoseColorMode>(DEFAULT_GLUCOSE_CHART_COLOR_MODE);
+  const [selectedPoints, setSelectedPoints] = useState<ChartPoint[]>([]);
+  const [previewCorrectionValues, setPreviewCorrectionValues] = useState<Record<string, number>>({});
+  const [correctionReasonInput, setCorrectionReasonInput] = useState('');
+  const [isSavingCorrection, setIsSavingCorrection] = useState(false);
+  const [correctionError, setCorrectionError] = useState<string | null>(null);
 
   const isApplyingUpdatesRef = useRef(false);
   const { cache, mutate: globalMutate } = useSWRConfig();
@@ -227,6 +236,180 @@ export function GlucoseAnalysisView() {
   const avgColor  = stats.avg < 4 ? lowColor : stats.avg > 10 ? highColor : normColor;
 
   const hasData = !error && data && data.items.length > 0;
+  const selectedReadingIds = selectedPoints
+    .map((point) => point.readingId)
+    .filter((readingId): readingId is string => Boolean(readingId));
+  const hasPreviewCorrection = selectedReadingIds.some((readingId) => previewCorrectionValues[readingId] !== undefined);
+  const trimmedCorrectionReason = correctionReasonInput.trim();
+  const isCorrectionReasonMissing = trimmedCorrectionReason.length === 0;
+
+  useEffect(() => {
+    if (!data?.items.length) {
+      setSelectedPoints((current) => (current.length === 0 ? current : []));
+      setPreviewCorrectionValues((current) =>
+        Object.keys(current).length === 0 ? current : {}
+      );
+      setCorrectionReasonInput((current) => (current === '' ? current : ''));
+      return;
+    }
+
+    const itemMap = new Map(data.items.map((item) => [item.readingId, item]));
+    setSelectedPoints((current) => {
+      const next = current
+        .map((point) => itemMap.get(point.readingId))
+        .filter((point): point is ChartPoint => Boolean(point));
+
+      if (
+        next.length === current.length &&
+        next.every((point, index) => point.readingId === current[index]?.readingId)
+      ) {
+        return current;
+      }
+
+      return next;
+    });
+    setPreviewCorrectionValues((current) => {
+      const nextEntries = Object.entries(current).filter(([readingId]) => itemMap.has(readingId));
+      if (nextEntries.length === Object.keys(current).length) {
+        return current;
+      }
+
+      return Object.fromEntries(nextEntries);
+    });
+  }, [data?.items]);
+
+  useEffect(() => {
+    if (selectedReadingIds.length === 0) {
+      setPreviewCorrectionValues((current) =>
+        Object.keys(current).length === 0 ? current : {}
+      );
+      setCorrectionReasonInput((current) => (current === '' ? current : ''));
+      return;
+    }
+
+    setPreviewCorrectionValues((current) => {
+      const selectedReadingIdSet = new Set(selectedReadingIds);
+      const nextEntries = Object.entries(current).filter(([readingId]) => selectedReadingIdSet.has(readingId));
+      if (nextEntries.length === Object.keys(current).length) {
+        return current;
+      }
+
+      return Object.fromEntries(nextEntries);
+    });
+  }, [selectedReadingIds]);
+
+  function handlePointSelect(point: ChartPoint, additive: boolean) {
+    const readingId = point.readingId;
+    const hasActiveCorrectionSession = selectedPoints.length > 0 || Object.keys(previewCorrectionValues).length > 0;
+    const shouldAddToSession = additive || hasActiveCorrectionSession;
+    const isAlreadySelected = Boolean(readingId) && selectedPoints.some((item) => item.readingId === readingId);
+    const shouldSeedReason = !shouldAddToSession && !isAlreadySelected;
+
+    setCorrectionError(null);
+    if (shouldSeedReason) {
+      setCorrectionReasonInput(point.correctionReason ?? '');
+    }
+    setSelectedPoints((current) => {
+      if (shouldAddToSession) {
+        const exists = current.some((item) => item.readingId === point.readingId);
+        if (exists) {
+          return current.filter((item) => item.readingId !== point.readingId);
+        }
+        return [...current, point];
+      }
+
+      return [point];
+    });
+    setPreviewCorrectionValues((current) => {
+      if (!readingId) {
+        return shouldAddToSession ? current : {};
+      }
+
+      if (shouldAddToSession) {
+        if (!isAlreadySelected) {
+          return current;
+        }
+
+        const { [readingId]: _removed, ...rest } = current;
+        return rest;
+      }
+
+      if (current[readingId] === undefined) {
+        return {};
+      }
+
+      return { [readingId]: current[readingId] };
+    });
+  }
+
+  function handleCorrectionPreviewChange(items: Array<{ readingId: string; valueMmolL: number }>) {
+    setCorrectionError(null);
+    setPreviewCorrectionValues((current) => ({
+      ...current,
+      ...Object.fromEntries(
+        items.map((item) => [item.readingId, roundCorrectionValue(item.valueMmolL)])
+      )
+    }));
+  }
+
+  async function submitCorrection() {
+    if (!isOwner || !selectedPoints.length) {
+      if (!isOwner) {
+        setCorrectionError('Admin sign in is required to apply glucose corrections.');
+      }
+      return;
+    }
+
+    if (isCorrectionReasonMissing) {
+      setCorrectionError('Enter a short reason for this glucose correction.');
+      return;
+    }
+
+    const correctionItems = selectedPoints
+      .filter((point): point is ChartPoint & { readingId: string } => Boolean(point.readingId))
+      .map((point) => ({
+        source: point.source,
+        readingId: point.readingId,
+        valueMmolL: previewCorrectionValues[point.readingId] ?? point.valueMmolL,
+        reason: trimmedCorrectionReason
+      }));
+
+    if (correctionItems.length === 0) {
+      setCorrectionError('No editable readings were selected.');
+      return;
+    }
+
+    setIsSavingCorrection(true);
+    setCorrectionError(null);
+
+    try {
+      const response = await fetch('/api/dashboard/glucose/corrections', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          items: correctionItems
+        })
+      });
+
+      const json = (await response.json()) as { error?: { message?: string } };
+      if (!response.ok) {
+        throw new Error(json.error?.message || 'Failed to update glucose correction');
+      }
+
+      setSelectedPoints([]);
+      setPreviewCorrectionValues({});
+      setCorrectionReasonInput('');
+      await globalMutate(sourceKey);
+    } catch (submitError) {
+      setCorrectionError(
+        submitError instanceof Error ? submitError.message : 'Failed to update glucose correction'
+      );
+    } finally {
+      setIsSavingCorrection(false);
+    }
+  }
 
   return (
     <div className="section-stack glucose-analysis-fullwidth">
@@ -377,6 +560,68 @@ export function GlucoseAnalysisView() {
 
           {hasData && (
             <div style={{ position: 'relative' }}>
+              {selectedPoints.length > 0 ? (
+                <div className="absolute right-4 top-4 z-10 w-[min(30rem,calc(100%-2rem))]">
+                  <DashboardPanel title="Active readings" twStyles="shadow-2xl">
+                    <div className="flex min-h-[10.5rem] flex-col gap-3">
+                      <p className="body_text text-text-soft">
+                        {hasPreviewCorrection
+                          ? selectedPoints.length === 1
+                            ? '1 reading is being adjusted.'
+                            : `${selectedPoints.length} readings are being adjusted.`
+                          : selectedPoints.length === 1
+                            ? '1 reading selected. Click more readings to add them to this correction.'
+                            : `${selectedPoints.length} readings selected. Click more readings to keep building this correction.`}
+                      </p>
+                      <label className="grid gap-1">
+                        <span className="ui_micro_label text-text-soft">
+                          Reason <span className="text-error">*</span>
+                        </span>
+                        <input
+                          type="text"
+                          value={correctionReasonInput}
+                          onChange={(event) => setCorrectionReasonInput(event.target.value)}
+                          placeholder="Short note about why this reading was corrected"
+                          maxLength={240}
+                          required
+                          className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none placeholder:text-text-soft placeholder:opacity-60 focus:border-border-strong"
+                          aria-label="Reason for glucose correction"
+                        />
+                      </label>
+                      <div className="mt-auto flex flex-wrap items-end gap-3">
+                        <SecondaryButton
+                          isActive={false}
+                          onClick={() => {
+                            void submitCorrection();
+                          }}
+                          disabled={isSavingCorrection || isCorrectionReasonMissing || !isOwner || !hasPreviewCorrection}
+                        >
+                          Apply preview
+                        </SecondaryButton>
+                        <SecondaryButton
+                          isActive={false}
+                          onClick={() => {
+                            setSelectedPoints([]);
+                            setPreviewCorrectionValues({});
+                            setCorrectionReasonInput('');
+                            setCorrectionError(null);
+                          }}
+                          disabled={isSavingCorrection}
+                        >
+                          Cancel
+                        </SecondaryButton>
+                      </div>
+                      {correctionError ? (
+                        <p className="body_text text-base-error-dark">{correctionError}</p>
+                      ) : !isOwner ? (
+                        <p className="body_text text-text-soft">
+                          Preview is available to everyone. Admin sign in is required to apply corrections.
+                        </p>
+                      ) : null}
+                    </div>
+                  </DashboardPanel>
+                </div>
+              ) : null}
               {isTransitioning && (
                 <div className="absolute inset-0 z-5 flex items-center justify-center">
                   <div className="glucose-spinner" />
@@ -391,6 +636,11 @@ export function GlucoseAnalysisView() {
                   height={chartHeight}
                   yMax={chartYMax}
                   colorMode={chartColorMode}
+                  editable
+                  selectedReadingIds={selectedReadingIds}
+                  previewReadingValues={previewCorrectionValues}
+                  onPointSelect={handlePointSelect}
+                  onCorrectionPreviewChange={handleCorrectionPreviewChange}
                 />
               </div>
             </div>

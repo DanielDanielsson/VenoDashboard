@@ -35,11 +35,16 @@ export async function GET(request: NextRequest) {
         items: latest
           ? [
               {
+                readingId: latest.id ?? '',
                 timestamp: latest.timestamp,
                 valueMmolL: latest.valueMmolL,
                 valueMgDl: latest.valueMgDl,
                 trend: latest.trend,
-                source: latest.source
+                source: latest.source,
+                originalValueMmolL: latest.originalValueMmolL ?? null,
+                originalValueMgDl: latest.originalValueMgDl ?? null,
+                isCorrected: latest.isCorrected ?? false,
+                correctionReason: latest.correctionReason ?? null
         }
             ]
           : [],

@@ -1,10 +1,13 @@
 import { GlucoseAnalysisView } from '@ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView';
+import { getOwnerSession } from '@/lib/auth';
 
 export const metadata = {
   title: 'Statistics'
 };
 
-export default function DashboardStatisticsPage() {
+export default async function DashboardStatisticsPage() {
+  const session = await getOwnerSession();
+
   return (
     <div className="section-stack">
       <header
@@ -19,7 +22,7 @@ export default function DashboardStatisticsPage() {
         </div>
       </header>
 
-      <GlucoseAnalysisView />
+      <GlucoseAnalysisView isOwner={Boolean(session)} />
     </div>
   );
 }

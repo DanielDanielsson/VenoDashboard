@@ -1,4 +1,8 @@
-import type { PulseApiReading } from '@/lib/pulse-api/types';
+import type {
+  GlucoseCorrectionBatchPayload,
+  GlucoseCorrectionBatchResponse,
+  PulseApiReading
+} from '@/lib/pulse-api/types';
 import { getAdminApiToken, getApiBaseUrl } from '@/lib/pulse-api/env';
 import { fetchWithApiAuth } from '@/lib/pulse-api/auth-fetch';
 
@@ -108,11 +112,16 @@ export function compressTandemBasalHistory(
 }
 
 export interface MergedGlucosePoint {
+  readingId?: string;
   timestamp: string;
   valueMmolL: number;
   valueMgDl: number;
   trend: string;
   source: 'official' | 'share';
+  originalValueMmolL?: number | null;
+  originalValueMgDl?: number | null;
+  isCorrected?: boolean;
+  correctionReason?: string | null;
 }
 
 function getReadingMinuteKey(timestamp: string): number {
@@ -280,10 +289,15 @@ export function mergeGlucoseReadings(
     const key = getReadingMinuteKey(reading.timestamp);
     pointMap.set(key, {
       timestamp: reading.timestamp,
+      readingId: reading.id,
       valueMmolL: reading.valueMmolL,
       valueMgDl: reading.valueMgDl,
       trend: reading.trend,
-      source: 'official'
+      source: 'official',
+      originalValueMmolL: reading.originalValueMmolL ?? null,
+      originalValueMgDl: reading.originalValueMgDl ?? null,
+      isCorrected: reading.isCorrected ?? false,
+      correctionReason: reading.correctionReason ?? null
     });
   }
 
@@ -292,10 +306,15 @@ export function mergeGlucoseReadings(
     if (!pointMap.has(key)) {
       pointMap.set(key, {
         timestamp: reading.timestamp,
+        readingId: reading.id,
         valueMmolL: reading.valueMmolL,
         valueMgDl: reading.valueMgDl,
         trend: reading.trend,
-        source: 'share'
+        source: 'share',
+        originalValueMmolL: reading.originalValueMmolL ?? null,
+        originalValueMgDl: reading.originalValueMgDl ?? null,
+        isCorrected: reading.isCorrected ?? false,
+        correctionReason: reading.correctionReason ?? null
       });
     }
   }
@@ -303,4 +322,24 @@ export function mergeGlucoseReadings(
   return Array.from(pointMap.values()).sort(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
+}
+
+export async function updateGlucoseCorrections(
+  payload: GlucoseCorrectionBatchPayload
+): Promise<GlucoseCorrectionBatchResponse> {
+  const response = await fetch(resolveUrl('/api/admin/glucose/corrections'), {
+    method: 'PUT',
+    cache: 'no-store',
+    headers: {
+      Authorization: `Bearer ${getAdminApiToken()}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Glucose correction update failed with status ${response.status}`);
+  }
+
+  return response.json() as Promise<GlucoseCorrectionBatchResponse>;
 }

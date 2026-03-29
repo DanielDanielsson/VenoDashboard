@@ -1,7 +1,12 @@
 export interface ChartPoint {
+  readingId?: string;
   timestamp: string;
   valueMmolL: number;
   source: 'official' | 'share';
+  originalValueMmolL?: number | null;
+  originalValueMgDl?: number | null;
+  isCorrected?: boolean;
+  correctionReason?: string | null;
 }
 
 export interface BasalChartPoint {
@@ -32,11 +37,16 @@ export interface HealthStepChartPoint {
 }
 
 export interface LatestReading {
+  id?: string;
   valueMmolL: number;
   valueMgDl: number;
   trend: string;
   timestamp: string;
   source: 'official' | 'share';
+  originalValueMmolL?: number | null;
+  originalValueMgDl?: number | null;
+  isCorrected?: boolean;
+  correctionReason?: string | null;
 }
 
 export interface GlucoseApiResponse {

@@ -1,10 +1,31 @@
 export interface PulseApiReading {
+  id?: string;
   timestamp: string;
   valueMmolL: number;
   valueMgDl: number;
+  originalValueMmolL?: number | null;
+  originalValueMgDl?: number | null;
+  isCorrected?: boolean;
+  correctionReason?: string | null;
   trend: string;
   status?: string;
   source?: string;
+}
+
+export interface GlucoseCorrectionTarget {
+  source: 'official' | 'share';
+  readingId: string;
+  valueMmolL: number | null;
+  reason?: string | null;
+}
+
+export interface GlucoseCorrectionBatchPayload {
+  items: GlucoseCorrectionTarget[];
+}
+
+export interface GlucoseCorrectionBatchResponse {
+  updated: number;
+  cleared: number;
 }
 
 export interface PulseApiSourceStatus {
