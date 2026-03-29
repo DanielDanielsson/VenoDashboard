@@ -33,6 +33,10 @@ describe('dashboard glucose history route', () => {
       timestamp: '2026-03-07T10:00:00.000Z',
       valueMmolL: 5.5,
       valueMgDl: 99,
+      originalValueMmolL: 6.2,
+      originalValueMgDl: 112,
+      isCorrected: true,
+      correctionReason: 'Sensor compression low',
       trend: 'flat',
       source: 'official'
     };
@@ -55,6 +59,8 @@ describe('dashboard glucose history route', () => {
       expect.objectContaining({
         timestamp: latest.timestamp,
         valueMmolL: latest.valueMmolL,
+        originalValueMgDl: latest.originalValueMgDl,
+        isCorrected: true,
         source: 'official'
       })
     ]);

@@ -48,6 +48,34 @@ describe('glucose helpers', () => {
     ]);
   });
 
+  test('mergeGlucoseReadings preserves correction metadata in both units', () => {
+    const merged = mergeGlucoseReadings(
+      [
+        {
+          ...reading('2026-03-07T10:05:10.000Z', 5.8, 'official'),
+          originalValueMmolL: 6.4,
+          originalValueMgDl: 115,
+          isCorrected: true,
+          correctionReason: 'Compression low'
+        }
+      ],
+      []
+    );
+
+    expect(merged).toEqual([
+      expect.objectContaining({
+        timestamp: '2026-03-07T10:05:10.000Z',
+        valueMmolL: 5.8,
+        valueMgDl: 104,
+        originalValueMmolL: 6.4,
+        originalValueMgDl: 115,
+        isCorrected: true,
+        correctionReason: 'Compression low',
+        source: 'official'
+      })
+    ]);
+  });
+
   test('pickLatestGlucoseReading returns the freshest reading and prefers official on the same minute', () => {
     const official = reading('2026-03-07T10:20:10.000Z', 6.1, 'official');
     const shareFresher = reading('2026-03-07T10:25:00.000Z', 6.4, 'share');
