@@ -69,6 +69,8 @@ Before pushing dashboard changes, prefer:
 
 1. `npm run ci:local`
 
+For this repo, commit requests should also follow this rule. Do not treat a commit request as complete until the local CI mirror has been run or a concrete blocker has been reported.
+
 This mirrors the current GitHub Actions workflow:
 
 1. lint
@@ -87,3 +89,4 @@ If you only need targeted iteration while developing, run the narrower command f
 2. `npm run test` must stay green and must include the colocated component specs
 3. if CI changes, update `npm run ci:local` to match it
 4. do not add filler tests just to satisfy the folder rule
+5. in `VenoDashboard`, a commit request implies running `npm run ci:local` before declaring the work ready

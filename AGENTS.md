@@ -257,6 +257,15 @@ Preferred:
 
 This is the one-command local equivalent of the current GitHub Actions workflow.
 
+For this repo, a user request to commit changes should be treated as requiring local CI verification before the commit is reported as ready.
+
+Rules:
+
+1. before closing out a commit request, run `npm run ci:local`
+2. if `npm run ci:local` fails, say so explicitly and do not imply the work is push-ready
+3. if `npm run ci:local` is blocked by an external issue, say exactly what blocked it
+4. do not treat "commit" as complete in this repo until the local CI mirror has been checked
+
 If you need to run checks individually, use:
 
 1. `npm run lint`
