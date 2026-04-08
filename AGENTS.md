@@ -214,14 +214,17 @@ If a new page needs remote optimized imagery, prefer `BunnyImage` over raw `<img
 Important env vars:
 
 1. `PULSE_API_BASE_URL`
-2. `PULSE_API_ADMIN_TOKEN`
-3. `PULSE_API_CONSUMER_KEY`
-4. `PULSE_API_STATUS_TOKEN`
-5. `DEXCOM_GATEWAY_BASE_URL`
-6. `DEXCOM_GATEWAY_ADMIN_TOKEN`
-7. `OWNER_LOGIN_USERNAME`
-8. `OWNER_LOGIN_PASSWORD`
-9. `NEXT_PUBLIC_SITE_URL`
+2. `ADMIN_BEARER_TOKEN`
+3. `DEXCOM_GATEWAY_BASE_URL`
+4. `OWNER_LOGIN_USERNAME`
+5. `OWNER_LOGIN_PASSWORD`
+6. `NEXT_PUBLIC_SITE_URL`
+
+Optional env vars:
+
+1. `PULSE_API_CONSUMER_KEY`
+2. `PULSE_API_STATUS_TOKEN`
+3. `DEXCOM_GATEWAY_ADMIN_TOKEN`
 
 Reference file:
 
@@ -230,6 +233,13 @@ Reference file:
 Important deployment detail:
 
 1. inside the deployed Docker stack, the dashboard should usually talk to `VenoAPI` on the internal service URL, not the public API domain
+2. `VenoDashboard` does not use `PULSE_API_TARGET`
+3. `VenoDashboard` does not use `PULSE_API_ADMIN_TOKEN`
+4. if `PULSE_API_CONSUMER_KEY` is unset, consumer requests fall back to `ADMIN_BEARER_TOKEN`
+5. if `DEXCOM_GATEWAY_ADMIN_TOKEN` is unset, Dexcom gateway requests fall back to `ADMIN_BEARER_TOKEN`
+6. if local works for `/api/dashboard/status` but glucose history or timers fail with `403`, suspect a stale `ADMIN_BEARER_TOKEN` first
+7. recommended `.env.local` workflow: keep prod values first, then add a local override block with the same keys at the end
+8. in `.env.local`, the last duplicate key wins, so commenting out the local override block switches the dashboard back to prod
 
 ## Local Development
 

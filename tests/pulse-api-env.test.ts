@@ -16,20 +16,19 @@ describe('pulse api env helpers', () => {
 
   test('ignores placeholder consumer key and falls back to admin token', () => {
     vi.stubEnv('PULSE_API_CONSUMER_KEY', 'replace_with_consumer_api_key_for_glucose_endpoints');
-    vi.stubEnv('PULSE_API_ADMIN_TOKEN', 'admin-token');
+    vi.stubEnv('ADMIN_BEARER_TOKEN', 'admin-token');
 
     expect(getConsumerOrAdminApiToken()).toBe('admin-token');
   });
 
-  test('falls back to ADMIN_BEARER_TOKEN when dashboard admin token is placeholder', () => {
-    vi.stubEnv('PULSE_API_ADMIN_TOKEN', 'replace_with_existing_api_admin_bearer_token');
+  test('reads the dashboard admin token from ADMIN_BEARER_TOKEN', () => {
     vi.stubEnv('ADMIN_BEARER_TOKEN', 'api-admin-bearer');
 
     expect(getAdminApiToken()).toBe('api-admin-bearer');
   });
 
   test('uses dexcom gateway admin token when configured', () => {
-    vi.stubEnv('PULSE_API_ADMIN_TOKEN', 'api-admin-bearer');
+    vi.stubEnv('ADMIN_BEARER_TOKEN', 'api-admin-bearer');
     vi.stubEnv('DEXCOM_GATEWAY_ADMIN_TOKEN', 'gateway-admin-bearer');
 
     expect(getDexcomGatewayAdminToken()).toBe('gateway-admin-bearer');
@@ -68,8 +67,19 @@ describe('pulse api env helpers', () => {
   });
 
   test('falls back to api admin token when dexcom gateway admin token is unset', () => {
-    vi.stubEnv('PULSE_API_ADMIN_TOKEN', 'api-admin-bearer');
+    vi.stubEnv('ADMIN_BEARER_TOKEN', 'api-admin-bearer');
 
     expect(getDexcomGatewayAdminToken()).toBe('api-admin-bearer');
+  });
+
+  test('ignores unused aliases and uses the supported env names only', () => {
+    vi.stubEnv('PULSE_API_BASE_URL', 'http://127.0.0.1:3101');
+    vi.stubEnv('PULSE_API_ADMIN_TOKEN', 'stale-admin-token');
+    vi.stubEnv('PULSE_API_CONSUMER_KEY', 'consumer-token');
+    vi.stubEnv('ADMIN_BEARER_TOKEN', 'admin-token');
+
+    expect(getApiBaseUrl()).toBe('http://127.0.0.1:3101');
+    expect(getAdminApiToken()).toBe('admin-token');
+    expect(getApiAuthTokenCandidates()).toEqual(['consumer-token', 'admin-token']);
   });
 });

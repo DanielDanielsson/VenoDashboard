@@ -38,7 +38,7 @@ describe('pulse api client', () => {
   test('starts dexcom connect through dedicated gateway base url when configured', async () => {
     vi.stubEnv('PULSE_API_BASE_URL', 'https://api.example.com');
     vi.stubEnv('DEXCOM_GATEWAY_BASE_URL', 'https://glucose-nu.vercel.app');
-    vi.stubEnv('PULSE_API_ADMIN_TOKEN', 'api-admin-token');
+    vi.stubEnv('ADMIN_BEARER_TOKEN', 'api-admin-token');
     vi.stubEnv('DEXCOM_GATEWAY_ADMIN_TOKEN', 'gateway-admin-token');
     vi.stubGlobal(
       'fetch',

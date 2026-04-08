@@ -39,7 +39,7 @@ function slicePath(cx: number, cy: number, r: number, startDeg: number, sweepDeg
 }
 
 function statsToPercs(stats: GlucoseStats | null): number[] {
-  if (!stats) return [0, 0, 100, 0, 0];
+  if (!stats) return [0, 0, 0, 0, 0];
   return [
     stats.veryLow.percentage,
     stats.low.percentage,
@@ -62,8 +62,9 @@ export function TimeInRangePanel() {
   const [selectedRange, setSelectedRange] = useState(0);
   const [loadedRange, setLoadedRange] = useState<number | null>(null);
   const [stats, setStats] = useState<GlucoseStats | null>(null);
-  const [displayPercs, setDisplayPercs] = useState<number[]>([0, 0, 100, 0, 0]);
-  const animatedPercs = useRef<number[]>([0, 0, 100, 0, 0]);
+  const [displayPercs, setDisplayPercs] = useState<number[]>([0, 0, 0, 0, 0]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const animatedPercs = useRef<number[]>([0, 0, 0, 0, 0]);
 
   const loading = loadedRange !== selectedRange;
 
@@ -74,9 +75,14 @@ export function TimeInRangePanel() {
         if (cancelled) return;
         setStats(computeGlucoseStats(data.items));
         setLoadedRange(selectedRange);
+        setErrorMessage(null);
       })
-      .catch(() => {
-        if (!cancelled) setLoadedRange(selectedRange);
+      .catch((error) => {
+        if (!cancelled) {
+          setStats(null);
+          setLoadedRange(selectedRange);
+          setErrorMessage(error instanceof Error ? error.message : 'Failed to load glucose history');
+        }
       });
     return () => { cancelled = true; };
   }, [selectedRange]);
@@ -115,7 +121,10 @@ export function TimeInRangePanel() {
           {TIME_RANGES.map((r, i) => (
             <button
               key={r.label}
-              onClick={() => setSelectedRange(i)}
+              onClick={() => {
+                setErrorMessage(null);
+                setSelectedRange(i);
+              }}
               style={{
                 padding: '2px 8px',
                 borderRadius: 4,
@@ -192,6 +201,7 @@ export function TimeInRangePanel() {
             </div>
           ))}
         </div>
+        {errorMessage ? <p className="ui_caption text-rose-300">{errorMessage}</p> : null}
       </div>
     </DashboardPanel>
   );

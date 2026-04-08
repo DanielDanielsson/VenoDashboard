@@ -51,4 +51,28 @@ describe('DashboardGlucoseBadge', () => {
       showAge: false,
     }));
   });
+
+  test('skips stream setup when streaming is disabled', async () => {
+    const eventSourceSpy = vi.fn();
+
+    class DisabledStreamEventSourceMock {
+      constructor() {
+        eventSourceSpy();
+      }
+
+      addEventListener() {}
+
+      close() {}
+    }
+
+    vi.stubGlobal('EventSource', DisabledStreamEventSourceMock as unknown as typeof EventSource);
+
+    render(<DashboardGlucoseBadge enableStream={false} pollIntervalMs={5_000} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('glucose-indicator')).toBeInTheDocument();
+    });
+
+    expect(eventSourceSpy).not.toHaveBeenCalled();
+  });
 });

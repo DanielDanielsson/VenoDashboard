@@ -32,11 +32,9 @@ export function getDexcomGatewayBaseUrl(): string {
 }
 
 export function getAdminApiToken(): string {
-  const token = readEnv('PULSE_API_ADMIN_TOKEN') || readEnv('ADMIN_BEARER_TOKEN');
+  const token = readEnv('ADMIN_BEARER_TOKEN');
   if (!token) {
-    throw new Error(
-      'Missing dashboard API admin token. Set PULSE_API_ADMIN_TOKEN or provide ADMIN_BEARER_TOKEN.'
-    );
+    throw new Error('Missing dashboard API admin token. Set ADMIN_BEARER_TOKEN.');
   }
 
   return token;
@@ -52,7 +50,7 @@ export function getConsumerApiToken(): string | undefined {
 
 export function getApiAuthTokenCandidates(): string[] {
   const consumerToken = getConsumerApiToken();
-  const adminToken = readEnv('PULSE_API_ADMIN_TOKEN') || readEnv('ADMIN_BEARER_TOKEN');
+  const adminToken = readEnv('ADMIN_BEARER_TOKEN');
 
   if (consumerToken && adminToken && consumerToken !== adminToken) {
     return [consumerToken, adminToken];
@@ -67,7 +65,7 @@ export function getApiAuthTokenCandidates(): string[] {
   }
 
   throw new Error(
-    'Missing dashboard API token. Set PULSE_API_CONSUMER_KEY, PULSE_API_ADMIN_TOKEN, or ADMIN_BEARER_TOKEN.'
+    'Missing dashboard API token. Set PULSE_API_CONSUMER_KEY or ADMIN_BEARER_TOKEN.'
   );
 }
 

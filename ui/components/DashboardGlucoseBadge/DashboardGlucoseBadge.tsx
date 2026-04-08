@@ -31,12 +31,21 @@ function normalizeStreamPayload(raw: string): LatestReading | null {
   }
 }
 
-export function DashboardGlucoseBadge() {
+interface DashboardGlucoseBadgeProps {
+  enableStream?: boolean;
+  pollIntervalMs?: number;
+}
+
+export function DashboardGlucoseBadge({
+  enableStream = true,
+  pollIntervalMs = 60_000
+}: DashboardGlucoseBadgeProps) {
   const [latest, setLatest] = useState<LatestReading | null>(null);
 
   useEffect(() => {
     let mounted = true;
     let eventSource: EventSource | null = null;
+    let pollTimer: number | null = null;
 
     async function fetchLatest() {
       try {
@@ -56,6 +65,16 @@ export function DashboardGlucoseBadge() {
       window.dispatchEvent(new CustomEvent('pulse-glucose-latest', { detail: reading }));
     }
 
+    function startPolling() {
+      if (pollTimer !== null) {
+        return;
+      }
+
+      pollTimer = window.setInterval(() => {
+        void fetchLatest();
+      }, pollIntervalMs);
+    }
+
     function connectStream() {
       eventSource = new EventSource('/api/dashboard/glucose/stream');
 
@@ -72,11 +91,22 @@ export function DashboardGlucoseBadge() {
 
       eventSource.addEventListener('stream_error', async () => {
         await fetchLatest();
+        startPolling();
+      });
+
+      eventSource.addEventListener('error', () => {
+        eventSource?.close();
+        startPolling();
       });
     }
 
-    fetchLatest();
-    connectStream();
+    void fetchLatest();
+
+    if (enableStream) {
+      connectStream();
+    } else {
+      startPolling();
+    }
 
     function handleEvent(e: Event) {
       const detail = (e as CustomEvent).detail;
@@ -89,9 +119,12 @@ export function DashboardGlucoseBadge() {
     return () => {
       mounted = false;
       eventSource?.close();
+      if (pollTimer !== null) {
+        window.clearInterval(pollTimer);
+      }
       window.removeEventListener('pulse-glucose-latest', handleEvent);
     };
-  }, []);
+  }, [enableStream, pollIntervalMs]);
 
   if (!latest) return null;
 

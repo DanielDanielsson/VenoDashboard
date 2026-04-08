@@ -4,6 +4,7 @@ export type LiveGlucosePanelTheme = 'light' | 'dark';
 
 export type LiveGlucosePanelProps = Stylable &
   Themable<LiveGlucosePanelTheme> & {
+    enableStream?: boolean;
     latestReadingAgeMinutes?: number | null;
     latestReadingTimestamp?: string | null;
   };

@@ -330,8 +330,9 @@ export function GlucoseAnalysisView({ isOwner = false }: { isOwner?: boolean }) 
           return current;
         }
 
-        const { [readingId]: _removed, ...rest } = current;
-        return rest;
+        const next = { ...current };
+        delete next[readingId];
+        return next;
       }
 
       if (current[readingId] === undefined) {

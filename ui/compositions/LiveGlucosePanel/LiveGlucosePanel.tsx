@@ -11,6 +11,7 @@ const THEME_CLASS: Record<LiveGlucosePanelTheme, string> = {
 };
 
 export const LiveGlucosePanel = ({
+  enableStream = true,
   latestReadingTimestamp,
   twStyles,
   theme,
@@ -22,7 +23,7 @@ export const LiveGlucosePanel = ({
     headerRight={latestReadingTimestamp ? <DataFreshnessLight key={latestReadingTimestamp} timestamp={latestReadingTimestamp} /> : undefined}
   >
     <div className="flex flex-1 flex-col items-center justify-center">
-      <DashboardGlucoseBadge />
+      <DashboardGlucoseBadge enableStream={enableStream} />
     </div>
   </DashboardPanel>
 );

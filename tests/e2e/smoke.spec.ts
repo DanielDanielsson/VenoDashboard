@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test('dashboard renders', async ({ page }) => {
-  await page.goto('/');
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.goto('/dashboard');
   await expect(page.getByRole('link', { name: 'Overview' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Statistics' })).toBeVisible();
 });

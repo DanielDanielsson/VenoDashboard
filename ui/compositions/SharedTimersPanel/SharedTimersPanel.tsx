@@ -127,7 +127,8 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [serverOffsetMs, setServerOffsetMs] = useState(0);
 
-  const { data, error, mutate } = useSWR<SharedTimerListResponse>('/api/dashboard/timers', fetchJson, {
+  const timersKey = readOnly ? null : '/api/dashboard/timers';
+  const { data, error, mutate } = useSWR<SharedTimerListResponse>(timersKey, fetchJson, {
     revalidateOnFocus: false
   });
 

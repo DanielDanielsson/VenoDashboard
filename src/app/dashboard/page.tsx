@@ -107,6 +107,7 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <LiveGlucosePanel
+          enableStream={Boolean(session)}
           latestReadingTimestamp={latestSource?.latestReading?.timestamp}
         />
 
