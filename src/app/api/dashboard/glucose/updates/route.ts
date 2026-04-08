@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchLatestDashboardReading, fetchMergedGlucoseWindow } from '@/lib/glucose/dashboard-data';
+import { dashboardGlucoseService } from '@/lib/glucose/dashboard-service';
 import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 
 export async function GET(request: NextRequest) {
@@ -25,44 +25,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const now = new Date();
-    const latest = await fetchLatestDashboardReading();
-    if (sinceMs >= now.getTime()) {
-      return NextResponse.json({
-        latest,
-        meta: {
-          since,
-          to: now.toISOString(),
-          newCount: 0
-        }
-      });
-    }
-
-    const from = new Date(sinceMs + 1).toISOString();
-    const { merged, tandemBasalItems, tandemEventItems } = await fetchMergedGlucoseWindow(
-      from,
-      now.toISOString(),
-      now
-    );
-    const newTandemBasalCount = tandemBasalItems.filter(
-      (item) => new Date(item.timestamp).getTime() > sinceMs
-    ).length;
-    const newTandemEventCount = tandemEventItems.filter(
-      (item) => new Date(item.timestamp).getTime() > sinceMs
-    ).length;
-    const newCount = merged.length + newTandemBasalCount + newTandemEventCount;
-
-    return NextResponse.json({
-      latest,
-      meta: {
-        since,
-        to: now.toISOString(),
-        newCount,
-        newGlucoseCount: merged.length,
-        newTandemBasalCount,
-        newTandemEventCount
-      }
-    });
+    const response = await dashboardGlucoseService.getUpdatesSince(since, new Date());
+    return NextResponse.json(response);
   } catch (error) {
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to load glucose updates' } },

@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  fetchLatestDashboardReading,
-  fetchMergedGlucoseWindow,
-  parseLimit,
-  resolveHistoryWindow
-} from '@/lib/glucose/dashboard-data';
+import { dashboardGlucoseService } from '@/lib/glucose/dashboard-service';
 import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
+
+function parseLimit(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return null;
+  }
+
+  return parsed;
+}
 
 export async function GET(request: NextRequest) {
   const rateLimit = applyRateLimit({
@@ -18,73 +26,18 @@ export async function GET(request: NextRequest) {
   }
 
   const params = request.nextUrl.searchParams;
-  const requestedLimit = parseLimit(params.get('limit'));
   const now = new Date();
-  const { from, to, hasExplicitRange } = resolveHistoryWindow({
-    range: params.get('range'),
-    from: params.get('from'),
-    to: params.get('to'),
-    now
-  });
 
   try {
-    const latest = await fetchLatestDashboardReading();
-
-    if (!hasExplicitRange && requestedLimit === 1) {
-      return NextResponse.json({
-        items: latest
-          ? [
-              {
-                readingId: latest.id ?? '',
-                timestamp: latest.timestamp,
-                valueMmolL: latest.valueMmolL,
-                valueMgDl: latest.valueMgDl,
-                trend: latest.trend,
-                source: latest.source,
-                originalValueMmolL: latest.originalValueMmolL ?? null,
-                originalValueMgDl: latest.originalValueMgDl ?? null,
-                isCorrected: latest.isCorrected ?? false,
-                correctionReason: latest.correctionReason ?? null
-        }
-            ]
-          : [],
-        basalItems: [],
-        eventItems: [],
-        stepItems: [],
-        latest,
-        meta: {
-          from,
-          to,
-          officialCount: latest?.source === 'official' ? 1 : 0,
-          shareCount: latest?.source === 'share' ? 1 : 0,
-          mergedCount: latest ? 1 : 0,
-          tandemBasalCount: 0,
-          tandemEventCount: 0,
-          healthStepCount: 0
-        }
-      });
-    }
-
-    const { officialItems, shareItems, tandemBasalItems, tandemEventItems, healthStepItems, merged } = await fetchMergedGlucoseWindow(from, to, now);
-    const items = requestedLimit ? merged.slice(-requestedLimit) : merged;
-
-    return NextResponse.json({
-      items,
-      basalItems: tandemBasalItems,
-      eventItems: tandemEventItems,
-      stepItems: healthStepItems,
-      latest,
-      meta: {
-        from,
-        to,
-        officialCount: officialItems.length,
-        shareCount: shareItems.length,
-        mergedCount: items.length,
-        tandemBasalCount: tandemBasalItems.length,
-        tandemEventCount: tandemEventItems.length,
-        healthStepCount: healthStepItems.length
-      }
+    const response = await dashboardGlucoseService.getHistory({
+      range: params.get('range'),
+      from: params.get('from'),
+      to: params.get('to'),
+      limit: parseLimit(params.get('limit')),
+      now
     });
+
+    return NextResponse.json(response);
   } catch (error) {
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to load glucose data' } },

@@ -1,103 +1,101 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const getOwnerSession = vi.fn();
-const fetchLatestDashboardReading = vi.fn();
-const fetchMergedGlucoseWindow = vi.fn();
-const parseLimit = vi.fn();
-const resolveHistoryWindow = vi.fn();
+const getHistory = vi.fn();
 
-vi.mock('@/lib/auth', () => ({
-  getOwnerSession
-}));
-
-vi.mock('@/lib/glucose/dashboard-data', () => ({
-  fetchLatestDashboardReading,
-  fetchMergedGlucoseWindow,
-  parseLimit,
-  resolveHistoryWindow
+vi.mock('@/lib/glucose/dashboard-service', () => ({
+  dashboardGlucoseService: {
+    getHistory
+  }
 }));
 
 describe('dashboard glucose history route', () => {
   beforeEach(() => {
-    getOwnerSession.mockResolvedValue({ user: { email: 'owner@example.com' } });
-    parseLimit.mockImplementation((value: string | null) => (value ? Number.parseInt(value, 10) : null));
+    getHistory.mockReset();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  test('uses the fast latest-only path when limit=1 and no range is requested', async () => {
-    const latest = {
-      timestamp: '2026-03-07T10:00:00.000Z',
-      valueMmolL: 5.5,
-      valueMgDl: 99,
+  test('passes parsed request data to the glucose service', async () => {
+    const payload = {
+      items: [
+        {
+          readingId: 'latest-1',
+          timestamp: '2026-03-07T10:00:00.000Z',
+          valueMmolL: 5.5,
+          valueMgDl: 99,
+          originalValueMmolL: 6.2,
+          originalValueMgDl: 112,
+          isCorrected: true,
+          correctionReason: 'Sensor compression low',
+          trend: 'flat',
+          source: 'official'
+        }
+      ],
+      basalItems: [],
+      eventItems: [],
+      stepItems: [],
+      latest: {
+        id: 'latest-1',
+        timestamp: '2026-03-07T10:00:00.000Z',
+        valueMmolL: 5.5,
+        valueMgDl: 99,
       originalValueMmolL: 6.2,
       originalValueMgDl: 112,
-      isCorrected: true,
-      correctionReason: 'Sensor compression low',
-      trend: 'flat',
-      source: 'official'
+        isCorrected: true,
+        correctionReason: 'Sensor compression low',
+        trend: 'flat',
+        source: 'official'
+      },
+      meta: {
+        from: '2026-03-06T10:00:00.000Z',
+        to: '2026-03-07T10:00:00.000Z',
+        officialCount: 1,
+        shareCount: 0,
+        mergedCount: 1,
+        tandemBasalCount: 0,
+        tandemEventCount: 0,
+        healthStepCount: 0
+      }
     };
-    resolveHistoryWindow.mockReturnValue({
-      from: '2026-03-06T10:00:00.000Z',
-      to: '2026-03-07T10:00:00.000Z',
-      range: null,
-      hasExplicitRange: false
-    });
-    fetchLatestDashboardReading.mockResolvedValue(latest);
+    getHistory.mockResolvedValue(payload);
 
     const { GET } = await import('@/app/api/dashboard/glucose/history/route');
     const response = await GET(new NextRequest('http://localhost/api/dashboard/glucose/history?limit=1'));
     const json = await response.json();
 
     expect(response.status).toBe(200);
-    expect(fetchMergedGlucoseWindow).not.toHaveBeenCalled();
-    expect(json.latest).toEqual(latest);
-    expect(json.items).toEqual([
-      expect.objectContaining({
-        timestamp: latest.timestamp,
-        valueMmolL: latest.valueMmolL,
-        originalValueMgDl: latest.originalValueMgDl,
-        isCorrected: true,
-        source: 'official'
-      })
-    ]);
-    expect(json.basalItems).toEqual([]);
-    expect(json.eventItems).toEqual([]);
-    expect(json.stepItems).toEqual([]);
-    expect(json.meta.mergedCount).toBe(1);
-    expect(json.meta.tandemBasalCount).toBe(0);
-    expect(json.meta.tandemEventCount).toBe(0);
-    expect(json.meta.healthStepCount).toBe(0);
+    expect(getHistory).toHaveBeenCalledWith({
+      range: null,
+      from: null,
+      to: null,
+      limit: 1,
+      now: expect.any(Date)
+    });
+    expect(json).toEqual(payload);
   });
 
-  test('returns sliced merged history and a resilient latest reading for ranged requests', async () => {
-    const latest = {
-      timestamp: '2026-03-07T10:10:00.000Z',
-      valueMmolL: 5.6,
-      valueMgDl: 101,
-      trend: 'flat',
-      source: 'official'
-    };
-    const merged = [
-      { timestamp: '2026-03-07T09:50:00.000Z', valueMmolL: 5.1, valueMgDl: 92, trend: 'flat', source: 'official' },
-      { timestamp: '2026-03-07T09:55:00.000Z', valueMmolL: 5.4, valueMgDl: 97, trend: 'flat', source: 'official' },
-      { timestamp: '2026-03-07T10:00:00.000Z', valueMmolL: 5.8, valueMgDl: 104, trend: 'up', source: 'share' }
-    ];
-
-    resolveHistoryWindow.mockReturnValue({
-      from: '2026-03-07T09:00:00.000Z',
-      to: '2026-03-07T10:10:00.000Z',
-      range: null,
-      hasExplicitRange: true
-    });
-    fetchLatestDashboardReading.mockResolvedValue(latest);
-    fetchMergedGlucoseWindow.mockResolvedValue({
-      officialItems: merged.filter((item) => item.source === 'official'),
-      shareItems: merged.filter((item) => item.source === 'share'),
-      tandemBasalItems: [
+  test('passes range, window, and limit parameters through to the service', async () => {
+    const payload = {
+      items: [
+        {
+          timestamp: '2026-03-07T09:55:00.000Z',
+          valueMmolL: 5.4,
+          valueMgDl: 97,
+          trend: 'flat',
+          source: 'official'
+        },
+        {
+          timestamp: '2026-03-07T10:00:00.000Z',
+          valueMmolL: 5.8,
+          valueMgDl: 104,
+          trend: 'up',
+          source: 'share'
+        }
+      ],
+      basalItems: [
         {
           timestamp: '2026-03-07T09:45:00.000Z',
           basalRateUnitsPerHour: 0.8,
@@ -106,7 +104,7 @@ describe('dashboard glucose history route', () => {
           pumpTimeZone: 'Europe/Stockholm'
         }
       ],
-      tandemEventItems: [
+      eventItems: [
         {
           timestamp: '2026-03-07T09:57:00.000Z',
           eventName: 'BolusDelivery',
@@ -119,7 +117,7 @@ describe('dashboard glucose history route', () => {
           glucoseMmolL: null
         }
       ],
-      healthStepItems: [
+      stepItems: [
         {
           bucketStart: '2026-03-07T09:50:00.000Z',
           bucketEnd: '2026-03-07T09:55:00.000Z',
@@ -127,8 +125,26 @@ describe('dashboard glucose history route', () => {
           source: 'apple_health'
         }
       ],
-      merged
-    });
+      latest: {
+        id: 'latest-2',
+        timestamp: '2026-03-07T10:10:00.000Z',
+        valueMmolL: 5.6,
+        valueMgDl: 101,
+        trend: 'flat',
+        source: 'official'
+      },
+      meta: {
+        from: '2026-03-07T09:00:00.000Z',
+        to: '2026-03-07T10:10:00.000Z',
+        officialCount: 2,
+        shareCount: 1,
+        mergedCount: 2,
+        tandemBasalCount: 1,
+        tandemEventCount: 1,
+        healthStepCount: 1
+      }
+    };
+    getHistory.mockResolvedValue(payload);
 
     const { GET } = await import('@/app/api/dashboard/glucose/history/route');
     const response = await GET(
@@ -139,17 +155,13 @@ describe('dashboard glucose history route', () => {
     const json = await response.json();
 
     expect(response.status).toBe(200);
-    expect(fetchMergedGlucoseWindow).toHaveBeenCalledTimes(1);
-    expect(json.latest).toEqual(latest);
-    expect(json.items).toEqual(merged.slice(-2));
-    expect(json.basalItems).toHaveLength(1);
-    expect(json.eventItems).toHaveLength(1);
-    expect(json.stepItems).toHaveLength(1);
-    expect(json.meta.officialCount).toBe(2);
-    expect(json.meta.shareCount).toBe(1);
-    expect(json.meta.mergedCount).toBe(2);
-    expect(json.meta.tandemBasalCount).toBe(1);
-    expect(json.meta.tandemEventCount).toBe(1);
-    expect(json.meta.healthStepCount).toBe(1);
+    expect(getHistory).toHaveBeenCalledWith({
+      range: null,
+      from: '2026-03-07T09:00:00.000Z',
+      to: '2026-03-07T10:10:00.000Z',
+      limit: 2,
+      now: expect.any(Date)
+    });
+    expect(json).toEqual(payload);
   });
 });

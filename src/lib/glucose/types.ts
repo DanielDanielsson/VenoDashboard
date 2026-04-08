@@ -2,6 +2,8 @@ export interface ChartPoint {
   readingId?: string;
   timestamp: string;
   valueMmolL: number;
+  valueMgDl?: number;
+  trend?: string;
   source: 'official' | 'share';
   originalValueMmolL?: number | null;
   originalValueMgDl?: number | null;
@@ -74,6 +76,9 @@ export interface GlucoseUpdatesResponse {
     since: string;
     to: string;
     newCount: number;
+    newGlucoseCount?: number;
+    newTandemBasalCount?: number;
+    newTandemEventCount?: number;
   };
   error?: { message: string };
 }
