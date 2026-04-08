@@ -1,5 +1,6 @@
 import { GlucoseAnalysisView } from '@ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView';
 import { getOwnerSession } from '@/lib/auth';
+import { dashboardGlucoseWorkspace } from '@/lib/glucose/dashboard-workspace';
 
 export const metadata = {
   title: 'Statistics'
@@ -7,6 +8,14 @@ export const metadata = {
 
 export default async function DashboardStatisticsPage() {
   const session = await getOwnerSession();
+  let initialSnapshot;
+
+  try {
+    const workspaceSession = await dashboardGlucoseWorkspace.open({ range: '3d' });
+    initialSnapshot = workspaceSession.snapshot;
+  } catch {
+    initialSnapshot = undefined;
+  }
 
   return (
     <div className="section-stack">
@@ -22,7 +31,7 @@ export default async function DashboardStatisticsPage() {
         </div>
       </header>
 
-      <GlucoseAnalysisView isOwner={Boolean(session)} />
+      <GlucoseAnalysisView isOwner={Boolean(session)} initialSnapshot={initialSnapshot} />
     </div>
   );
 }

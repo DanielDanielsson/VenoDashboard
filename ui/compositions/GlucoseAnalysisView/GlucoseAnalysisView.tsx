@@ -10,6 +10,7 @@ import { DashboardPanel } from '@ui/components/DashboardPanel';
 import { NumberInput } from '@ui/components/NumberInput';
 import { SegmentedControl } from '@ui/components/SegmentedControl';
 import { GLUCOSE_COLOR_MODES, type GlucoseColorMode } from '@/lib/glucose/tints';
+import { computeGlucoseStats } from '@/lib/glucose/metrics';
 import {
   buildPresetWindow,
   getHistoryCustomKey,
@@ -19,7 +20,6 @@ import {
   type HistorySelection,
   type HistoryWindow
 } from '@/lib/glucose/history-cache';
-import { computeGlucoseStats } from '@/lib/glucose/metrics';
 import { GLUCOSE_TIME_RANGES } from '@/lib/glucose/time-ranges';
 import { SecondaryButton } from '@ui/components/SecondaryButton';
 import type { ChartPoint, GlucoseApiResponse, GlucoseUpdatesResponse } from '@/lib/glucose/types';
@@ -102,7 +102,13 @@ function getChartHeight(data: Pick<GlucoseApiResponse, 'basalItems' | 'eventItem
   return totalHeight;
 }
 
-export function GlucoseAnalysisView({ isOwner = false }: { isOwner?: boolean }) {
+export function GlucoseAnalysisView({
+  isOwner = false,
+  initialSnapshot
+}: {
+  isOwner?: boolean;
+  initialSnapshot?: GlucoseApiResponse;
+}) {
   const [selection, setSelection] = useState<HistorySelection>({
     kind: 'preset',
     range: '3d'
@@ -128,8 +134,7 @@ export function GlucoseAnalysisView({ isOwner = false }: { isOwner?: boolean }) 
   const [correctionError, setCorrectionError] = useState<string | null>(null);
 
   const isApplyingUpdatesRef = useRef(false);
-  const { cache, mutate: globalMutate } = useSWRConfig();
-
+  const { cache } = useSWRConfig();
   const loadedSourceKey = pickBestLoadedSourceKey(cache, selection);
   const requestKey =
     selection.kind === 'preset'
@@ -138,7 +143,7 @@ export function GlucoseAnalysisView({ isOwner = false }: { isOwner?: boolean }) 
   const sourceKey = loadedSourceKey ?? requestKey;
 
   const {
-    data: sourceData,
+    data: sourceDataResponse,
     error,
     isLoading,
     isValidating,
@@ -150,6 +155,7 @@ export function GlucoseAnalysisView({ isOwner = false }: { isOwner?: boolean }) 
     keepPreviousData: true
   });
 
+  const sourceData = sourceDataResponse ?? (sourceKey === getHistoryRangeKey('3d') ? initialSnapshot : undefined);
   const targetWindow = getSelectionTargetWindow(selection, sourceData);
   const data = sourceData && targetWindow
     ? sliceHistoryResponseToWindow(sourceData, targetWindow)
@@ -217,16 +223,15 @@ export function GlucoseAnalysisView({ isOwner = false }: { isOwner?: boolean }) 
     }
 
     isApplyingUpdatesRef.current = true;
-    void globalMutate(sourceKey).finally(() => {
+    void mutate().finally(() => {
       isApplyingUpdatesRef.current = false;
     });
   }, [
     displayedLatestTimestamp,
-    globalMutate,
     isValidating,
+    mutate,
     newUpdatesCount,
-    selection.kind,
-    sourceKey
+    selection.kind
   ]);
 
   const lowColor  = isDark ? '#fb7185' : '#be123c';
@@ -240,6 +245,8 @@ export function GlucoseAnalysisView({ isOwner = false }: { isOwner?: boolean }) 
     .map((point) => point.readingId)
     .filter((readingId): readingId is string => Boolean(readingId));
   const hasPreviewCorrection = selectedReadingIds.some((readingId) => previewCorrectionValues[readingId] !== undefined);
+  const canRemoveCorrection = selectedPoints.length > 0
+    && selectedPoints.every((point) => point.isCorrected && point.readingId);
   const trimmedCorrectionReason = correctionReasonInput.trim();
   const isCorrectionReasonMissing = trimmedCorrectionReason.length === 0;
 
@@ -402,10 +409,64 @@ export function GlucoseAnalysisView({ isOwner = false }: { isOwner?: boolean }) 
       setSelectedPoints([]);
       setPreviewCorrectionValues({});
       setCorrectionReasonInput('');
-      await globalMutate(sourceKey);
+      await mutate();
     } catch (submitError) {
       setCorrectionError(
         submitError instanceof Error ? submitError.message : 'Failed to update glucose correction'
+      );
+    } finally {
+      setIsSavingCorrection(false);
+    }
+  }
+
+  async function removeCorrection() {
+    if (!isOwner || !selectedPoints.length) {
+      if (!isOwner) {
+        setCorrectionError('Admin sign in is required to remove glucose corrections.');
+      }
+      return;
+    }
+
+    const correctionItems = selectedPoints
+      .filter((point): point is ChartPoint & { readingId: string } => Boolean(point.readingId))
+      .map((point) => ({
+        source: point.source,
+        readingId: point.readingId,
+        valueMmolL: null,
+        reason: null
+      }));
+
+    if (correctionItems.length === 0) {
+      setCorrectionError('No corrected readings were selected.');
+      return;
+    }
+
+    setIsSavingCorrection(true);
+    setCorrectionError(null);
+
+    try {
+      const response = await fetch('/api/dashboard/glucose/corrections', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          items: correctionItems
+        })
+      });
+
+      const json = (await response.json()) as { error?: { message?: string } };
+      if (!response.ok) {
+        throw new Error(json.error?.message || 'Failed to remove glucose correction');
+      }
+
+      setSelectedPoints([]);
+      setPreviewCorrectionValues({});
+      setCorrectionReasonInput('');
+      await mutate();
+    } catch (submitError) {
+      setCorrectionError(
+        submitError instanceof Error ? submitError.message : 'Failed to remove glucose correction'
       );
     } finally {
       setIsSavingCorrection(false);
@@ -566,7 +627,11 @@ export function GlucoseAnalysisView({ isOwner = false }: { isOwner?: boolean }) 
                   <DashboardPanel title="Active readings" twStyles="shadow-2xl">
                     <div className="flex min-h-[10.5rem] flex-col gap-3">
                       <p className="body_text text-text-soft">
-                        {hasPreviewCorrection
+                        {canRemoveCorrection
+                          ? selectedPoints.length === 1
+                            ? '1 corrected reading selected. Remove correction to restore the original value.'
+                            : `${selectedPoints.length} corrected readings selected. Remove correction to restore the original values.`
+                          : hasPreviewCorrection
                           ? selectedPoints.length === 1
                             ? '1 reading is being adjusted.'
                             : `${selectedPoints.length} readings are being adjusted.`
@@ -574,31 +639,45 @@ export function GlucoseAnalysisView({ isOwner = false }: { isOwner?: boolean }) 
                             ? '1 reading selected. Click more readings to add them to this correction.'
                             : `${selectedPoints.length} readings selected. Click more readings to keep building this correction.`}
                       </p>
-                      <label className="grid gap-1">
-                        <span className="ui_micro_label text-text-soft">
-                          Reason <span className="text-error">*</span>
-                        </span>
-                        <input
-                          type="text"
-                          value={correctionReasonInput}
-                          onChange={(event) => setCorrectionReasonInput(event.target.value)}
-                          placeholder="Short note about why this reading was corrected"
-                          maxLength={240}
-                          required
-                          className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none placeholder:text-text-soft placeholder:opacity-60 focus:border-border-strong"
-                          aria-label="Reason for glucose correction"
-                        />
-                      </label>
+                      {canRemoveCorrection ? null : (
+                        <label className="grid gap-1">
+                          <span className="ui_micro_label text-text-soft">
+                            Reason <span className="text-error">*</span>
+                          </span>
+                          <input
+                            type="text"
+                            value={correctionReasonInput}
+                            onChange={(event) => setCorrectionReasonInput(event.target.value)}
+                            placeholder="Short note about why this reading was corrected"
+                            maxLength={240}
+                            required
+                            className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none placeholder:text-text-soft placeholder:opacity-60 focus:border-border-strong"
+                            aria-label="Reason for glucose correction"
+                          />
+                        </label>
+                      )}
                       <div className="mt-auto flex flex-wrap items-end gap-3">
-                        <SecondaryButton
-                          isActive={false}
-                          onClick={() => {
-                            void submitCorrection();
-                          }}
-                          disabled={isSavingCorrection || isCorrectionReasonMissing || !isOwner || !hasPreviewCorrection}
-                        >
-                          Apply preview
-                        </SecondaryButton>
+                        {canRemoveCorrection ? (
+                          <SecondaryButton
+                            isActive={false}
+                            onClick={() => {
+                              void removeCorrection();
+                            }}
+                            disabled={isSavingCorrection || !isOwner}
+                          >
+                            Remove correction
+                          </SecondaryButton>
+                        ) : (
+                          <SecondaryButton
+                            isActive={false}
+                            onClick={() => {
+                              void submitCorrection();
+                            }}
+                            disabled={isSavingCorrection || isCorrectionReasonMissing || !isOwner || !hasPreviewCorrection}
+                          >
+                            Apply preview
+                          </SecondaryButton>
+                        )}
                         <SecondaryButton
                           isActive={false}
                           onClick={() => {
@@ -616,7 +695,9 @@ export function GlucoseAnalysisView({ isOwner = false }: { isOwner?: boolean }) 
                         <p className="body_text text-base-error-dark">{correctionError}</p>
                       ) : !isOwner ? (
                         <p className="body_text text-text-soft">
-                          Preview is available to everyone. Admin sign in is required to apply corrections.
+                          {canRemoveCorrection
+                            ? 'Admin sign in is required to remove glucose corrections.'
+                            : 'Preview is available to everyone. Admin sign in is required to apply corrections.'}
                         </p>
                       ) : null}
                     </div>
