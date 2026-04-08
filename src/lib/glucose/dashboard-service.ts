@@ -63,7 +63,7 @@ export interface DashboardGlucoseService {
   getUpdatesSince(since: string, now?: Date): Promise<GlucoseUpdatesResponse>;
 }
 
-interface DashboardGlucoseServiceDeps {
+export interface DashboardGlucoseServiceDeps {
   glucosePort: GlucoseTimelinePort;
   tandemPort: TandemActivityPort;
   healthPort: HealthStepsPort;
@@ -90,7 +90,7 @@ interface AttemptResult<T> {
   error: Error | null;
 }
 
-const pulseApiGlucosePort: GlucoseTimelinePort = {
+export const pulseApiGlucosePort: GlucoseTimelinePort = {
   async fetchLatest(source) {
     return fetchGlucoseLatest(source);
   },
@@ -100,7 +100,7 @@ const pulseApiGlucosePort: GlucoseTimelinePort = {
   }
 };
 
-const pulseApiTandemPort: TandemActivityPort = {
+export const pulseApiTandemPort: TandemActivityPort = {
   async fetchBasal(window) {
     const response = await fetchTandemBasalHistory(window.from, window.to, window.limit);
     return response.items;
@@ -111,7 +111,7 @@ const pulseApiTandemPort: TandemActivityPort = {
   }
 };
 
-const pulseApiHealthPort: HealthStepsPort = {
+export const pulseApiHealthPort: HealthStepsPort = {
   async fetchSteps(window) {
     const response = await fetchHealthStepHistory(window.from, window.to);
     return response.items;

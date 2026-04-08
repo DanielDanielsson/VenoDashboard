@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { dashboardGlucoseService } from '@/lib/glucose/dashboard-service';
+import { dashboardGlucoseWorkspace } from '@/lib/glucose/dashboard-workspace';
 import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 
 export async function GET(request: NextRequest) {
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const response = await dashboardGlucoseService.getUpdatesSince(since, new Date());
+    const response = await dashboardGlucoseWorkspace.getUpdatesSince(since, new Date());
     return NextResponse.json(response);
   } catch (error) {
     return NextResponse.json(

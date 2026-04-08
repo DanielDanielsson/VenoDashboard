@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const getHistory = vi.fn();
+const open = vi.fn();
 
 vi.mock('@/lib/glucose/dashboard-service', () => ({
   dashboardGlucoseService: {
@@ -9,9 +10,16 @@ vi.mock('@/lib/glucose/dashboard-service', () => ({
   }
 }));
 
+vi.mock('@/lib/glucose/dashboard-workspace', () => ({
+  dashboardGlucoseWorkspace: {
+    open
+  }
+}));
+
 describe('dashboard glucose history route', () => {
   beforeEach(() => {
     getHistory.mockReset();
+    open.mockReset();
   });
 
   afterEach(() => {
@@ -163,5 +171,112 @@ describe('dashboard glucose history route', () => {
       now: expect.any(Date)
     });
     expect(json).toEqual(payload);
+  });
+
+  test('uses the workspace boundary for preset range requests', async () => {
+    const snapshot = {
+      items: [
+        {
+          readingId: 'reading-1',
+          timestamp: '2026-03-04T00:00:00.000Z',
+          valueMmolL: 5.8,
+          valueMgDl: 104,
+          trend: 'flat',
+          source: 'official'
+        }
+      ],
+      basalItems: [],
+      eventItems: [],
+      stepItems: [],
+      latest: {
+        id: 'reading-1',
+        timestamp: '2026-03-04T00:00:00.000Z',
+        valueMmolL: 5.8,
+        valueMgDl: 104,
+        trend: 'flat',
+        source: 'official'
+      },
+      meta: {
+        from: '2026-03-01T00:00:00.000Z',
+        to: '2026-03-04T00:00:00.000Z',
+        officialCount: 1,
+        shareCount: 0,
+        mergedCount: 1,
+        tandemBasalCount: 0,
+        tandemEventCount: 0,
+        healthStepCount: 0
+      }
+    };
+    open.mockResolvedValue({ snapshot });
+
+    const { GET } = await import('@/app/api/dashboard/glucose/history/route');
+    const response = await GET(
+      new NextRequest('http://localhost/api/dashboard/glucose/history?range=3d')
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(open).toHaveBeenCalledWith({
+      range: '3d',
+      now: expect.any(Date)
+    });
+    expect(getHistory).not.toHaveBeenCalled();
+    expect(json).toEqual(snapshot);
+  });
+
+  test('uses the workspace boundary for explicit custom windows without a limit override', async () => {
+    const snapshot = {
+      items: [
+        {
+          readingId: 'reading-1',
+          timestamp: '2026-03-07T09:55:00.000Z',
+          valueMmolL: 5.8,
+          valueMgDl: 104,
+          trend: 'flat',
+          source: 'official'
+        }
+      ],
+      basalItems: [],
+      eventItems: [],
+      stepItems: [],
+      latest: {
+        id: 'reading-1',
+        timestamp: '2026-03-07T09:55:00.000Z',
+        valueMmolL: 5.8,
+        valueMgDl: 104,
+        trend: 'flat',
+        source: 'official'
+      },
+      meta: {
+        from: '2026-03-07T09:00:00.000Z',
+        to: '2026-03-07T10:10:00.000Z',
+        officialCount: 1,
+        shareCount: 0,
+        mergedCount: 1,
+        tandemBasalCount: 0,
+        tandemEventCount: 0,
+        healthStepCount: 0
+      }
+    };
+    open.mockResolvedValue({ snapshot });
+
+    const { GET } = await import('@/app/api/dashboard/glucose/history/route');
+    const response = await GET(
+      new NextRequest(
+        'http://localhost/api/dashboard/glucose/history?from=2026-03-07T09:00:00.000Z&to=2026-03-07T10:10:00.000Z'
+      )
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(open).toHaveBeenCalledWith({
+      window: {
+        from: '2026-03-07T09:00:00.000Z',
+        to: '2026-03-07T10:10:00.000Z'
+      },
+      now: expect.any(Date)
+    });
+    expect(getHistory).not.toHaveBeenCalled();
+    expect(json).toEqual(snapshot);
   });
 });

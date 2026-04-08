@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
-import { updateGlucoseCorrections } from '@/lib/pulse-api/glucose';
+import { dashboardGlucoseWorkspace } from '@/lib/glucose/dashboard-workspace';
 import type { GlucoseCorrectionBatchPayload } from '@/lib/pulse-api/types';
 
 export async function PUT(request: NextRequest) {
@@ -12,7 +12,7 @@ export async function PUT(request: NextRequest) {
   const payload = (await request.json()) as GlucoseCorrectionBatchPayload;
 
   try {
-    const response = await updateGlucoseCorrections(payload);
+    const response = await dashboardGlucoseWorkspace.applyCorrections(payload);
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
     return NextResponse.json(

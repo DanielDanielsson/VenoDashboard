@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dashboardGlucoseService } from '@/lib/glucose/dashboard-service';
+import { dashboardGlucoseWorkspace } from '@/lib/glucose/dashboard-workspace';
 import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
+import type { TimeRange } from '@/lib/glucose/time-ranges';
 
 function parseLimit(value: string | null): number | null {
   if (!value) {
@@ -27,13 +29,38 @@ export async function GET(request: NextRequest) {
 
   const params = request.nextUrl.searchParams;
   const now = new Date();
+  const range = params.get('range');
+  const from = params.get('from');
+  const to = params.get('to');
+  const limit = parseLimit(params.get('limit'));
 
   try {
+    if (range) {
+      const session = await dashboardGlucoseWorkspace.open({
+        range: range as TimeRange,
+        now
+      });
+
+      return NextResponse.json(session.snapshot);
+    }
+
+    if (from && to && limit == null) {
+      const session = await dashboardGlucoseWorkspace.open({
+        window: {
+          from,
+          to
+        },
+        now
+      });
+
+      return NextResponse.json(session.snapshot);
+    }
+
     const response = await dashboardGlucoseService.getHistory({
-      range: params.get('range'),
-      from: params.get('from'),
-      to: params.get('to'),
-      limit: parseLimit(params.get('limit')),
+      range,
+      from,
+      to,
+      limit,
       now
     });
 
