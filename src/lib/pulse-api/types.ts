@@ -28,6 +28,61 @@ export interface GlucoseCorrectionBatchResponse {
   cleared: number;
 }
 
+export type TimelineNoteAuthorType = 'user' | 'assistant';
+
+export interface TimelineNote {
+  id: string;
+  text: string;
+  startAt: string;
+  endAt: string;
+  timezone: string;
+  allDay: boolean;
+  authorType: TimelineNoteAuthorType;
+  source: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+}
+
+export interface TimelineNoteListResponse {
+  items: TimelineNote[];
+  meta: {
+    from: string;
+    to: string;
+    returned: number;
+  };
+}
+
+export interface TimelineNoteWritePayload {
+  text: string;
+  timezone: string;
+  allDay: boolean;
+  startDate: string;
+  endDate: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  authorType?: TimelineNoteAuthorType;
+  source?: string | null;
+}
+
+export interface TimelineNoteMutationResponse {
+  note: TimelineNote;
+}
+
+export interface TimelineNoteDeleteResponse {
+  deleted: boolean;
+  noteId: string;
+}
+
+export interface TimelineUpdatesResponse {
+  meta: {
+    since: string;
+    latestRevision: string | null;
+    newCount: number;
+  };
+}
+
 export interface PulseApiSourceStatus {
   stable: boolean;
   connected: boolean;

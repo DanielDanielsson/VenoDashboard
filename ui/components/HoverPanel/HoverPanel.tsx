@@ -39,7 +39,7 @@ export const HoverPanel = ({
       {isOpen ? (
         <div
           role="tooltip"
-          className="absolute left-full top-1/2 z-30 ml-2 w-72 -translate-y-1/2"
+          className="absolute left-full top-1/2 z-50 ml-2 w-72 -translate-y-1/2"
         >
           <DashboardPanel
             title={title ?? 'Info'}

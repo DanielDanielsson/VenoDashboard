@@ -121,16 +121,25 @@ vi.mock('@ui/components/GlucoseAgpChart', () => ({
 vi.mock('@ui/components/GlucoseChart/GlucoseChart', () => ({
   GlucoseChart: ({
     data,
+    noteData = [],
     onPointSelect,
-    onCorrectionPreviewChange
+    onCorrectionPreviewChange,
+    onNoteAddRequest,
+    onNoteSelect
   }: {
     data: Array<{ readingId?: string; valueMmolL: number; source: 'official' | 'share'; correctionReason?: string | null }>;
+    noteData?: Array<{ id: string; text: string }>;
     onPointSelect?: (point: { readingId?: string; valueMmolL: number; source: 'official' | 'share'; correctionReason?: string | null }, additive: boolean) => void;
     onCorrectionPreviewChange?: (items: Array<{ readingId: string; valueMmolL: number }>) => void;
+    onNoteAddRequest?: (hoveredAt: string | null) => void;
+    onNoteSelect?: (note: { id: string; text: string }) => void;
   }) => (
     <div>
       <div data-testid="chart-reading-ids">
         {data.map((point) => point.readingId ?? 'missing').join(',')}
+      </div>
+      <div data-testid="chart-note-ids">
+        {noteData.map((note) => note.id).join(',')}
       </div>
       {data.map((point, index) => (
         <div key={point.readingId ?? index}>
@@ -153,6 +162,14 @@ vi.mock('@ui/components/GlucoseChart/GlucoseChart', () => ({
             </button>
           ) : null}
         </div>
+      ))}
+      <button type="button" onClick={() => onNoteAddRequest?.('2026-03-29T07:00:00.000Z')}>
+        add-note
+      </button>
+      {noteData.map((note) => (
+        <button key={note.id} type="button" onClick={() => onNoteSelect?.(note)}>
+          note-{note.id}
+        </button>
       ))}
     </div>
   )
@@ -189,6 +206,7 @@ function createHistoryResponse() {
     basalItems: [],
     eventItems: [],
     stepItems: [],
+    noteItems: [],
     latest: {
       id: 'latest-1',
       timestamp: '2026-03-29T07:05:00.000Z',
@@ -211,6 +229,28 @@ function createHistoryResponse() {
       tandemEventCount: 0,
       healthStepCount: 0
     }
+  };
+}
+
+function createHistoryResponseWithNote() {
+  return {
+    ...createHistoryResponse(),
+    noteItems: [
+      {
+        id: 'note-1',
+        text: 'Workout affected glucose',
+        startAt: '2026-03-29T06:00:00.000Z',
+        endAt: '2026-03-29T07:00:00.000Z',
+        timezone: 'UTC',
+        allDay: false,
+        authorType: 'user' as const,
+        source: 'dashboard',
+        createdAt: '2026-03-29T06:00:00.000Z',
+        updatedAt: '2026-03-29T06:00:00.000Z',
+        createdBy: 'owner@example.com',
+        updatedBy: 'owner@example.com'
+      }
+    ]
   };
 }
 
@@ -538,5 +578,215 @@ describe('GlucoseAnalysisView', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'select-reading-2' }));
     expect(screen.getByText('2 readings selected. Click more readings to keep building this correction.')).toBeInTheDocument();
+  });
+
+  test('shows note length validation only after save is attempted', async () => {
+    const fetchMock = vi.mocked(fetch);
+
+    render(<GlucoseAnalysisView isOwner />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'add-note' }));
+
+    expect(screen.queryByText('Notes must contain at least 3 non whitespace characters.')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Note'), {
+      target: { value: 'hi' }
+    });
+
+    expect(screen.queryByText('Notes must contain at least 3 non whitespace characters.')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+
+    expect(await screen.findByText('Notes must contain at least 3 non whitespace characters.')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/dashboard/glucose/notes',
+      expect.objectContaining({ method: 'POST' })
+    );
+  });
+
+  test('focuses the note textarea when creating a new note', async () => {
+    render(<GlucoseAnalysisView isOwner />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'add-note' }));
+
+    expect(await screen.findByRole('dialog', { name: 'New timeline note' })).toBeInTheDocument();
+    expect(screen.getByTestId('note-editor-overlay')).toBeInTheDocument();
+
+    const noteField = await screen.findByLabelText('Note');
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(noteField);
+    });
+  });
+
+  test('hides all day and time controls for multi day notes', async () => {
+    render(<GlucoseAnalysisView isOwner />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'add-note' }));
+    fireEvent.change(await screen.findByLabelText('End date'), {
+      target: { value: '2026-03-30' }
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('All day')).not.toBeInTheDocument();
+    });
+    expect(screen.queryByText('Start time')).not.toBeInTheDocument();
+    expect(screen.queryByText('End time')).not.toBeInTheDocument();
+  });
+
+  test('shows only created by for a note that has not been edited', async () => {
+    useSWRMock.mockImplementation((key: string | null) => {
+      if (!key) {
+        return {
+          data: undefined,
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      if (String(key).startsWith('/api/dashboard/glucose/updates')) {
+        return {
+          data: { latest: null, meta: { since: '', to: '', newCount: 0 } },
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      return {
+        data: undefined,
+        error: undefined,
+        isLoading: true,
+        isValidating: false,
+        mutate: historyMutateMock
+      };
+    });
+
+    render(<GlucoseAnalysisView isOwner initialSnapshot={createHistoryResponseWithNote()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'note-note-1' }));
+
+    expect(await screen.findByText('Created by owner@example.com')).toBeInTheDocument();
+    expect(screen.queryByText('Updated by owner@example.com')).not.toBeInTheDocument();
+  });
+
+  test('lets owners edit an existing note', async () => {
+    const fetchMock = vi.mocked(fetch);
+    const initialSnapshot = createHistoryResponseWithNote();
+
+    useSWRMock.mockImplementation((key: string | null) => {
+      if (!key) {
+        return {
+          data: undefined,
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      if (String(key).startsWith('/api/dashboard/glucose/updates')) {
+        return {
+          data: { latest: null, meta: { since: '', to: '', newCount: 0 } },
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      return {
+        data: undefined,
+        error: undefined,
+        isLoading: true,
+        isValidating: false,
+        mutate: historyMutateMock
+      };
+    });
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        note: {
+          ...initialSnapshot.noteItems[0],
+          text: 'Edited note text',
+          updatedAt: '2026-03-29T08:00:00.000Z',
+          updatedBy: 'owner@example.com'
+        }
+      })
+    } as Response);
+
+    render(<GlucoseAnalysisView isOwner initialSnapshot={initialSnapshot} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'note-note-1' }));
+    fireEvent.change(await screen.findByLabelText('Note'), {
+      target: { value: 'Edited note text' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/dashboard/glucose/notes/note-1',
+        expect.objectContaining({
+          method: 'PUT'
+        })
+      );
+    });
+  });
+
+  test('removes a deleted note from the chart immediately while the initial snapshot is still the source', async () => {
+    const fetchMock = vi.mocked(fetch);
+    const initialSnapshot = createHistoryResponseWithNote();
+
+    useSWRMock.mockImplementation((key: string | null) => {
+      if (!key) {
+        return {
+          data: undefined,
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      if (String(key).startsWith('/api/dashboard/glucose/updates')) {
+        return {
+          data: { latest: null, meta: { since: '', to: '', newCount: 0 } },
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      return {
+        data: undefined,
+        error: undefined,
+        isLoading: true,
+        isValidating: false,
+        mutate: historyMutateMock
+      };
+    });
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    } as Response);
+
+    render(<GlucoseAnalysisView isOwner initialSnapshot={initialSnapshot} />);
+
+    expect(screen.getByTestId('chart-note-ids')).toHaveTextContent('note-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'note-note-1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm delete' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('chart-note-ids')).toHaveTextContent('');
+    });
+    expect(historyMutateMock).toHaveBeenCalled();
   });
 });

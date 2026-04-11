@@ -4,6 +4,8 @@ import { dashboardGlucoseWorkspace } from '@/lib/glucose/dashboard-workspace';
 import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 import type { TimeRange } from '@/lib/glucose/time-ranges';
 
+export const dynamic = 'force-dynamic';
+
 function parseLimit(value: string | null): number | null {
   if (!value) {
     return null;
@@ -41,7 +43,11 @@ export async function GET(request: NextRequest) {
         now
       });
 
-      return NextResponse.json(session.snapshot);
+      return NextResponse.json(session.snapshot, {
+        headers: {
+          'Cache-Control': 'no-store'
+        }
+      });
     }
 
     if (from && to && limit == null) {
@@ -53,7 +59,11 @@ export async function GET(request: NextRequest) {
         now
       });
 
-      return NextResponse.json(session.snapshot);
+      return NextResponse.json(session.snapshot, {
+        headers: {
+          'Cache-Control': 'no-store'
+        }
+      });
     }
 
     const response = await dashboardGlucoseService.getHistory({
@@ -64,11 +74,20 @@ export async function GET(request: NextRequest) {
       now
     });
 
-    return NextResponse.json(response);
+    return NextResponse.json(response, {
+      headers: {
+        'Cache-Control': 'no-store'
+      }
+    });
   } catch (error) {
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to load glucose data' } },
-      { status: 502 }
+      {
+        status: 502,
+        headers: {
+          'Cache-Control': 'no-store'
+        }
+      }
     );
   }
 }

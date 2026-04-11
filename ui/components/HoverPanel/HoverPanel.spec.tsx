@@ -19,5 +19,6 @@ describe('HoverPanel', () => {
     expect(screen.getByRole('tooltip')).toBeInTheDocument();
     expect(screen.getByText('The steps data comes from my phone.')).toBeInTheDocument();
     expect(screen.getByText('Apple HealthKit')).toBeInTheDocument();
+    expect(screen.getByRole('tooltip')).toHaveClass('z-50');
   });
 });

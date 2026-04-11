@@ -75,6 +75,7 @@ describe('dashboard glucose history route', () => {
     const json = await response.json();
 
     expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
     expect(getHistory).toHaveBeenCalledWith({
       range: null,
       from: null,
@@ -163,6 +164,7 @@ describe('dashboard glucose history route', () => {
     const json = await response.json();
 
     expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
     expect(getHistory).toHaveBeenCalledWith({
       range: null,
       from: '2026-03-07T09:00:00.000Z',
@@ -216,6 +218,7 @@ describe('dashboard glucose history route', () => {
     const json = await response.json();
 
     expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
     expect(open).toHaveBeenCalledWith({
       range: '3d',
       now: expect.any(Date)
@@ -269,6 +272,7 @@ describe('dashboard glucose history route', () => {
     const json = await response.json();
 
     expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
     expect(open).toHaveBeenCalledWith({
       window: {
         from: '2026-03-07T09:00:00.000Z',

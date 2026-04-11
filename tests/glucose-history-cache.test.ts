@@ -70,6 +70,22 @@ function response(from: string, to: string): GlucoseApiResponse {
         source: 'apple_health'
       }
     ],
+    noteItems: [
+      {
+        id: 'note-1',
+        text: 'Stress',
+        startAt: '2026-03-06T11:30:00.000Z',
+        endAt: '2026-03-06T13:30:00.000Z',
+        timezone: 'Europe/Stockholm',
+        allDay: false,
+        authorType: 'user',
+        source: 'dashboard',
+        createdAt: '2026-03-06T13:35:00.000Z',
+        updatedAt: '2026-03-06T13:35:00.000Z',
+        createdBy: 'admin@pulseglucose.local',
+        updatedBy: 'admin@pulseglucose.local'
+      }
+    ],
     latest: {
       timestamp: to,
       valueMmolL: 5.8,
@@ -85,7 +101,8 @@ function response(from: string, to: string): GlucoseApiResponse {
       mergedCount: 3,
       tandemBasalCount: 2,
       tandemEventCount: 2,
-      healthStepCount: 2
+      healthStepCount: 2,
+      timelineRevision: '2026-03-06T13:35:00.000Z'
     }
   };
 }
@@ -136,6 +153,7 @@ describe('glucose history cache helpers', () => {
     expect(sliced.eventItems[0].timestamp).toBe('2026-03-06T07:30:00.000Z');
     expect(sliced.eventItems[1].timestamp).toBe('2026-03-06T15:30:00.000Z');
     expect(sliced.stepItems).toHaveLength(2);
+    expect(sliced.noteItems).toHaveLength(1);
     expect(sliced.meta.officialCount).toBe(0);
     expect(sliced.meta.shareCount).toBe(1);
     expect(sliced.meta.tandemBasalCount).toBe(2);
@@ -186,5 +204,22 @@ describe('glucose history cache helpers', () => {
         to: '2026-03-06T23:59:59.999Z'
       })
     ).toContain('from=2026-03-05T00%3A00%3A00.000Z');
+  });
+
+  test('prefers timeline revision for response freshness when notes changed more recently than glucose', () => {
+    expect(getHistoryRangeKey('24h')).toContain('24h');
+    expect(pickBestLoadedSourceKey(
+      new Map<string, { data?: GlucoseApiResponse }>([
+        [getHistoryRangeKey('24h'), { data: response('2026-03-06T12:00:00.000Z', '2026-03-07T12:00:00.000Z') }],
+        [getHistoryRangeKey('3d'), { data: {
+          ...response('2026-03-04T12:00:00.000Z', '2026-03-07T11:00:00.000Z'),
+          meta: {
+            ...response('2026-03-04T12:00:00.000Z', '2026-03-07T11:00:00.000Z').meta,
+            timelineRevision: '2026-03-07T12:30:00.000Z'
+          }
+        } }]
+      ]),
+      { kind: 'preset', range: '24h' }
+    )).toBe(getHistoryRangeKey('3d'));
   });
 });

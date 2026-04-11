@@ -41,7 +41,7 @@ export function buildPresetWindow(endIso: string, range: TimeRange): HistoryWind
 }
 
 export function getResponseFreshness(response: GlucoseApiResponse): number {
-  return toMs(response.latest?.timestamp ?? response.meta.to);
+  return toMs(response.meta.timelineRevision ?? response.latest?.timestamp ?? response.meta.to);
 }
 
 function windowContains(source: HistoryWindow, target: HistoryWindow): boolean {
@@ -101,6 +101,20 @@ function pickStepItemsForWindow(
     const bucketStartMs = toMs(item.bucketStart);
     const bucketEndMs = toMs(item.bucketEnd);
     return bucketEndMs > fromMs && bucketStartMs < toMsValue;
+  });
+}
+
+function pickNoteItemsForWindow(
+  noteItems: GlucoseApiResponse['noteItems'] = [],
+  window: HistoryWindow
+): NonNullable<GlucoseApiResponse['noteItems']> {
+  const fromMs = toMs(window.from);
+  const toMsValue = toMs(window.to);
+
+  return noteItems.filter((item) => {
+    const startMs = toMs(item.startAt);
+    const endMs = toMs(item.endAt);
+    return endMs > fromMs && startMs < toMsValue;
   });
 }
 
@@ -195,6 +209,7 @@ export function sliceHistoryResponseToWindow(
   const basalItems = pickBasalItemsForWindow(sourceData.basalItems, window);
   const eventItems = pickEventItemsForWindow(sourceData.eventItems, window);
   const stepItems = pickStepItemsForWindow(sourceData.stepItems, window);
+  const noteItems = pickNoteItemsForWindow(sourceData.noteItems, window);
 
   return {
     ...sourceData,
@@ -202,6 +217,7 @@ export function sliceHistoryResponseToWindow(
     basalItems,
     eventItems,
     stepItems,
+    noteItems,
     meta: {
       from: window.from,
       to: window.to,
@@ -210,7 +226,8 @@ export function sliceHistoryResponseToWindow(
       mergedCount: items.length,
       tandemBasalCount: basalItems.length,
       tandemEventCount: eventItems.length,
-      healthStepCount: stepItems.length
+      healthStepCount: stepItems.length,
+      timelineRevision: sourceData.meta.timelineRevision ?? sourceData.latest?.timestamp ?? sourceData.meta.to
     }
   };
 }

@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { createDashboardGlucoseService, type GlucoseTimelinePort, type HealthStepsPort, type TandemActivityPort } from '@/lib/glucose/dashboard-service';
+import {
+  createDashboardGlucoseService,
+  type GlucoseTimelinePort,
+  type HealthStepsPort,
+  type TandemActivityPort,
+  type TimelineNotesPort
+} from '@/lib/glucose/dashboard-service';
 import type { PulseApiReading } from '@/lib/pulse-api/types';
 
 function reading(overrides: Partial<PulseApiReading> = {}): PulseApiReading {
@@ -22,6 +28,7 @@ describe('dashboard glucose service', () => {
   let glucosePort: GlucoseTimelinePort;
   let tandemPort: TandemActivityPort;
   let healthPort: HealthStepsPort;
+  let notesPort: TimelineNotesPort;
 
   beforeEach(() => {
     glucosePort = {
@@ -34,6 +41,13 @@ describe('dashboard glucose service', () => {
     };
     healthPort = {
       fetchSteps: vi.fn().mockResolvedValue([])
+    };
+    notesPort = {
+      fetchNotes: vi.fn().mockResolvedValue([]),
+      fetchMutationSummary: vi.fn().mockResolvedValue({
+        latestRevision: null,
+        newCount: 0
+      })
     };
   });
 
@@ -65,6 +79,7 @@ describe('dashboard glucose service', () => {
       glucosePort,
       tandemPort,
       healthPort,
+      notesPort,
       clock: () => new Date('2026-03-07T10:05:00.000Z')
     });
 
@@ -91,6 +106,7 @@ describe('dashboard glucose service', () => {
       glucosePort,
       tandemPort,
       healthPort,
+      notesPort,
       clock: () => new Date('2026-03-07T10:00:00.000Z')
     });
 
@@ -111,7 +127,8 @@ describe('dashboard glucose service', () => {
       mergedCount: 1,
       tandemBasalCount: 0,
       tandemEventCount: 0,
-      healthStepCount: 0
+      healthStepCount: 0,
+      timelineRevision: '2026-03-07T10:00:00.000Z'
     });
     expect(glucosePort.fetchHistory).not.toHaveBeenCalled();
     expect(tandemPort.fetchBasal).not.toHaveBeenCalled();
@@ -180,6 +197,7 @@ describe('dashboard glucose service', () => {
       glucosePort,
       tandemPort,
       healthPort,
+      notesPort,
       clock: () => new Date('2026-03-04T00:00:00.000Z')
     });
 
@@ -194,6 +212,7 @@ describe('dashboard glucose service', () => {
     expect(response.meta.tandemBasalCount).toBe(3);
     expect(response.meta.tandemEventCount).toBe(3);
     expect(response.meta.healthStepCount).toBe(1);
+    expect(response.noteItems).toEqual([]);
   });
 
   test('getUpdatesSince counts glucose and tandem updates using the service boundary', async () => {
@@ -250,20 +269,27 @@ describe('dashboard glucose service', () => {
         glucoseMmolL: null
       }
     ]);
+    vi.mocked(notesPort.fetchMutationSummary).mockResolvedValue({
+      latestRevision: '2026-03-07T07:19:30.000Z',
+      newCount: 2
+    });
 
     const service = createDashboardGlucoseService({
       glucosePort,
       tandemPort,
       healthPort,
+      notesPort,
       clock: () => new Date('2026-03-07T07:20:00.000Z')
     });
 
     const response = await service.getUpdatesSince('2026-03-07T07:10:00.000Z');
 
-    expect(response.meta.newCount).toBe(4);
+    expect(response.meta.newCount).toBe(6);
     expect(response.meta.newGlucoseCount).toBe(2);
     expect(response.meta.newTandemBasalCount).toBe(1);
     expect(response.meta.newTandemEventCount).toBe(1);
+    expect(response.meta.newNoteMutationCount).toBe(2);
+    expect(response.meta.timelineRevision).toBe('2026-03-07T07:20:00.000Z');
   });
 
   test('getHistory throws when both glucose history sources fail', async () => {
@@ -276,6 +302,7 @@ describe('dashboard glucose service', () => {
       glucosePort,
       tandemPort,
       healthPort,
+      notesPort,
       clock: () => new Date('2026-03-07T10:00:00.000Z')
     });
 
@@ -310,6 +337,7 @@ describe('dashboard glucose service', () => {
       glucosePort,
       tandemPort,
       healthPort,
+      notesPort,
       clock: () => new Date('2026-03-07T10:00:00.000Z')
     });
 
@@ -325,5 +353,46 @@ describe('dashboard glucose service', () => {
         source: 'share'
       })
     );
+  });
+
+  test('getHistory includes overlapping note items in the timeline snapshot', async () => {
+    vi.mocked(glucosePort.fetchLatest).mockResolvedValue(null);
+    vi.mocked(glucosePort.fetchHistory).mockResolvedValue([
+      reading({
+        id: 'official-1',
+        timestamp: '2026-03-07T09:00:00.000Z',
+        source: 'official'
+      })
+    ]);
+    vi.mocked(notesPort.fetchNotes).mockResolvedValue([
+      {
+        id: 'note-1',
+        text: 'Late lunch',
+        startAt: '2026-03-07T11:00:00.000Z',
+        endAt: '2026-03-07T13:00:00.000Z',
+        timezone: 'Europe/Stockholm',
+        allDay: false,
+        authorType: 'user',
+        source: 'dashboard',
+        createdAt: '2026-03-07T13:05:00.000Z',
+        updatedAt: '2026-03-07T13:05:00.000Z',
+        createdBy: 'admin@pulseglucose.local',
+        updatedBy: 'admin@pulseglucose.local'
+      }
+    ]);
+
+    const service = createDashboardGlucoseService({
+      glucosePort,
+      tandemPort,
+      healthPort,
+      notesPort,
+      clock: () => new Date('2026-03-07T12:00:00.000Z')
+    });
+
+    const response = await service.getHistory({ range: '24h' });
+
+    expect(response.noteItems).toHaveLength(1);
+    expect(response.noteItems?.[0]?.id).toBe('note-1');
+    expect(response.meta.timelineRevision).toBe('2026-03-07T13:05:00.000Z');
   });
 });

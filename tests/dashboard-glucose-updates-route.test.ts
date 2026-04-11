@@ -45,6 +45,7 @@ describe('dashboard glucose updates route', () => {
     const json = await response.json();
 
     expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
     expect(workspaceGetUpdatesSince).toHaveBeenCalledWith(
       '2026-03-07T07:10:00.000Z',
       expect.any(Date)
@@ -79,6 +80,7 @@ describe('dashboard glucose updates route', () => {
     const json = await response.json();
 
     expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
     expect(workspaceGetUpdatesSince).toHaveBeenCalledWith(
       '2026-03-07T07:10:00.000Z',
       expect.any(Date)

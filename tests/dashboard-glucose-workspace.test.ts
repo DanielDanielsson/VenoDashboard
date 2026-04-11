@@ -39,6 +39,13 @@ describe('dashboard glucose workspace', () => {
       healthPort: {
         fetchSteps: vi.fn().mockResolvedValue([])
       },
+      notesPort: {
+        fetchNotes: vi.fn().mockResolvedValue([]),
+        fetchMutationSummary: vi.fn().mockResolvedValue({
+          latestRevision: null,
+          newCount: 0
+        })
+      },
       correctionsPort: {
         apply: vi.fn().mockResolvedValue({
           updated: 0,
@@ -84,6 +91,7 @@ describe('dashboard glucose workspace', () => {
     expect(session.snapshot.meta.officialCount).toBe(2);
     expect(session.snapshot.meta.shareCount).toBe(2);
     expect(session.snapshot.items).toHaveLength(4);
+    expect(session.snapshot.noteItems).toEqual([]);
     expect(session.snapshot.items.map((item) => item.source)).toEqual([
       'official',
       'share',
@@ -353,5 +361,6 @@ describe('dashboard glucose workspace', () => {
     expect(session.snapshot.basalItems).toEqual([]);
     expect(session.snapshot.eventItems).toEqual([]);
     expect(session.snapshot.stepItems).toEqual([]);
+    expect(session.snapshot.noteItems).toEqual([]);
   });
 });

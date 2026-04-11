@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dashboardGlucoseWorkspace } from '@/lib/glucose/dashboard-workspace';
 import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const rateLimit = applyRateLimit({
     key: `glucose-updates:${getClientIp(request)}`,
@@ -26,11 +28,20 @@ export async function GET(request: NextRequest) {
 
   try {
     const response = await dashboardGlucoseWorkspace.getUpdatesSince(since, new Date());
-    return NextResponse.json(response);
+    return NextResponse.json(response, {
+      headers: {
+        'Cache-Control': 'no-store'
+      }
+    });
   } catch (error) {
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to load glucose updates' } },
-      { status: 502 }
+      {
+        status: 502,
+        headers: {
+          'Cache-Control': 'no-store'
+        }
+      }
     );
   }
 }

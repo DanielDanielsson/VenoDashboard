@@ -38,6 +38,21 @@ export interface HealthStepChartPoint {
   source: string;
 }
 
+export interface TimelineNote {
+  id: string;
+  text: string;
+  startAt: string;
+  endAt: string;
+  timezone: string;
+  allDay: boolean;
+  authorType: 'user' | 'assistant';
+  source: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+}
+
 export interface LatestReading {
   id?: string;
   valueMmolL: number;
@@ -56,6 +71,7 @@ export interface GlucoseApiResponse {
   basalItems: BasalChartPoint[];
   eventItems: TandemEventChartPoint[];
   stepItems: HealthStepChartPoint[];
+  noteItems?: TimelineNote[];
   latest: LatestReading | null;
   meta: {
     from: string;
@@ -66,6 +82,7 @@ export interface GlucoseApiResponse {
     tandemBasalCount: number;
     tandemEventCount: number;
     healthStepCount: number;
+    timelineRevision?: string | null;
   };
   error?: { message: string };
 }
@@ -79,6 +96,8 @@ export interface GlucoseUpdatesResponse {
     newGlucoseCount?: number;
     newTandemBasalCount?: number;
     newTandemEventCount?: number;
+    newNoteMutationCount?: number;
+    timelineRevision?: string | null;
   };
   error?: { message: string };
 }

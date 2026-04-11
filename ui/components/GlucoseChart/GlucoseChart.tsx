@@ -2,8 +2,23 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 
 import { useRef, useEffect, useCallback, useState } from 'react';
-import type { BasalChartPoint, ChartPoint, HealthStepChartPoint, TandemEventChartPoint } from '@/lib/glucose/types';
+import type {
+  BasalChartPoint,
+  ChartPoint,
+  HealthStepChartPoint,
+  TandemEventChartPoint,
+  TimelineNote
+} from '@/lib/glucose/types';
 import { getGlucoseColor, type GlucoseColorMode } from '@/lib/glucose/tints';
+import {
+  NOTE_BAND_GAP,
+  NOTE_BAND_PADDING_Y,
+  NOTE_ROW_GAP,
+  NOTE_ROW_HEIGHT,
+  assignTimelineNoteLanes,
+  getTimelineNoteBandHeight,
+  getTimelineNotesAtTimestamp
+} from '@/lib/glucose/timeline-note-layout';
 import { HoverPanel } from '../HoverPanel';
 
 export type { ChartPoint } from '@/lib/glucose/types';
@@ -13,14 +28,18 @@ interface GlucoseChartProps {
   basalData?: BasalChartPoint[];
   eventData?: TandemEventChartPoint[];
   stepData?: HealthStepChartPoint[];
+  noteData?: TimelineNote[];
   height?: number;
   yMax?: number;
   colorMode: GlucoseColorMode;
   editable?: boolean;
   selectedReadingIds?: string[];
+  selectedNoteId?: string | null;
   previewReadingValues?: Record<string, number>;
   onPointSelect?: (point: ChartPoint, additive: boolean) => void;
   onCorrectionPreviewChange?: (items: Array<{ readingId: string; valueMmolL: number }>) => void;
+  onNoteSelect?: (note: TimelineNote) => void;
+  onNoteAddRequest?: (hoveredAt: string | null) => void;
 }
 
 const LOW_THRESHOLD = 4.0;
@@ -495,14 +514,18 @@ export function GlucoseChart({
   basalData = [],
   eventData = [],
   stepData = [],
+  noteData = [],
   height = 400,
   yMax = 25,
   colorMode,
   editable = false,
   selectedReadingIds = [],
+  selectedNoteId = null,
   previewReadingValues = {},
   onPointSelect,
-  onCorrectionPreviewChange
+  onCorrectionPreviewChange,
+  onNoteSelect,
+  onNoteAddRequest
 }: GlucoseChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -522,6 +545,8 @@ export function GlucoseChart({
   const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
   const [draggedReadingId, setDraggedReadingId] = useState<string | null>(null);
   const [isEditDragging, setIsEditDragging] = useState(false);
+  const viewportFrameRef = useRef<number>(0);
+  const [, setViewportVersion] = useState(0);
   const dataSignatureRef = useRef('');
   const [isDark, setIsDark] = useState(() =>
     typeof document !== 'undefined'
@@ -591,10 +616,20 @@ export function GlucoseChart({
   const stepGap = hasStepBand ? STEP_BAND_GAP : 0;
   const eventTrackHeight = hasEventTrack ? EVENT_TRACK_HEIGHT : 0;
   const eventGap = hasEventTrack ? EVENT_TRACK_GAP : 0;
+  const assignedNoteItems = assignTimelineNoteLanes(noteData);
+  const noteBandHeight = getTimelineNoteBandHeight(noteData);
   const glucosePlotHeight = 240;
   const eventTrackTop = PADDING.top + glucosePlotHeight + eventGap;
   const basalBandTop = eventTrackTop + eventTrackHeight + basalGap;
   const stepBandTop = basalBandTop + basalBandHeight + stepGap;
+  const noteAnchorBottom = hasStepBand
+    ? stepBandTop + stepBandHeight
+    : hasBasalBand
+      ? basalBandTop + basalBandHeight
+      : hasEventTrack
+        ? eventTrackTop + eventTrackHeight
+        : PADDING.top + glucosePlotHeight;
+  const noteBandTop = noteAnchorBottom + NOTE_BAND_GAP;
   const fitAllPxPerMs = chartWidth > 0 ? chartWidth / totalDurationMs : 0;
   const minPxPerMs = fitAllPxPerMs > 0 ? fitAllPxPerMs : 0;
   const hoveredPoint = hoveredIndex === null ? null : renderedData[hoveredIndex] ?? null;
@@ -613,6 +648,20 @@ export function GlucoseChart({
   const hoveredStepBucket = getHoveredStepBucket(hoveredTimestampMs, stepData);
   const hoveredSuspendInterval = getHoveredSuspendInterval(hoveredTimestampMs, eventData);
   const hoveredIobValue = getHoveredIobValue(hoveredTimestampMs, iobPoints);
+  const hoveredNotes = hoveredTimestampMs === null
+    ? []
+    : getTimelineNotesAtTimestamp(assignedNoteItems, hoveredTimestampMs);
+
+  const syncViewportOverlay = useCallback(() => {
+    if (viewportFrameRef.current) {
+      return;
+    }
+
+    viewportFrameRef.current = requestAnimationFrame(() => {
+      viewportFrameRef.current = 0;
+      setViewportVersion((version) => version + 1);
+    });
+  }, []);
 
   useEffect(() => {
     if (data.length > 1 && chartWidth > 0 && fitAllPxPerMs > 0) {
@@ -627,8 +676,50 @@ export function GlucoseChart({
       } else if (pxPerMsRef.current < fitAllPxPerMs) {
         pxPerMsRef.current = fitAllPxPerMs;
       }
+
+      syncViewportOverlay();
     }
-  }, [data.length, chartWidth, fitAllPxPerMs, timeEndMs, timeStartMs]);
+  }, [data.length, chartWidth, fitAllPxPerMs, syncViewportOverlay, timeEndMs, timeStartMs]);
+
+  useEffect(() => {
+    return () => {
+      if (viewportFrameRef.current) {
+        cancelAnimationFrame(viewportFrameRef.current);
+      }
+    };
+  }, []);
+
+  function getTimestampMsForCanvasX(mouseX: number): number | null {
+    if (chartWidth <= 0 || pxPerMsRef.current <= 0) {
+      return null;
+    }
+
+    const clampedMouseX = clamp(mouseX - PADDING.left, 0, chartWidth);
+    return timeStartMs + (clampedMouseX + scrollRef.current) / pxPerMsRef.current;
+  }
+
+  function getXForTimestamp(timestampMs: number): number {
+    return PADDING.left + (timestampMs - timeStartMs) * pxPerMsRef.current - scrollRef.current;
+  }
+
+  function updateHoverAtPosition(mouseX: number, mouseY: number) {
+    const targetTimeMs = getTimestampMsForCanvasX(mouseX);
+    if (targetTimeMs === null) {
+      setHoveredIndex(null);
+      setHoveredTimestampMs(null);
+      return;
+    }
+
+    const nearestIndex = findNearestIndex(timestamps, targetTimeMs);
+    if (nearestIndex >= 0) {
+      setHoveredIndex(nearestIndex);
+      setHoveredTimestampMs(targetTimeMs);
+      setHoverPos({ x: mouseX, y: mouseY });
+    } else {
+      setHoveredIndex(null);
+      setHoveredTimestampMs(null);
+    }
+  }
 
   const clampScroll = useCallback(() => {
     const maxAllowed = Math.max(0, totalDurationMs * pxPerMsRef.current - chartWidth);
@@ -1411,6 +1502,7 @@ export function GlucoseChart({
     clampScroll();
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(draw);
+    syncViewportOverlay();
   }, [chartWidth, clampScroll, draw, fitAllPxPerMs, minPxPerMs, timeStartMs, totalDurationMs]);
 
   function getSelectablePointIndexAtClientPosition(clientX: number, clientY: number): number | null {
@@ -1548,6 +1640,7 @@ export function GlucoseChart({
 
       cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(draw);
+      syncViewportOverlay();
       if (dragModeRef.current !== 'edit') {
         setHoveredIndex(null);
         setHoveredTimestampMs(null);
@@ -1570,18 +1663,8 @@ export function GlucoseChart({
       return;
     }
 
-    const targetTimeMs = timeStartMs + (mouseX - PADDING.left + scrollRef.current) / pxPerMsRef.current;
-    const nearestIndex = findNearestIndex(timestamps, targetTimeMs);
-
-    if (nearestIndex >= 0) {
-      setHoveredIndex(nearestIndex);
-      setHoveredTimestampMs(targetTimeMs);
-      setHoverPos({ x: mouseX, y: mouseY });
-    } else {
-      setHoveredIndex(null);
-      setHoveredTimestampMs(null);
-    }
-  }, [chartHeight, chartWidth, clampScroll, data.length, draw, glucosePlotHeight, onCorrectionPreviewChange, timeStartMs, timestamps, yMax]);
+    updateHoverAtPosition(mouseX, mouseY);
+  }, [chartHeight, chartWidth, clampScroll, data.length, draw, glucosePlotHeight, onCorrectionPreviewChange, timestamps, yMax]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     if (dragModeRef.current === 'edit') {
@@ -1647,14 +1730,25 @@ export function GlucoseChart({
       clampScroll();
       cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(draw);
+      syncViewportOverlay();
       setHoveredIndex(null);
       setHoveredTimestampMs(null);
     }
-  }, [clampScroll, draw]);
+  }, [clampScroll, draw, syncViewportOverlay]);
 
   const handleTouchEnd = useCallback(() => {
     touchStartRef.current = null;
   }, []);
+
+  function handleNoteBandMouseMove(event: React.MouseEvent<HTMLDivElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    updateHoverAtPosition(event.clientX - rect.left + PADDING.left, event.clientY - rect.top + noteBandTop);
+  }
+
+  function handleNoteBandMouseLeave() {
+    setHoveredTimestampMs(null);
+    setHoveredIndex(null);
+  }
 
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
@@ -1664,7 +1758,7 @@ export function GlucoseChart({
             position: 'absolute',
             left: 8,
             top: stepBandTop + 4,
-            zIndex: 5,
+            zIndex: 12,
             display: 'inline-flex',
             alignItems: 'flex-start',
             pointerEvents: 'none',
@@ -1683,6 +1777,29 @@ export function GlucoseChart({
           </div>
         </div>
       ) : null}
+      <div
+        style={{
+          position: 'absolute',
+          left: 8,
+          top: noteBandTop + 4,
+          zIndex: 12,
+          display: 'inline-flex',
+          alignItems: 'flex-start',
+          pointerEvents: 'none'
+        }}
+      >
+        <span className="ui_chart_axis_unit" style={{ color: 'var(--text-soft)', lineHeight: 1, whiteSpace: 'nowrap' }}>
+          Notes
+        </span>
+        <div style={{ pointerEvents: 'auto' }}>
+          <HoverPanel
+            title="Notes"
+            body="Plain text timeline annotations. Hover the notes band to add a note. Click a note to inspect or edit it."
+            sourceValue="Timeline notes"
+            twStyles="-ml-0.5 -mt-2"
+          />
+        </div>
+      </div>
       <canvas
         ref={canvasRef}
         style={{
@@ -1706,7 +1823,100 @@ export function GlucoseChart({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       />
-      {hoveredPoint && (
+      <div
+        aria-label="Notes band"
+        onMouseMove={handleNoteBandMouseMove}
+        onMouseLeave={handleNoteBandMouseLeave}
+        style={{
+          position: 'absolute',
+          left: PADDING.left,
+          right: PADDING.right,
+          top: noteBandTop,
+          height: noteBandHeight,
+          borderRadius: 12,
+          background: isDark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(100, 116, 139, 0.08)',
+          border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(100, 116, 139, 0.18)'}`,
+          overflow: 'hidden',
+          zIndex: 6
+        }}
+      >
+        {assignedNoteItems.map((note) => {
+          const startX = getXForTimestamp(new Date(note.startAt).getTime());
+          const endX = getXForTimestamp(new Date(note.endAt).getTime());
+          const left = Math.max(0, startX - PADDING.left);
+          const right = Math.max(left + 12, endX - PADDING.left);
+          const width = Math.max(12, right - left);
+          const top = NOTE_BAND_PADDING_Y + note.lane * (NOTE_ROW_HEIGHT + NOTE_ROW_GAP);
+          const isSelected = selectedNoteId === note.id;
+
+          return (
+            <button
+              key={note.id}
+              type="button"
+              onClick={() => onNoteSelect?.(note)}
+              style={{
+                position: 'absolute',
+                left,
+                top,
+                width,
+                height: NOTE_ROW_HEIGHT,
+                borderRadius: 8,
+                border: isSelected
+                  ? `1px solid ${isDark ? 'rgba(226, 232, 240, 0.75)' : 'rgba(51, 65, 85, 0.65)'}`
+                  : `1px solid ${isDark ? 'rgba(148, 163, 184, 0.25)' : 'rgba(100, 116, 139, 0.25)'}`,
+                background: isSelected
+                  ? (isDark ? 'rgba(148, 163, 184, 0.34)' : 'rgba(148, 163, 184, 0.42)')
+                  : (isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(148, 163, 184, 0.24)'),
+                color: 'var(--text)',
+                padding: '0 10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                overflow: 'hidden',
+                cursor: 'pointer'
+              }}
+            >
+              <span
+                className="ui_caption"
+                style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'left',
+                  flex: 1
+                }}
+              >
+                {note.text}
+              </span>
+            </button>
+          );
+        })}
+        {hoveredTimestampMs !== null ? (
+          <button
+            type="button"
+            aria-label="Add note"
+            onClick={() => onNoteAddRequest?.(new Date(hoveredTimestampMs).toISOString())}
+            style={{
+              position: 'absolute',
+              left: clamp(getXForTimestamp(hoveredTimestampMs) - PADDING.left - 12, 0, Math.max(0, chartWidth - 24)),
+              top: noteBandHeight - NOTE_BAND_PADDING_Y - NOTE_ROW_HEIGHT,
+              width: 24,
+              height: 24,
+              borderRadius: 999,
+              border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.42)' : 'rgba(100, 116, 139, 0.35)'}`,
+              background: isDark ? 'rgba(148, 163, 184, 0.16)' : 'rgba(148, 163, 184, 0.18)',
+              color: 'var(--text-soft)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer'
+            }}
+          >
+            +
+          </button>
+        ) : null}
+      </div>
+      {(hoveredPoint || hoveredNotes.length > 0) && (
         <div
           className="rounded border border-border-strong bg-surface-strong"
           style={{
@@ -1721,10 +1931,12 @@ export function GlucoseChart({
             minWidth: 140
           }}
         >
-          <p className="ui_mono_value_lg" style={{ margin: 0, color: getRenderedReadingColor(hoveredPoint, colorMode, isDark) }}>
-            {hoveredPoint.valueMmolL.toFixed(1)} <span className="ui_caption text-text-soft">mmol/L</span>
-          </p>
-          {!isEditDragging || hoveredPoint.readingId !== draggedReadingId ? (
+          {hoveredPoint ? (
+            <p className="ui_mono_value_lg" style={{ margin: 0, color: getRenderedReadingColor(hoveredPoint, colorMode, isDark) }}>
+              {hoveredPoint.valueMmolL.toFixed(1)} <span className="ui_caption text-text-soft">mmol/L</span>
+            </p>
+          ) : null}
+          {hoveredPoint && (!isEditDragging || hoveredPoint.readingId !== draggedReadingId) ? (
             <>
               <p className="ui_caption text-text-dim" style={{ margin: '4px 0 0' }}>
                 {new Date(hoveredPoint.timestamp).toLocaleString([], {
@@ -1850,6 +2062,30 @@ export function GlucoseChart({
                   ? new Date(hoveredSuspendInterval.resumeMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                   : 'ongoing'}
               </p>
+            </div>
+          )}
+          {hoveredNotes.length > 0 && (
+            <div className="mt-2 border-t border-border pt-2">
+              <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
+                Notes
+              </p>
+              <div style={{ display: 'grid', gap: 8, marginTop: 6 }}>
+                {hoveredNotes.map((note) => (
+                  <div key={note.id} style={{ display: 'grid', gap: 3 }}>
+                    <p className="ui_caption text-text-soft" style={{ margin: 0 }}>
+                      {note.allDay
+                        ? `${new Date(note.startAt).toLocaleDateString()} to ${new Date(note.endAt).toLocaleDateString()}`
+                        : `${new Date(note.startAt).toLocaleString()} to ${new Date(note.endAt).toLocaleString()}`}
+                    </p>
+                    <p
+                      className="body_text text-text"
+                      style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                    >
+                      {note.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

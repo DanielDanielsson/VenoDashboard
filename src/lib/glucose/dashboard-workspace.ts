@@ -3,7 +3,12 @@ import {
   type DashboardGlucoseServiceDeps
 } from '@/lib/glucose/dashboard-service';
 import type { GlucoseApiResponse, GlucoseUpdatesResponse } from '@/lib/glucose/types';
-import { pulseApiHealthPort, pulseApiTandemPort, pulseApiGlucosePort } from '@/lib/glucose/dashboard-service';
+import {
+  pulseApiHealthPort,
+  pulseApiNotesPort,
+  pulseApiTandemPort,
+  pulseApiGlucosePort
+} from '@/lib/glucose/dashboard-service';
 import type { TimeRange } from '@/lib/glucose/time-ranges';
 import { updateGlucoseCorrections } from '@/lib/pulse-api/glucose';
 import type { GlucoseCorrectionBatchPayload, GlucoseCorrectionBatchResponse } from '@/lib/pulse-api/types';
@@ -67,7 +72,7 @@ export function createDashboardGlucoseWorkspace(
     return {
       snapshot,
       async refresh() {
-        const since = snapshot.latest?.timestamp ?? snapshot.meta.to;
+        const since = snapshot.meta.timelineRevision ?? snapshot.latest?.timestamp ?? snapshot.meta.to;
         const updates = await service.getUpdatesSince(since, input.now ?? deps.clock?.() ?? new Date());
 
         if (updates.meta.newCount <= 0) {
@@ -101,6 +106,7 @@ export const dashboardGlucoseWorkspace = createDashboardGlucoseWorkspace({
   glucosePort: pulseApiGlucosePort,
   tandemPort: pulseApiTandemPort,
   healthPort: pulseApiHealthPort,
+  notesPort: pulseApiNotesPort,
   correctionsPort: {
     apply: updateGlucoseCorrections
   }

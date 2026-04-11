@@ -11,6 +11,14 @@ import { NumberInput } from '@ui/components/NumberInput';
 import { SegmentedControl } from '@ui/components/SegmentedControl';
 import { GLUCOSE_COLOR_MODES, type GlucoseColorMode } from '@/lib/glucose/tints';
 import { computeGlucoseStats } from '@/lib/glucose/metrics';
+import { getTimelineNoteBandHeight } from '@/lib/glucose/timeline-note-layout';
+import {
+  createTimelineNoteDraft,
+  draftFromTimelineNote,
+  isMultiDayTimelineNoteDraft,
+  validateTimelineNoteDraft,
+  type TimelineNoteDraft
+} from '@/lib/glucose/timeline-note-form';
 import {
   buildPresetWindow,
   getHistoryCustomKey,
@@ -20,9 +28,15 @@ import {
   type HistorySelection,
   type HistoryWindow
 } from '@/lib/glucose/history-cache';
+import {
+  buildDisplayedTimelineNotes,
+  removeTimelineNoteFromHistoryResponse,
+  upsertTimelineNoteInHistoryResponse
+} from '@/lib/glucose/timeline-note-history';
 import { GLUCOSE_TIME_RANGES } from '@/lib/glucose/time-ranges';
 import { SecondaryButton } from '@ui/components/SecondaryButton';
-import type { ChartPoint, GlucoseApiResponse, GlucoseUpdatesResponse } from '@/lib/glucose/types';
+import type { ChartPoint, GlucoseApiResponse, GlucoseUpdatesResponse, TimelineNote } from '@/lib/glucose/types';
+import type { ConsumerProfileResponse } from '@/lib/pulse-api/types';
 
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
@@ -38,8 +52,8 @@ async function fetchJson<T>(url: string): Promise<T> {
 const GLUCOSE_CHART_COLOR_MODE_STORAGE_KEY = 'pulse-glucose-chart-color-mode';
 const DEFAULT_GLUCOSE_CHART_COLOR_MODE: GlucoseColorMode = 'threeColors';
 
-function getUpdatesKey(timestamp: string): string {
-  return `/api/dashboard/glucose/updates?since=${encodeURIComponent(timestamp)}`;
+function getUpdatesKey(revision: string): string {
+  return `/api/dashboard/glucose/updates?since=${encodeURIComponent(revision)}`;
 }
 
 function getSelectionTargetWindow(
@@ -78,7 +92,32 @@ function roundCorrectionValue(value: number): number {
   return Number(value.toFixed(1));
 }
 
-function getChartHeight(data: Pick<GlucoseApiResponse, 'basalItems' | 'eventItems' | 'stepItems'> | undefined): number {
+function getTimelineNoteSignature(note: TimelineNote | null): string | null {
+  if (!note) {
+    return null;
+  }
+
+  return [
+    note.id,
+    note.text,
+    note.startAt,
+    note.endAt,
+    note.timezone,
+    String(note.allDay),
+    note.authorType,
+    note.source ?? '',
+    note.createdAt,
+    note.updatedAt,
+    note.createdBy,
+    note.updatedBy
+  ].join('|');
+}
+
+function wasTimelineNoteEdited(note: TimelineNote): boolean {
+  return note.updatedAt !== note.createdAt || note.updatedBy !== note.createdBy;
+}
+
+function getChartHeight(data: Pick<GlucoseApiResponse, 'basalItems' | 'eventItems' | 'stepItems' | 'noteItems'> | undefined): number {
   const glucosePlotHeight = 240;
   const paddingTop = 32;
   const paddingBottom = 48;
@@ -98,6 +137,8 @@ function getChartHeight(data: Pick<GlucoseApiResponse, 'basalItems' | 'eventItem
   if (data?.stepItems.length) {
     totalHeight += bandGap + bandHeight;
   }
+
+  totalHeight += bandGap + getTimelineNoteBandHeight(data?.noteItems ?? []);
 
   return totalHeight;
 }
@@ -132,8 +173,20 @@ export function GlucoseAnalysisView({
   const [correctionReasonInput, setCorrectionReasonInput] = useState('');
   const [isSavingCorrection, setIsSavingCorrection] = useState(false);
   const [correctionError, setCorrectionError] = useState<string | null>(null);
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState<TimelineNoteDraft | null>(null);
+  const [noteInitialDraft, setNoteInitialDraft] = useState<TimelineNoteDraft | null>(null);
+  const [noteLastValidPreview, setNoteLastValidPreview] = useState<TimelineNote | null>(null);
+  const [noteMode, setNoteMode] = useState<'create' | 'edit' | 'read'>('read');
+  const [noteError, setNoteError] = useState<string | null>(null);
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [hasAttemptedNoteSave, setHasAttemptedNoteSave] = useState(false);
+  const [deletedNoteIds, setDeletedNoteIds] = useState<string[]>([]);
 
   const isApplyingUpdatesRef = useRef(false);
+  const noteValidationPreviewRef = useRef<TimelineNote | null>(null);
+  const noteTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const { cache } = useSWRConfig();
   const loadedSourceKey = pickBestLoadedSourceKey(cache, selection);
   const requestKey =
@@ -154,23 +207,53 @@ export function GlucoseAnalysisView({
     revalidateIfStale: false,
     keepPreviousData: true
   });
+  const { data: profileResponse } = useSWR<ConsumerProfileResponse>(
+    isOwner ? '/api/dashboard/settings/profile' : null,
+    fetchJson,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false
+    }
+  );
 
   const sourceData = sourceDataResponse ?? (sourceKey === getHistoryRangeKey('3d') ? initialSnapshot : undefined);
   const targetWindow = getSelectionTargetWindow(selection, sourceData);
   const data = sourceData && targetWindow
     ? sliceHistoryResponseToWindow(sourceData, targetWindow)
     : sourceData;
-  const chartHeight = getChartHeight(data);
+  const visibleSavedNoteItems = buildDisplayedTimelineNotes(data?.noteItems, {
+    deletedIds: deletedNoteIds
+  });
+  const activeSavedNote = visibleSavedNoteItems.find((note) => note.id === activeNoteId) ?? null;
+  const noteValidation = noteDraft
+    ? validateTimelineNoteDraft(noteDraft, activeSavedNote ?? noteLastValidPreview)
+    : null;
+  const notePreviewSignature = getTimelineNoteSignature(noteValidation?.preview ?? null);
+  noteValidationPreviewRef.current = noteValidation?.preview ?? null;
+  const displayedNoteItems = buildDisplayedTimelineNotes(visibleSavedNoteItems, {
+    previewNote: noteLastValidPreview
+  });
+
+  const displayData = data
+    ? {
+        ...data,
+        noteItems: displayedNoteItems
+      }
+    : data;
+  const chartHeight = getChartHeight(displayData);
 
   const isTransitioning = isValidating || isLoading;
   const isFirstLoad = !data && isLoading;
+  const ownerTimeZone = profileResponse?.profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
-  const displayedLatestTimestamp = selection.kind === 'preset' ? data?.latest?.timestamp ?? null : null;
+  const displayedTimelineRevision = selection.kind === 'preset'
+    ? displayData?.meta.timelineRevision ?? displayData?.latest?.timestamp ?? null
+    : null;
   const {
     data: updates,
     error: updatesError
   } = useSWR<GlucoseUpdatesResponse>(
-    displayedLatestTimestamp ? getUpdatesKey(displayedLatestTimestamp) : null,
+    displayedTimelineRevision ? getUpdatesKey(displayedTimelineRevision) : null,
     fetchJson,
     {
       refreshInterval: 2 * 60 * 1000,
@@ -218,7 +301,7 @@ export function GlucoseAnalysisView({
       return;
     }
 
-    if (!displayedLatestTimestamp || newUpdatesCount <= 0 || isApplyingUpdatesRef.current || isValidating) {
+    if (!displayedTimelineRevision || newUpdatesCount <= 0 || isApplyingUpdatesRef.current || isValidating) {
       return;
     }
 
@@ -227,7 +310,7 @@ export function GlucoseAnalysisView({
       isApplyingUpdatesRef.current = false;
     });
   }, [
-    displayedLatestTimestamp,
+    displayedTimelineRevision,
     isValidating,
     mutate,
     newUpdatesCount,
@@ -249,6 +332,12 @@ export function GlucoseAnalysisView({
     && selectedPoints.every((point) => point.isCorrected && point.readingId);
   const trimmedCorrectionReason = correctionReasonInput.trim();
   const isCorrectionReasonMissing = trimmedCorrectionReason.length === 0;
+  const noteDraftIsDirty = noteDraft && noteInitialDraft
+    ? JSON.stringify(noteDraft) !== JSON.stringify(noteInitialDraft)
+    : false;
+  const isMultiDayNoteDraft = noteDraft ? isMultiDayTimelineNoteDraft(noteDraft) : false;
+  const isNoteReadOnly = !isOwner || noteMode === 'read';
+  const activePanelNote = noteLastValidPreview ?? activeSavedNote;
 
   useEffect(() => {
     if (!data?.items.length) {
@@ -286,6 +375,63 @@ export function GlucoseAnalysisView({
   }, [data?.items]);
 
   useEffect(() => {
+    const preview = noteValidationPreviewRef.current;
+    if (!preview) {
+      return;
+    }
+
+    setNoteLastValidPreview((current) =>
+      getTimelineNoteSignature(current) === notePreviewSignature ? current : preview
+    );
+  }, [notePreviewSignature]);
+
+  useEffect(() => {
+    if (noteMode !== 'create' || !noteDraft || isNoteReadOnly) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      noteTextAreaRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [isNoteReadOnly, noteDraft, noteMode]);
+
+  useEffect(() => {
+    if (!activeNoteId || !data?.noteItems) {
+      return;
+    }
+
+    const nextActive = data.noteItems.find((note) => note.id === activeNoteId);
+    if (!nextActive && !noteDraft) {
+      setActiveNoteId(null);
+      setNoteLastValidPreview(null);
+      setNoteInitialDraft(null);
+    }
+  }, [activeNoteId, data?.noteItems, noteDraft]);
+
+  useEffect(() => {
+    if (!noteDraft || !isMultiDayTimelineNoteDraft(noteDraft) || noteDraft.allDay) {
+      return;
+    }
+
+    setNoteDraft((current) => {
+      if (!current || !isMultiDayTimelineNoteDraft(current) || current.allDay) {
+        return current;
+      }
+
+      return {
+        ...current,
+        allDay: true,
+        startTime: '',
+        endTime: ''
+      };
+    });
+  }, [noteDraft]);
+
+  useEffect(() => {
     if (selectedReadingIds.length === 0) {
       setPreviewCorrectionValues((current) =>
         Object.keys(current).length === 0 ? current : {}
@@ -305,7 +451,74 @@ export function GlucoseAnalysisView({
     });
   }, [selectedReadingIds]);
 
+  function closeNoteEditor() {
+    setActiveNoteId(null);
+    setNoteDraft(null);
+    setNoteInitialDraft(null);
+    setNoteLastValidPreview(null);
+    setNoteMode('read');
+    setNoteError(null);
+    setHasAttemptedNoteSave(false);
+    setIsConfirmingDelete(false);
+  }
+
+  function confirmDiscardNoteDraft(): boolean {
+    if (!noteDraftIsDirty) {
+      return true;
+    }
+
+    return window.confirm('Discard unsaved note changes?');
+  }
+
+  function clearCorrectionEditor() {
+    setSelectedPoints([]);
+    setPreviewCorrectionValues({});
+    setCorrectionReasonInput('');
+    setCorrectionError(null);
+  }
+
+  function handleNoteSelect(note: TimelineNote) {
+    if (!confirmDiscardNoteDraft()) {
+      return;
+    }
+
+    clearCorrectionEditor();
+    const draft = draftFromTimelineNote(note);
+    setActiveNoteId(note.id);
+    setNoteDraft(draft);
+    setNoteInitialDraft(draft);
+    setNoteLastValidPreview(note);
+    setNoteMode(isOwner ? 'edit' : 'read');
+    setNoteError(null);
+    setHasAttemptedNoteSave(false);
+    setIsConfirmingDelete(false);
+  }
+
+  function handleNoteAddRequest(hoveredAt: string | null) {
+    if (!confirmDiscardNoteDraft()) {
+      return;
+    }
+
+    clearCorrectionEditor();
+    const draft = createTimelineNoteDraft(ownerTimeZone, hoveredAt);
+    setActiveNoteId(null);
+    setNoteDraft(draft);
+    setNoteInitialDraft(draft);
+    setNoteLastValidPreview(null);
+    setNoteMode(isOwner ? 'create' : 'read');
+    setNoteError(null);
+    setHasAttemptedNoteSave(false);
+    setIsConfirmingDelete(false);
+  }
+
   function handlePointSelect(point: ChartPoint, additive: boolean) {
+    if (!isNoteReadOnly && noteDraft) {
+      if (!confirmDiscardNoteDraft()) {
+        return;
+      }
+      closeNoteEditor();
+    }
+
     const readingId = point.readingId;
     const hasActiveCorrectionSession = selectedPoints.length > 0 || Object.keys(previewCorrectionValues).length > 0;
     const shouldAddToSession = additive || hasActiveCorrectionSession;
@@ -473,6 +686,99 @@ export function GlucoseAnalysisView({
     }
   }
 
+  async function saveNote() {
+    if (!noteDraft || isNoteReadOnly) {
+      if (!isOwner) {
+        setNoteError('Admin sign in is required to save notes.');
+      }
+      return;
+    }
+
+    setHasAttemptedNoteSave(true);
+
+    if (!noteValidation?.payload || !noteLastValidPreview) {
+      setNoteError(null);
+      return;
+    }
+
+    setIsSavingNote(true);
+    setNoteError(null);
+
+    try {
+      const response = await fetch(
+        activeNoteId ? `/api/dashboard/glucose/notes/${activeNoteId}` : '/api/dashboard/glucose/notes',
+        {
+          method: activeNoteId ? 'PUT' : 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(noteValidation.payload)
+        }
+      );
+
+      const json = await response.json() as { note?: TimelineNote; error?: { message?: string } };
+      if (!response.ok || !json.note) {
+        throw new Error(json.error?.message || 'Failed to save note');
+      }
+
+      const savedNote = json.note;
+      const nextDraft = draftFromTimelineNote(savedNote);
+      setActiveNoteId(savedNote.id);
+      setNoteDraft(nextDraft);
+      setNoteInitialDraft(nextDraft);
+      setNoteLastValidPreview(savedNote);
+      setNoteMode(isOwner ? 'edit' : 'read');
+      setHasAttemptedNoteSave(false);
+      setDeletedNoteIds((current) => current.filter((id) => id !== savedNote.id));
+      await mutate(
+        sourceData ? upsertTimelineNoteInHistoryResponse(sourceData, savedNote) : sourceDataResponse,
+        { revalidate: true }
+      );
+    } catch (saveError) {
+      setNoteError(saveError instanceof Error ? saveError.message : 'Failed to save note');
+    } finally {
+      setIsSavingNote(false);
+    }
+  }
+
+  async function deleteNote() {
+    if (!activeNoteId || !isOwner) {
+      setNoteError('Admin sign in is required to delete notes.');
+      return;
+    }
+
+    const deletingNoteId = activeNoteId;
+
+    setIsSavingNote(true);
+    setNoteError(null);
+
+    try {
+      const response = await fetch(`/api/dashboard/glucose/notes/${deletingNoteId}`, {
+        method: 'DELETE'
+      });
+      const json = await response.json() as { error?: { message?: string } };
+      if (!response.ok) {
+        throw new Error(json.error?.message || 'Failed to delete note');
+      }
+
+      setDeletedNoteIds((current) => (
+        current.includes(deletingNoteId) ? current : [...current, deletingNoteId]
+      ));
+      closeNoteEditor();
+      await mutate(
+        sourceData
+          ? removeTimelineNoteFromHistoryResponse(sourceData, deletingNoteId, new Date().toISOString())
+          : sourceDataResponse,
+        { revalidate: true }
+      );
+    } catch (deleteError) {
+      setNoteError(deleteError instanceof Error ? deleteError.message : 'Failed to delete note');
+    } finally {
+      setIsSavingNote(false);
+      setIsConfirmingDelete(false);
+    }
+  }
+
   return (
     <div className="section-stack glucose-analysis-fullwidth">
       {/* Stats Grid — always rendered to prevent layout shift */}
@@ -528,7 +834,13 @@ export function GlucoseAnalysisView({
                   <SecondaryButton
                     key={timeRange.key}
                     isActive={activePreset === timeRange.key}
-                    onClick={() => setSelection({ kind: 'preset', range: timeRange.key })}
+                    onClick={() => {
+                      if (!confirmDiscardNoteDraft()) {
+                        return;
+                      }
+                      closeNoteEditor();
+                      setSelection({ kind: 'preset', range: timeRange.key });
+                    }}
                   >
                     {timeRange.label}
                   </SecondaryButton>
@@ -536,6 +848,10 @@ export function GlucoseAnalysisView({
                 <GlucoseDateRangePicker
                   value={customValue}
                   onApply={(window) => {
+                    if (!confirmDiscardNoteDraft()) {
+                      return;
+                    }
+                    closeNoteEditor();
                     setSelection({ kind: 'custom', window });
                   }}
                 />
@@ -588,6 +904,7 @@ export function GlucoseAnalysisView({
       {/* Glucose Chart */}
       <DashboardPanel
         title="Glucose Timeline"
+        twStyles="overflow-visible"
         headerRight={
           <span className="ui_caption tracking-wide text-text-soft">⌘ + Scroll to zoom · Drag to pan</span>
         }
@@ -622,6 +939,173 @@ export function GlucoseAnalysisView({
 
           {hasData && (
             <div style={{ position: 'relative' }}>
+              {noteDraft ? (
+                <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+                  <div
+                    data-testid="note-editor-overlay"
+                    className="absolute inset-0"
+                    style={{
+                      background: isDark ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.28)',
+                      backdropFilter: 'blur(3px)'
+                    }}
+                  />
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={activeNoteId ? 'Timeline note' : 'New timeline note'}
+                    className="relative z-10 w-[min(34rem,calc(100%-2rem))]"
+                  >
+                    <DashboardPanel title={activeNoteId ? 'Timeline note' : 'New timeline note'} twStyles="shadow-2xl">
+                      <div className="flex min-h-[14rem] flex-col gap-3">
+                        <label className="grid gap-1">
+                          <span className="ui_micro_label text-text-soft">Start date</span>
+                          <input
+                            type="date"
+                            value={noteDraft.startDate}
+                            disabled={isNoteReadOnly || isSavingNote}
+                            onChange={(event) => setNoteDraft((current) => current ? { ...current, startDate: event.target.value } : current)}
+                            className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none"
+                          />
+                        </label>
+                        <label className="grid gap-1">
+                          <span className="ui_micro_label text-text-soft">End date</span>
+                          <input
+                            type="date"
+                            value={noteDraft.endDate}
+                            disabled={isNoteReadOnly || isSavingNote}
+                            onChange={(event) => setNoteDraft((current) => current ? { ...current, endDate: event.target.value } : current)}
+                            className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none"
+                          />
+                        </label>
+                        {!isMultiDayNoteDraft ? (
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={noteDraft.allDay}
+                              disabled={isNoteReadOnly || isSavingNote}
+                              onChange={(event) => setNoteDraft((current) => current ? { ...current, allDay: event.target.checked } : current)}
+                            />
+                            <span className="body_text text-text-soft">All day</span>
+                          </label>
+                        ) : null}
+                        {!noteDraft.allDay && !isMultiDayNoteDraft ? (
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="grid gap-1">
+                              <span className="ui_micro_label text-text-soft">Start time</span>
+                              <input
+                                type="time"
+                                step={1800}
+                                value={noteDraft.startTime}
+                                disabled={isNoteReadOnly || isSavingNote}
+                                onChange={(event) => setNoteDraft((current) => current ? { ...current, startTime: event.target.value } : current)}
+                                className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none"
+                              />
+                            </label>
+                            <label className="grid gap-1">
+                              <span className="ui_micro_label text-text-soft">End time</span>
+                              <input
+                                type="time"
+                                step={1800}
+                                value={noteDraft.endTime}
+                                disabled={isNoteReadOnly || isSavingNote}
+                                onChange={(event) => setNoteDraft((current) => current ? { ...current, endTime: event.target.value } : current)}
+                                className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none"
+                              />
+                            </label>
+                          </div>
+                        ) : null}
+                        <label className="grid gap-1">
+                          <span className="ui_micro_label text-text-soft">Note</span>
+                          <textarea
+                            ref={noteTextAreaRef}
+                            value={noteDraft.text}
+                            disabled={isNoteReadOnly || isSavingNote}
+                            onChange={(event) => setNoteDraft((current) => current ? { ...current, text: event.target.value } : current)}
+                            placeholder="Write a plain text note about what affected your glucose."
+                            rows={5}
+                            className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none"
+                          />
+                        </label>
+                        {activeNoteId && activePanelNote ? (
+                          <div className="grid gap-1">
+                            <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
+                              Audit
+                            </p>
+                            <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
+                              Created by {activePanelNote.createdBy}
+                            </p>
+                            {wasTimelineNoteEdited(activePanelNote) ? (
+                              <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
+                                Updated by {activePanelNote.updatedBy}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        <div className="mt-auto flex flex-wrap items-end gap-3">
+                          <SecondaryButton
+                            isActive={false}
+                            onClick={() => {
+                              void saveNote();
+                            }}
+                            disabled={isNoteReadOnly || isSavingNote || !noteDraftIsDirty}
+                          >
+                            Save note
+                          </SecondaryButton>
+                          <SecondaryButton
+                            isActive={false}
+                            onClick={() => {
+                              closeNoteEditor();
+                            }}
+                            disabled={isSavingNote}
+                          >
+                            Close
+                          </SecondaryButton>
+                          {activeNoteId ? (
+                            isConfirmingDelete ? (
+                              <>
+                                <SecondaryButton
+                                  isActive={false}
+                                  onClick={() => {
+                                    void deleteNote();
+                                  }}
+                                  disabled={isSavingNote || !isOwner}
+                                >
+                                  Confirm delete
+                                </SecondaryButton>
+                                <SecondaryButton
+                                  isActive={false}
+                                  onClick={() => setIsConfirmingDelete(false)}
+                                  disabled={isSavingNote}
+                                >
+                                  Cancel delete
+                                </SecondaryButton>
+                              </>
+                            ) : (
+                              <SecondaryButton
+                                isActive={false}
+                                onClick={() => setIsConfirmingDelete(true)}
+                                disabled={isSavingNote || !isOwner}
+                              >
+                                Delete note
+                              </SecondaryButton>
+                            )
+                          ) : null}
+                        </div>
+                        {hasAttemptedNoteSave && noteValidation?.error ? (
+                          <p className="body_text text-base-error-dark">{noteValidation.error}</p>
+                        ) : null}
+                        {noteError ? (
+                          <p className="body_text text-base-error-dark">{noteError}</p>
+                        ) : !isOwner ? (
+                          <p className="body_text text-text-soft">
+                            Admin sign in is required to create, edit, or delete notes.
+                          </p>
+                        ) : null}
+                      </div>
+                    </DashboardPanel>
+                  </div>
+                </div>
+              ) : null}
               {selectedPoints.length > 0 ? (
                 <div className="absolute right-4 top-4 z-10 w-[min(30rem,calc(100%-2rem))]">
                   <DashboardPanel title="Active readings" twStyles="shadow-2xl">
@@ -715,14 +1199,18 @@ export function GlucoseAnalysisView({
                   basalData={data.basalItems}
                   eventData={data.eventItems}
                   stepData={data.stepItems}
+                  noteData={displayData?.noteItems ?? []}
                   height={chartHeight}
                   yMax={chartYMax}
                   colorMode={chartColorMode}
                   editable
                   selectedReadingIds={selectedReadingIds}
+                  selectedNoteId={activeNoteId}
                   previewReadingValues={previewCorrectionValues}
                   onPointSelect={handlePointSelect}
                   onCorrectionPreviewChange={handleCorrectionPreviewChange}
+                  onNoteSelect={handleNoteSelect}
+                  onNoteAddRequest={handleNoteAddRequest}
                 />
               </div>
             </div>
