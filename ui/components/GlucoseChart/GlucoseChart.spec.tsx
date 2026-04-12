@@ -22,6 +22,102 @@ const ctxProxy = new Proxy(
 );
 
 describe('GlucoseChart', () => {
+  test('renders a per day total in the steps band', async () => {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() {
+        return 900;
+      }
+    });
+
+    try {
+      render(
+        <GlucoseChart
+          data={[
+            { timestamp: '2026-03-25T00:00:00.000Z', valueMmolL: 5.8, source: 'official' },
+            { timestamp: '2026-03-26T23:55:00.000Z', valueMmolL: 6.1, source: 'official' },
+          ]}
+          stepData={[
+            {
+              bucketStart: '2026-03-25T08:00:00.000Z',
+              bucketEnd: '2026-03-25T08:05:00.000Z',
+              stepCount: 400,
+              source: 'apple_health',
+            },
+            {
+              bucketStart: '2026-03-25T18:00:00.000Z',
+              bucketEnd: '2026-03-25T18:05:00.000Z',
+              stepCount: 600,
+              source: 'apple_health',
+            },
+            {
+              bucketStart: '2026-03-26T10:00:00.000Z',
+              bucketEnd: '2026-03-26T10:05:00.000Z',
+              stepCount: 2500,
+              source: 'apple_health',
+            },
+          ]}
+          colorMode="gradient"
+        />,
+      );
+
+      expect(await screen.findByText('1,000 total')).toBeInTheDocument();
+      expect(screen.getByText('2,500 total')).toBeInTheDocument();
+    } finally {
+      if (clientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      } else {
+        delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      }
+    }
+  });
+
+  test('renders compact step totals for longer ranges', async () => {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() {
+        return 900;
+      }
+    });
+
+    try {
+      render(
+        <GlucoseChart
+          data={[
+            { timestamp: '2026-03-01T00:00:00.000Z', valueMmolL: 5.8, source: 'official' },
+            { timestamp: '2026-03-14T23:55:00.000Z', valueMmolL: 6.1, source: 'official' },
+          ]}
+          stepData={Array.from({ length: 14 }, (_, index) => {
+            const day = String(index + 1).padStart(2, '0');
+            return {
+              bucketStart: `2026-03-${day}T12:00:00.000Z`,
+              bucketEnd: `2026-03-${day}T12:05:00.000Z`,
+              stepCount: 1000 + index * 100,
+              source: 'apple_health',
+            };
+          })}
+          colorMode="gradient"
+        />,
+      );
+
+      expect(await screen.findByText('1k')).toBeInTheDocument();
+      expect(screen.getByText('2k')).toBeInTheDocument();
+      expect(screen.queryByText('1k total')).not.toBeInTheDocument();
+    } finally {
+      if (clientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      } else {
+        delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      }
+    }
+  });
+
   test('renders the steps band label and its info panel when step data exists', () => {
     HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 

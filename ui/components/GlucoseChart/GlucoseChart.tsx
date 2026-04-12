@@ -58,6 +58,9 @@ const EVENT_LANE_COUNT = 3;
 const EVENT_HOVER_WINDOW_MS = 3 * 60 * 1000;
 const MAX_PX_PER_MS = 0.04;
 const FIT_ALL_EPSILON = 0.001;
+const STEP_TOTAL_FULL_LABEL_MIN_WIDTH_PX = 72;
+const STEP_TOTAL_SUFFIX_MIN_WIDTH_PX = 58;
+const STEP_TOTAL_LABEL_GAP_PX = 6;
 const CORRECTED_COLOR_DARK = '#f472b6';
 const CORRECTED_COLOR_LIGHT = '#db2777';
 const TICK_INTERVALS_MS = [
@@ -84,6 +87,13 @@ function formatDate(date: Date): string {
 
 function getDayStartMs(timestampMs: number): number {
   const date = new Date(timestampMs);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
+function getNextDayStartMs(dayStartMs: number): number {
+  const date = new Date(dayStartMs);
+  date.setDate(date.getDate() + 1);
   date.setHours(0, 0, 0, 0);
   return date.getTime();
 }
@@ -353,6 +363,127 @@ function getHoveredStepBucket(
   }
 
   return null;
+}
+
+function buildVisibleStepDaySummaries({
+  stepData,
+  visibleStartMs,
+  visibleEndMs,
+  timeStartMs,
+  chartWidth,
+  pxPerMs,
+  scroll,
+}: {
+  stepData: HealthStepChartPoint[];
+  visibleStartMs: number;
+  visibleEndMs: number;
+  timeStartMs: number;
+  chartWidth: number;
+  pxPerMs: number;
+  scroll: number;
+}): Array<{ dayStartMs: number; segmentLeft: number; segmentWidth: number; totalSteps: number }> {
+  if (stepData.length === 0 || chartWidth <= 0 || pxPerMs <= 0 || visibleEndMs <= visibleStartMs) {
+    return [];
+  }
+
+  const totalsByDay = new Map<number, number>();
+  for (const bucket of stepData) {
+    const dayStartMs = getDayStartMs(new Date(bucket.bucketStart).getTime());
+    totalsByDay.set(dayStartMs, (totalsByDay.get(dayStartMs) ?? 0) + bucket.stepCount);
+  }
+
+  const summaries: Array<{ dayStartMs: number; segmentLeft: number; segmentWidth: number; totalSteps: number }> = [];
+  const firstDayStartMs = getDayStartMs(visibleStartMs);
+
+  for (let dayStartMs = firstDayStartMs; dayStartMs <= visibleEndMs;) {
+    const totalSteps = totalsByDay.get(dayStartMs);
+    const dayEndMs = getNextDayStartMs(dayStartMs);
+
+    if (totalSteps === undefined) {
+      dayStartMs = dayEndMs;
+      continue;
+    }
+
+    const segmentStartMs = Math.max(dayStartMs, visibleStartMs);
+    const segmentEndMs = Math.min(dayEndMs, visibleEndMs);
+
+    if (segmentEndMs <= segmentStartMs) {
+      dayStartMs = dayEndMs;
+      continue;
+    }
+
+    const rawLeft = PADDING.left + (segmentStartMs - timeStartMs) * pxPerMs - scroll;
+    const rawRight = PADDING.left + (segmentEndMs - timeStartMs) * pxPerMs - scroll;
+    const segmentLeft = clamp(rawLeft, PADDING.left, PADDING.left + chartWidth);
+    const segmentRight = clamp(rawRight, PADDING.left, PADDING.left + chartWidth);
+    const segmentWidth = Math.max(0, segmentRight - segmentLeft);
+
+    if (segmentWidth <= 0) {
+      continue;
+    }
+
+    summaries.push({
+      dayStartMs,
+      segmentLeft,
+      segmentWidth,
+      totalSteps,
+    });
+
+    dayStartMs = dayEndMs;
+  }
+
+  return summaries;
+}
+
+function formatCompactStepTotal(stepCount: number): string {
+  if (stepCount < 1_000) {
+    return stepCount.toString();
+  }
+
+  if (stepCount < 10_000) {
+    const compactValue = Math.round((stepCount / 1_000) * 10) / 10;
+    return `${compactValue % 1 === 0 ? compactValue.toFixed(0) : compactValue.toFixed(1)}k`;
+  }
+
+  if (stepCount < 1_000_000) {
+    return `${Math.round(stepCount / 1_000)}k`;
+  }
+
+  const compactValue = Math.round((stepCount / 1_000_000) * 10) / 10;
+  return `${compactValue % 1 === 0 ? compactValue.toFixed(0) : compactValue.toFixed(1)}m`;
+}
+
+function buildVisibleStepDayLabels(
+  summaries: Array<{ dayStartMs: number; segmentLeft: number; segmentWidth: number; totalSteps: number }>
+): Array<{ dayStartMs: number; left: number; text: string }> {
+  const labels: Array<{ dayStartMs: number; left: number; text: string }> = [];
+  let previousRight = Number.NEGATIVE_INFINITY;
+
+  for (const summary of summaries) {
+    const useCompactNumber = summary.segmentWidth < STEP_TOTAL_FULL_LABEL_MIN_WIDTH_PX;
+    const hideTotalSuffix = summary.segmentWidth < STEP_TOTAL_SUFFIX_MIN_WIDTH_PX;
+    const labelValue = useCompactNumber
+      ? formatCompactStepTotal(summary.totalSteps)
+      : summary.totalSteps.toLocaleString();
+    const text = hideTotalSuffix ? labelValue : `${labelValue} total`;
+    const estimatedCharacterWidth = useCompactNumber ? 5.4 : 6.2;
+    const estimatedTextWidth = Math.max(20, text.length * estimatedCharacterWidth);
+    const right = summary.segmentLeft + summary.segmentWidth - 8;
+    const left = Math.max(PADDING.left, right - estimatedTextWidth);
+
+    if (left <= previousRight + STEP_TOTAL_LABEL_GAP_PX) {
+      continue;
+    }
+
+    labels.push({
+      dayStartMs: summary.dayStartMs,
+      left,
+      text,
+    });
+    previousRight = right;
+  }
+
+  return labels;
 }
 
 function getTandemEventVisual(eventName: string, isDark = true): {
@@ -651,6 +782,30 @@ export function GlucoseChart({
   const hoveredNotes = hoveredTimestampMs === null
     ? []
     : getTimelineNotesAtTimestamp(assignedNoteItems, hoveredTimestampMs);
+  const viewportPxPerMs = pxPerMsRef.current > 0 ? pxPerMsRef.current : fitAllPxPerMs;
+  const viewportTotalContentWidth = totalDurationMs * viewportPxPerMs;
+  const viewportScroll = viewportPxPerMs > 0
+    ? clamp(scrollRef.current, 0, Math.max(0, viewportTotalContentWidth - chartWidth))
+    : 0;
+  const visibleStartMs = viewportPxPerMs > 0
+    ? timeStartMs + viewportScroll / viewportPxPerMs
+    : timeStartMs;
+  const visibleEndMs = viewportPxPerMs > 0
+    ? Math.min(timeEndMs, visibleStartMs + chartWidth / viewportPxPerMs)
+    : timeStartMs;
+  const visibleStepDaySummaries = hasStepBand
+    ? buildVisibleStepDaySummaries({
+        stepData,
+        visibleStartMs,
+        visibleEndMs,
+        timeStartMs,
+        chartWidth,
+        pxPerMs: viewportPxPerMs,
+        scroll: viewportScroll,
+      })
+    : [];
+  const visibleStepDayLabels = buildVisibleStepDayLabels(visibleStepDaySummaries);
+  const stepTotalLabelColor = isDark ? 'rgba(253, 224, 71, 0.96)' : 'rgba(160, 90, 0, 0.92)';
 
   const syncViewportOverlay = useCallback(() => {
     if (viewportFrameRef.current) {
@@ -789,22 +944,27 @@ export function GlucoseChart({
     const yHigh = yForValue(HIGH_THRESHOLD);
     const firstDayStartMs = getDayStartMs(visibleStartMs);
 
-    for (let dayStartMs = firstDayStartMs; dayStartMs <= visibleEndMs + 24 * 60 * 60 * 1000; dayStartMs += 24 * 60 * 60 * 1000) {
-      const nextDayStartMs = dayStartMs + 24 * 60 * 60 * 1000;
+    let dayIndex = 0;
+    for (let dayStartMs = firstDayStartMs; dayStartMs <= visibleEndMs;) {
+      const nextDayStartMs = getNextDayStartMs(dayStartMs);
       const segmentStartMs = Math.max(dayStartMs, visibleStartMs);
       const segmentEndMs = Math.min(nextDayStartMs, visibleEndMs);
 
       if (segmentEndMs <= segmentStartMs) {
+        dayStartMs = nextDayStartMs;
+        dayIndex += 1;
         continue;
       }
 
-      const dayIndex = Math.floor((dayStartMs - firstDayStartMs) / (24 * 60 * 60 * 1000));
       if (dayIndex % 2 === 0) {
         const bandX = xForTimestamp(segmentStartMs);
         const bandWidth = (segmentEndMs - segmentStartMs) * pxPerMs;
         ctx.fillStyle = 'rgba(148, 163, 184, 0.025)';
         ctx.fillRect(bandX, PADDING.top, bandWidth, chartHeight);
       }
+
+      dayStartMs = nextDayStartMs;
+      dayIndex += 1;
     }
 
     ctx.fillStyle = 'rgba(52, 211, 153, 0.06)';
@@ -1251,7 +1411,7 @@ export function GlucoseChart({
     const firstTickMs = Math.ceil(visibleStartMs / tickIntervalMs) * tickIntervalMs;
     let previousDateLabel = '';
 
-    for (let dayStartMs = firstDayStartMs; dayStartMs <= visibleEndMs + 24 * 60 * 60 * 1000; dayStartMs += 24 * 60 * 60 * 1000) {
+    for (let dayStartMs = firstDayStartMs; dayStartMs <= visibleEndMs; dayStartMs = getNextDayStartMs(dayStartMs)) {
       if (dayStartMs < visibleStartMs || dayStartMs > visibleEndMs) {
         continue;
       }
@@ -1777,6 +1937,33 @@ export function GlucoseChart({
           </div>
         </div>
       ) : null}
+      {hasStepBand && stepBandHeight > 0
+        ? visibleStepDayLabels.map((label) => {
+            return (
+              <div
+                key={label.dayStartMs}
+                style={{
+                  position: 'absolute',
+                  left: label.left,
+                  top: stepBandTop + 6,
+                  pointerEvents: 'none',
+                  zIndex: 5,
+                }}
+              >
+                <span
+                  className="ui_chart_axis_unit"
+                  style={{
+                    color: stepTotalLabelColor,
+                    lineHeight: 1,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {label.text}
+                </span>
+              </div>
+            );
+          })
+        : null}
       <div
         style={{
           position: 'absolute',
