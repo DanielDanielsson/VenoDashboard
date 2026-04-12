@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-04-11T14:05:00.002Z",
+  "generatedAt": "2026-04-12T10:59:42.109Z",
   "baseUrl": "https://api.veno.local",
   "scope": "mixed",
   "endpoints": [
@@ -152,6 +152,28 @@
       "method": "POST",
       "path": "/api/v1/health/steps",
       "summary": "Upload health step buckets",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Health and Activity"
+      ]
+    },
+    {
+      "id": "health-workouts-get",
+      "method": "GET",
+      "path": "/api/v1/health/workouts",
+      "summary": "List workouts for caller API key",
+      "auth": "api_key",
+      "source": "mixed",
+      "tags": [
+        "Health and Activity"
+      ]
+    },
+    {
+      "id": "health-workouts-post",
+      "method": "POST",
+      "path": "/api/v1/health/workouts",
+      "summary": "Upload workout sessions",
       "auth": "api_key",
       "source": "mixed",
       "tags": [
@@ -394,6 +416,50 @@
       "method": "GET",
       "path": "/api/admin/health/steps",
       "summary": "Read all stored health step buckets",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "admin-health-workouts",
+      "method": "GET",
+      "path": "/api/admin/health/workouts",
+      "summary": "Read all stored workout sessions",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "admin-health-workouts-create",
+      "method": "POST",
+      "path": "/api/admin/health/workouts",
+      "summary": "Create a manual workout",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "admin-health-workouts-update",
+      "method": "PUT",
+      "path": "/api/admin/health/workouts/{workoutId}",
+      "summary": "Update a workout",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Admin and Ops"
+      ]
+    },
+    {
+      "id": "admin-health-workouts-delete",
+      "method": "DELETE",
+      "path": "/api/admin/health/workouts/{workoutId}",
+      "summary": "Delete a manual workout",
       "auth": "admin",
       "source": "mixed",
       "tags": [

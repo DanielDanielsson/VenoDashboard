@@ -4,7 +4,7 @@
     "title": "VenoAPI",
     "version": "1.0.0",
     "description": "Machine readable OpenAPI contract for VenoAPI consumer and operational endpoints.",
-    "x-generatedAt": "2026-04-11T14:05:00.001Z"
+    "x-generatedAt": "2026-04-12T10:59:42.112Z"
   },
   "servers": [
     {
@@ -665,6 +665,124 @@
                     "bucketEnd": "2026-02-16T12:00:00.000Z",
                     "stepCount": 1264,
                     "source": "apple_health"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "importedCount": 1,
+                  "rangeStart": "2026-02-16T11:00:00.000Z",
+                  "rangeEnd": "2026-02-16T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/v1/health/workouts": {
+      "get": {
+        "operationId": "health-workouts-get",
+        "summary": "List workouts for caller API key",
+        "description": "Returns stored workout sessions scoped to the calling consumer API key.",
+        "tags": [
+          "Health and Activity"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "description": "ISO start timestamp for overlap filtering.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-15T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "ISO end timestamp for overlap filtering.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-16T12:00:00.000Z"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "id": "workout_123",
+                      "startAt": "2026-02-16T11:00:00.000Z",
+                      "endAt": "2026-02-16T12:00:00.000Z",
+                      "workoutType": "run",
+                      "rawWorkoutType": "running",
+                      "displayName": "Morning run",
+                      "sourceSystem": "apple_health",
+                      "sourceId": "apple-workout-1",
+                      "rawMetadataJson": {
+                        "HKIndoorWorkout": "0"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "api_key",
+        "x-pulseglucose-source": "mixed"
+      },
+      "post": {
+        "operationId": "health-workouts-post",
+        "summary": "Upload workout sessions",
+        "description": "Stores or updates workout sessions for the calling consumer API key.",
+        "tags": [
+          "Health and Activity"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "items": [
+                  {
+                    "startAt": "2026-02-16T11:00:00.000Z",
+                    "endAt": "2026-02-16T12:00:00.000Z",
+                    "workoutType": "run",
+                    "rawWorkoutType": "running",
+                    "displayName": "Morning run",
+                    "sourceSystem": "apple_health",
+                    "sourceId": "apple-workout-1",
+                    "rawMetadataJson": {
+                      "HKIndoorWorkout": "0"
+                    }
                   }
                 ]
               }
@@ -1775,6 +1893,204 @@
                       "source": "apple_health"
                     }
                   ]
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/admin/health/workouts": {
+      "get": {
+        "operationId": "admin-health-workouts",
+        "summary": "Read all stored workout sessions",
+        "description": "Admin only endpoint that returns workout sessions across all API keys.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "description": "ISO start timestamp for overlap filtering.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-15T12:00:00.000Z"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "ISO end timestamp for overlap filtering.",
+            "schema": {
+              "type": "string",
+              "example": "2026-02-16T12:00:00.000Z"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "id": "workout_123",
+                      "startAt": "2026-02-16T11:00:00.000Z",
+                      "endAt": "2026-02-16T12:00:00.000Z",
+                      "workoutType": "run",
+                      "rawWorkoutType": "running",
+                      "displayName": "Morning run",
+                      "sourceSystem": "apple_health",
+                      "sourceId": "apple-workout-1",
+                      "rawMetadataJson": {
+                        "HKIndoorWorkout": "0"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      },
+      "post": {
+        "operationId": "admin-health-workouts-create",
+        "summary": "Create a manual workout",
+        "description": "Admin only endpoint that creates a manual workout session. Overlapping workout intervals are rejected, but exact boundary touch is allowed.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "startAt": "2026-02-16T11:00:00.000Z",
+                "endAt": "2026-02-16T12:00:00.000Z",
+                "workoutType": "strength",
+                "displayName": "Gym"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "workout": {
+                    "id": "workout_123",
+                    "startAt": "2026-02-16T11:00:00.000Z",
+                    "endAt": "2026-02-16T12:00:00.000Z",
+                    "workoutType": "strength",
+                    "rawWorkoutType": null,
+                    "displayName": "Gym",
+                    "sourceSystem": "manual",
+                    "sourceId": "manual-workout-1",
+                    "rawMetadataJson": null
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/admin/health/workouts/{workoutId}": {
+      "put": {
+        "operationId": "admin-health-workouts-update",
+        "summary": "Update a workout",
+        "description": "Admin only endpoint that updates manual workouts directly and stores local overrides for imported workouts.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "startAt": "2026-02-16T11:00:00.000Z",
+                "endAt": "2026-02-16T12:00:00.000Z",
+                "workoutType": "strength",
+                "displayName": "Gym"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "workout": {
+                    "id": "workout_123",
+                    "startAt": "2026-02-16T11:00:00.000Z",
+                    "endAt": "2026-02-16T12:00:00.000Z",
+                    "workoutType": "strength",
+                    "rawWorkoutType": null,
+                    "displayName": "Gym",
+                    "sourceSystem": "manual",
+                    "sourceId": "manual-workout-1",
+                    "rawMetadataJson": null
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      },
+      "delete": {
+        "operationId": "admin-health-workouts-delete",
+        "summary": "Delete a manual workout",
+        "description": "Admin only endpoint that deletes a manual workout session. Imported workouts remain read only in this endpoint.",
+        "tags": [
+          "Admin and Ops"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "deleted": true,
+                  "workoutId": "workout_123"
                 }
               }
             }
