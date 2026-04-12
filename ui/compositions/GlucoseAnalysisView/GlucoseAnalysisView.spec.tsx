@@ -391,6 +391,14 @@ function createTwoWeekHistoryResponse() {
   };
 }
 
+function createOwnerProfileResponse() {
+  return {
+    profile: {
+      timezone: 'UTC'
+    }
+  };
+}
+
 describe('GlucoseAnalysisView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -409,6 +417,16 @@ describe('GlucoseAnalysisView', () => {
       if (String(key).startsWith('/api/dashboard/glucose/updates')) {
         return {
           data: { latest: null, meta: { since: '', to: '', newCount: 0 } },
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      if (key === '/api/dashboard/settings/profile') {
+        return {
+          data: createOwnerProfileResponse(),
           error: undefined,
           isLoading: false,
           isValidating: false,
@@ -454,6 +472,16 @@ describe('GlucoseAnalysisView', () => {
       if (String(key).startsWith('/api/dashboard/glucose/updates')) {
         return {
           data: { latest: null, meta: { since: '', to: '', newCount: 0 } },
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      if (key === '/api/dashboard/settings/profile') {
+        return {
+          data: createOwnerProfileResponse(),
           error: undefined,
           isLoading: false,
           isValidating: false,
@@ -725,6 +753,16 @@ describe('GlucoseAnalysisView', () => {
         };
       }
 
+      if (key === '/api/dashboard/settings/profile') {
+        return {
+          data: createOwnerProfileResponse(),
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
       return {
         data: undefined,
         error: undefined,
@@ -760,6 +798,16 @@ describe('GlucoseAnalysisView', () => {
       if (String(key).startsWith('/api/dashboard/glucose/updates')) {
         return {
           data: { latest: null, meta: { since: '', to: '', newCount: 0 } },
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      if (key === '/api/dashboard/settings/profile') {
+        return {
+          data: createOwnerProfileResponse(),
           error: undefined,
           isLoading: false,
           isValidating: false,
@@ -824,6 +872,16 @@ describe('GlucoseAnalysisView', () => {
       if (String(key).startsWith('/api/dashboard/glucose/updates')) {
         return {
           data: { latest: null, meta: { since: '', to: '', newCount: 0 } },
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      if (key === '/api/dashboard/settings/profile') {
+        return {
+          data: createOwnerProfileResponse(),
           error: undefined,
           isLoading: false,
           isValidating: false,
@@ -959,8 +1017,8 @@ describe('GlucoseAnalysisView', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'add-workout' }));
     expect(await screen.findByRole('dialog', { name: 'New workout' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Start time')).toHaveValue('09:00');
-    expect(screen.getByLabelText('End time')).toHaveValue('10:00');
+    expect(screen.getByLabelText('Start time')).toHaveValue('07:00');
+    expect(screen.getByLabelText('End time')).toHaveValue('08:00');
 
     fireEvent.change(screen.getByLabelText('Workout type'), {
       target: { value: 'strength' }
@@ -1004,6 +1062,16 @@ describe('GlucoseAnalysisView', () => {
       if (String(key).startsWith('/api/dashboard/glucose/updates')) {
         return {
           data: { latest: null, meta: { since: '', to: '', newCount: 0 } },
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      if (key === '/api/dashboard/settings/profile') {
+        return {
+          data: createOwnerProfileResponse(),
           error: undefined,
           isLoading: false,
           isValidating: false,
@@ -1091,6 +1159,16 @@ describe('GlucoseAnalysisView', () => {
         };
       }
 
+      if (key === '/api/dashboard/settings/profile') {
+        return {
+          data: createOwnerProfileResponse(),
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
       return {
         data: undefined,
         error: undefined,
@@ -1133,17 +1211,17 @@ describe('GlucoseAnalysisView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save workout' }));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/dashboard/glucose/workouts/workout-1',
-        expect.objectContaining({
-          method: 'PUT',
-          body: JSON.stringify({
-            startAt: '2026-03-29T07:00:00.000Z',
-            endAt: '2026-03-29T08:00:00.000Z',
-            workoutType: 'strength',
-            displayName: 'Gym override'
+        expect(fetchMock).toHaveBeenCalledWith(
+          '/api/dashboard/glucose/workouts/workout-1',
+          expect.objectContaining({
+            method: 'PUT',
+            body: JSON.stringify({
+              startAt: '2026-03-29T09:00:00.000Z',
+              endAt: '2026-03-29T10:00:00.000Z',
+              workoutType: 'strength',
+              displayName: 'Gym override'
+            })
           })
-        })
       );
     });
 
