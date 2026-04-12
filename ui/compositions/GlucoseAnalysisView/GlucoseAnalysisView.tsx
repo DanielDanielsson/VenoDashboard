@@ -171,9 +171,7 @@ function getChartHeight(
     totalHeight += bandGap + bandHeight;
   }
 
-  if (data?.workoutItems?.length) {
-    totalHeight += bandGap + 44;
-  }
+  totalHeight += bandGap + 44;
 
   totalHeight += bandGap + getTimelineNoteBandHeight(data?.noteItems ?? []);
 

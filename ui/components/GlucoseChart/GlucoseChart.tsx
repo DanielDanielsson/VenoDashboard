@@ -66,6 +66,7 @@ const STEP_BAND_HEIGHT = 120;
 const STEP_BAND_GAP = 20;
 const WORKOUT_BAND_HEIGHT = 44;
 const WORKOUT_BAND_GAP = 20;
+const WORKOUT_SESSION_MIN_WIDTH = 32;
 const IOB_MARKER_MIN_SPACING = 36;
 const EVENT_TRACK_HEIGHT = 120;
 const EVENT_TRACK_GAP = 20;
@@ -707,6 +708,8 @@ export function GlucoseChart({
   const rafRef = useRef<number>(0);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hoveredTimestampMs, setHoveredTimestampMs] = useState<number | null>(null);
+  const [hoveredWorkoutAddTimestampMs, setHoveredWorkoutAddTimestampMs] = useState<number | null>(null);
+  const [hoveredNoteAddTimestampMs, setHoveredNoteAddTimestampMs] = useState<number | null>(null);
   const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
   const [draggedReadingId, setDraggedReadingId] = useState<string | null>(null);
   const [isEditDragging, setIsEditDragging] = useState(false);
@@ -772,7 +775,7 @@ export function GlucoseChart({
   const hasBasalBand = basalData.length > 0;
   const hasEventTrack = eventData.length > 0;
   const hasStepBand = stepData.length > 0;
-  const hasWorkoutBand = workoutData.length > 0 || Boolean(onWorkoutAddRequest);
+  const hasWorkoutBand = true;
   const iobPoints = eventData
     .filter((e) => e.iob !== null)
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -903,6 +906,8 @@ export function GlucoseChart({
     if (targetTimeMs === null) {
       setHoveredIndex(null);
       setHoveredTimestampMs(null);
+      setHoveredWorkoutAddTimestampMs(null);
+      setHoveredNoteAddTimestampMs(null);
       return;
     }
 
@@ -1861,9 +1866,13 @@ export function GlucoseChart({
     ) {
       setHoveredIndex(null);
       setHoveredTimestampMs(null);
+      setHoveredWorkoutAddTimestampMs(null);
+      setHoveredNoteAddTimestampMs(null);
       return;
     }
 
+    setHoveredWorkoutAddTimestampMs(null);
+    setHoveredNoteAddTimestampMs(null);
     updateHoverAtPosition(mouseX, mouseY);
   }, [chartHeight, chartWidth, clampScroll, data.length, draw, glucosePlotHeight, onCorrectionPreviewChange, timestamps, yMax]);
 
@@ -1905,6 +1914,8 @@ export function GlucoseChart({
     setDraggedReadingId(null);
     setHoveredIndex(null);
     setHoveredTimestampMs(null);
+    setHoveredWorkoutAddTimestampMs(null);
+    setHoveredNoteAddTimestampMs(null);
     dragMovedRef.current = false;
   }, []);
 
@@ -1943,11 +1954,16 @@ export function GlucoseChart({
 
   function handleNoteBandMouseMove(event: React.MouseEvent<HTMLDivElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
-    updateHoverAtPosition(event.clientX - rect.left + PADDING.left, event.clientY - rect.top + noteBandTop);
+    const mouseX = event.clientX - rect.left + PADDING.left;
+    const timestampMs = getTimestampMsForCanvasX(mouseX);
+    setHoveredNoteAddTimestampMs(timestampMs);
+    setHoveredWorkoutAddTimestampMs(null);
+    updateHoverAtPosition(mouseX, event.clientY - rect.top + noteBandTop);
   }
 
   function handleNoteBandMouseLeave() {
     setHoveredTimestampMs(null);
+    setHoveredNoteAddTimestampMs(null);
     setHoveredIndex(null);
   }
 
@@ -1963,11 +1979,16 @@ export function GlucoseChart({
 
   function handleWorkoutBandMouseMove(event: React.MouseEvent<HTMLDivElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
-    updateHoverAtPosition(event.clientX - rect.left + PADDING.left, event.clientY - rect.top + workoutBandTop);
+    const mouseX = event.clientX - rect.left + PADDING.left;
+    const timestampMs = getTimestampMsForCanvasX(mouseX);
+    setHoveredWorkoutAddTimestampMs(timestampMs);
+    setHoveredNoteAddTimestampMs(null);
+    updateHoverAtPosition(mouseX, event.clientY - rect.top + workoutBandTop);
   }
 
   function handleWorkoutBandMouseLeave() {
     setHoveredTimestampMs(null);
+    setHoveredWorkoutAddTimestampMs(null);
     setHoveredIndex(null);
   }
 
@@ -2108,7 +2129,7 @@ export function GlucoseChart({
             right: PADDING.right,
             top: workoutBandTop,
             height: workoutBandHeight,
-            borderRadius: 12,
+            borderRadius: 0,
             background: isDark ? 'rgba(120, 255, 90, 0.10)' : 'rgba(132, 204, 22, 0.14)',
             border: `1px solid ${isDark ? 'rgba(163, 230, 53, 0.28)' : 'rgba(101, 163, 13, 0.34)'}`,
             overflow: 'hidden',
@@ -2121,7 +2142,7 @@ export function GlucoseChart({
             const endX = getXForTimestamp(new Date(workout.endAt).getTime());
             const left = Math.max(0, startX - PADDING.left);
             const right = Math.max(left + 20, endX - PADDING.left);
-            const width = Math.max(20, right - left);
+            const width = Math.max(WORKOUT_SESSION_MIN_WIDTH, right - left);
             const label = getWorkoutDisplayLabel(workout);
             const iconName = getWorkoutIconName(workout.workoutType);
             const showLabel = width >= 84;
@@ -2146,16 +2167,16 @@ export function GlucoseChart({
                   border: `1px solid ${isSelected ? (isDark ? 'rgba(217, 249, 157, 0.95)' : 'rgba(63, 98, 18, 0.72)') : (isDark ? 'rgba(190, 242, 100, 0.45)' : 'rgba(77, 124, 15, 0.36)')}`,
                   background: isSelected ? (isDark ? 'rgba(101, 163, 13, 0.62)' : 'rgba(163, 230, 53, 0.42)') : (isDark ? 'rgba(77, 124, 15, 0.42)' : 'rgba(163, 230, 53, 0.28)'),
                   color: 'var(--text)',
-                  padding: showLabel ? '0 10px' : '0 8px',
+                  padding: showLabel ? '0 10px' : 0,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'flex-start',
-                  gap: 6,
+                  justifyContent: showLabel ? 'flex-start' : 'center',
+                  gap: showLabel ? 6 : 0,
                   overflow: 'hidden',
                   cursor: 'pointer'
                 }}
               >
-                <Icon icon={iconName} title={`${label} icon`} twStyles="h-3.5 w-3.5 shrink-0" />
+                <Icon icon={iconName} title={`${label} icon`} twStyles="h-5 w-5 shrink-0" />
                 {showLabel ? (
                   <span
                     className="ui_caption"
@@ -2173,17 +2194,17 @@ export function GlucoseChart({
               </button>
             );
           })}
-          {hoveredTimestampMs !== null && onWorkoutAddRequest ? (
+          {hoveredWorkoutAddTimestampMs !== null && onWorkoutAddRequest ? (
             <button
               type="button"
               aria-label="Add workout"
               onClick={(event) => {
                 event.stopPropagation();
-                onWorkoutAddRequest(new Date(hoveredTimestampMs).toISOString());
+                onWorkoutAddRequest(new Date(hoveredWorkoutAddTimestampMs).toISOString());
               }}
               style={{
                 position: 'absolute',
-                left: clamp(getXForTimestamp(hoveredTimestampMs) - PADDING.left - 12, 0, Math.max(0, chartWidth - 24)),
+                left: clamp(getXForTimestamp(hoveredWorkoutAddTimestampMs) - PADDING.left - 12, 0, Math.max(0, chartWidth - 24)),
                 top: Math.max(0, (workoutBandHeight - 24) / 2),
                 width: 24,
                 height: 24,
@@ -2212,7 +2233,7 @@ export function GlucoseChart({
           right: PADDING.right,
           top: noteBandTop,
           height: noteBandHeight,
-          borderRadius: 12,
+          borderRadius: 0,
           background: isDark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(100, 116, 139, 0.08)',
           border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(100, 116, 139, 0.18)'}`,
           overflow: 'hidden',
@@ -2270,14 +2291,14 @@ export function GlucoseChart({
             </button>
           );
         })}
-        {hoveredTimestampMs !== null ? (
+        {hoveredNoteAddTimestampMs !== null && onNoteAddRequest ? (
           <button
             type="button"
             aria-label="Add note"
-            onClick={() => onNoteAddRequest?.(new Date(hoveredTimestampMs).toISOString())}
+            onClick={() => onNoteAddRequest(new Date(hoveredNoteAddTimestampMs).toISOString())}
             style={{
               position: 'absolute',
-              left: clamp(getXForTimestamp(hoveredTimestampMs) - PADDING.left - 12, 0, Math.max(0, chartWidth - 24)),
+              left: clamp(getXForTimestamp(hoveredNoteAddTimestampMs) - PADDING.left - 12, 0, Math.max(0, chartWidth - 24)),
               top: noteBandHeight - NOTE_BAND_PADDING_Y - NOTE_ROW_HEIGHT,
               width: 24,
               height: 24,

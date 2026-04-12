@@ -176,6 +176,26 @@ describe('GlucoseChart', () => {
     expect(screen.getByText('Apple Health and manual entry')).toBeInTheDocument();
   });
 
+  test('renders an empty workout band even when there are no workout sessions', () => {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    render(
+      <GlucoseChart
+        data={[
+          { timestamp: '2026-03-25T12:00:00.000Z', valueMmolL: 5.8, source: 'official' },
+          { timestamp: '2026-03-25T12:05:00.000Z', valueMmolL: 6.1, source: 'official' },
+        ]}
+        colorMode="gradient"
+      />,
+    );
+
+    expect(screen.getByLabelText('Workouts band')).toBeInTheDocument();
+    expect(screen.getByLabelText('Notes band')).toBeInTheDocument();
+    expect(screen.getByLabelText('Workouts band')).toHaveStyle({ borderRadius: '0px' });
+    expect(screen.getByLabelText('Notes band')).toHaveStyle({ borderRadius: '0px' });
+    expect(screen.queryByRole('button', { name: 'Add workout' })).not.toBeInTheDocument();
+  });
+
   test('renders workout session blocks with their display label', async () => {
     HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 
@@ -211,6 +231,55 @@ describe('GlucoseChart', () => {
       );
 
       expect(await screen.findByRole('button', { name: 'Morning run' })).toBeInTheDocument();
+    } finally {
+      if (clientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      } else {
+        delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      }
+    }
+  });
+
+  test('keeps narrow workout sessions wide enough to center the icon', async () => {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() {
+        return 900;
+      }
+    });
+
+    try {
+      render(
+        <GlucoseChart
+          data={[
+            { timestamp: '2026-03-18T10:00:00.000Z', valueMmolL: 5.8, source: 'official' },
+            { timestamp: '2026-03-25T10:00:00.000Z', valueMmolL: 6.1, source: 'official' },
+          ]}
+          workoutData={[
+            {
+              id: 'workout-1',
+              startAt: '2026-03-22T11:00:00.000Z',
+              endAt: '2026-03-22T12:00:00.000Z',
+              workoutType: 'run',
+              rawWorkoutType: 'running',
+              displayName: 'Short run',
+              sourceSystem: 'apple_health',
+              sourceId: 'apple-workout-1',
+            },
+          ]}
+          colorMode="gradient"
+        />,
+      );
+
+      expect(await screen.findByRole('button', { name: 'Short run' })).toHaveStyle({
+        justifyContent: 'center',
+        padding: '0px',
+        width: '32px'
+      });
+      expect(screen.getByTitle('Short run icon').closest('svg')).toHaveClass('h-5', 'w-5');
     } finally {
       if (clientWidth) {
         Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
@@ -347,6 +416,51 @@ describe('GlucoseChart', () => {
 
       expect(onWorkoutAddRequest).toHaveBeenCalledTimes(1);
       expect(onWorkoutAddRequest.mock.calls[0]?.[0]).toMatch(/^2026-03-25T/);
+    } finally {
+      if (clientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      } else {
+        delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      }
+    }
+  });
+
+  test('only shows the add button for the hovered timeline lane', async () => {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+    const onWorkoutAddRequest = vi.fn();
+    const onNoteAddRequest = vi.fn();
+
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() {
+        return 900;
+      }
+    });
+
+    try {
+      render(
+        <GlucoseChart
+          data={[
+            { timestamp: '2026-03-25T10:00:00.000Z', valueMmolL: 5.8, source: 'official' },
+            { timestamp: '2026-03-25T14:00:00.000Z', valueMmolL: 6.1, source: 'official' },
+          ]}
+          colorMode="gradient"
+          editable
+          onWorkoutAddRequest={onWorkoutAddRequest}
+          onNoteAddRequest={onNoteAddRequest}
+        />,
+      );
+
+      fireEvent.mouseMove(await screen.findByLabelText('Workouts band'), { clientX: 450, clientY: 8 });
+
+      expect(await screen.findByRole('button', { name: 'Add workout' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add note' })).not.toBeInTheDocument();
+
+      fireEvent.mouseMove(await screen.findByLabelText('Notes band'), { clientX: 450, clientY: 8 });
+
+      expect(await screen.findByRole('button', { name: 'Add note' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add workout' })).not.toBeInTheDocument();
     } finally {
       if (clientWidth) {
         Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
