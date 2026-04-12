@@ -70,6 +70,28 @@ function response(from: string, to: string): GlucoseApiResponse {
         source: 'apple_health'
       }
     ],
+    workoutItems: [
+      {
+        id: 'workout-1',
+        startAt: '2026-03-06T10:30:00.000Z',
+        endAt: '2026-03-06T12:30:00.000Z',
+        workoutType: 'run',
+        rawWorkoutType: 'running',
+        displayName: 'Morning run',
+        sourceSystem: 'apple_health',
+        sourceId: 'apple-workout-1'
+      },
+      {
+        id: 'workout-2',
+        startAt: '2026-03-06T20:00:00.000Z',
+        endAt: '2026-03-06T21:00:00.000Z',
+        workoutType: 'walk',
+        rawWorkoutType: 'walking',
+        displayName: 'Evening walk',
+        sourceSystem: 'apple_health',
+        sourceId: 'apple-workout-2'
+      }
+    ],
     noteItems: [
       {
         id: 'note-1',
@@ -153,6 +175,8 @@ describe('glucose history cache helpers', () => {
     expect(sliced.eventItems[0].timestamp).toBe('2026-03-06T07:30:00.000Z');
     expect(sliced.eventItems[1].timestamp).toBe('2026-03-06T15:30:00.000Z');
     expect(sliced.stepItems).toHaveLength(2);
+    expect(sliced.workoutItems).toHaveLength(1);
+    expect(sliced.workoutItems?.[0]?.id).toBe('workout-1');
     expect(sliced.noteItems).toHaveLength(1);
     expect(sliced.meta.officialCount).toBe(0);
     expect(sliced.meta.shareCount).toBe(1);

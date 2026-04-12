@@ -3,6 +3,7 @@ import {
   fetchGlucoseHistory,
   fetchGlucoseLatest,
   fetchHealthStepHistory,
+  fetchWorkoutHistory,
   fetchTandemBasalHistory,
   fetchTandemEventHistory,
   mergeGlucoseReadings,
@@ -19,7 +20,8 @@ import type {
   GlucoseApiResponse,
   GlucoseUpdatesResponse,
   LatestReading,
-  TimelineNote
+  TimelineNote,
+  WorkoutChartPoint
 } from '@/lib/glucose/types';
 import { getTimeRangeHours, type TimeRange } from './time-ranges';
 
@@ -51,6 +53,10 @@ export interface HealthStepsPort {
   fetchSteps(window: Pick<GlucoseFetchWindow, 'from' | 'to'>): Promise<HealthStepHistoryPoint[]>;
 }
 
+export interface WorkoutTimelinePort {
+  fetchWorkouts(window: Pick<GlucoseFetchWindow, 'from' | 'to'>): Promise<WorkoutChartPoint[]>;
+}
+
 export interface TimelineNotesPort {
   fetchNotes(window: Pick<GlucoseFetchWindow, 'from' | 'to'>): Promise<TimelineNote[]>;
   fetchMutationSummary(since: string): Promise<{ latestRevision: string | null; newCount: number }>;
@@ -74,6 +80,7 @@ export interface DashboardGlucoseServiceDeps {
   glucosePort: GlucoseTimelinePort;
   tandemPort: TandemActivityPort;
   healthPort: HealthStepsPort;
+  workoutPort: WorkoutTimelinePort;
   notesPort: TimelineNotesPort;
   clock?: () => Date;
 }
@@ -90,6 +97,7 @@ interface MergedWindowData {
   tandemBasalItems: TandemBasalHistoryPoint[];
   tandemEventItems: TandemEventHistoryPoint[];
   healthStepItems: HealthStepHistoryPoint[];
+  workoutItems: WorkoutChartPoint[];
   noteItems: TimelineNote[];
   merged: MergedGlucosePoint[];
 }
@@ -137,6 +145,13 @@ export const pulseApiNotesPort: TimelineNotesPort = {
       latestRevision: response.latestRevision,
       newCount: response.newCount
     };
+  }
+};
+
+export const pulseApiWorkoutPort: WorkoutTimelinePort = {
+  async fetchWorkouts(window) {
+    const response = await fetchWorkoutHistory(window.from, window.to);
+    return response.items;
   }
 };
 
@@ -243,6 +258,19 @@ function maxIsoDate(...values: Array<string | null | undefined>): string | null 
   return new Date(Math.max(...timestamps)).toISOString();
 }
 
+function maxWorkoutRevision(workouts: WorkoutChartPoint[]): string | null {
+  return workouts.reduce<string | null>((latestWorkout, workout) => {
+    return maxIsoDate(latestWorkout, workout.updatedAt ?? null);
+  }, null);
+}
+
+function countWorkoutMutationsSince(workouts: WorkoutChartPoint[], sinceMs: number): number {
+  return workouts.filter((workout) => {
+    const updatedAtMs = workout.updatedAt ? new Date(workout.updatedAt).getTime() : Number.NaN;
+    return Number.isFinite(updatedAtMs) && updatedAtMs > sinceMs;
+  }).length;
+}
+
 async function attempt<T>(work: () => Promise<T>, fallback: T): Promise<AttemptResult<T>> {
   try {
     return { data: await work(), error: null };
@@ -269,6 +297,7 @@ function buildLatestOnlyHistoryResponse(
     basalItems: [],
     eventItems: [],
     stepItems: [],
+    workoutItems: [],
     noteItems: [],
     latest,
     meta: {
@@ -289,6 +318,7 @@ export function createDashboardGlucoseService({
   glucosePort,
   tandemPort,
   healthPort,
+  workoutPort,
   notesPort,
   clock = () => new Date()
 }: DashboardGlucoseServiceDeps): DashboardGlucoseService {
@@ -329,7 +359,7 @@ export function createDashboardGlucoseService({
     const officialItems = officialResult.data;
     const shareItems = shareResult.data;
 
-    const [tandemBasal, tandemEvents, healthStepItems, noteItems] = await Promise.all([
+    const [tandemBasal, tandemEvents, healthStepItems, workoutItems, noteItems] = await Promise.all([
       fetchChunked(from, to, TANDEM_CHUNK_MS, (window) => tandemPort.fetchBasal(window)).catch(
         () => [] as TandemBasalHistoryPoint[]
       ),
@@ -337,6 +367,7 @@ export function createDashboardGlucoseService({
         () => [] as TandemEventHistoryPoint[]
       ),
       healthPort.fetchSteps({ from, to }).catch(() => [] as HealthStepHistoryPoint[]),
+      workoutPort.fetchWorkouts({ from, to }).catch(() => [] as WorkoutChartPoint[]),
       notesPort.fetchNotes({ from, to }).catch(() => [] as TimelineNote[])
     ]);
 
@@ -346,6 +377,7 @@ export function createDashboardGlucoseService({
       tandemBasalItems: compressTandemBasalHistory(tandemBasal),
       tandemEventItems: tandemEvents,
       healthStepItems,
+      workoutItems,
       noteItems,
       merged: mergeGlucoseReadings(officialItems, shareItems)
     };
@@ -375,6 +407,7 @@ export function createDashboardGlucoseService({
         tandemBasalItems,
         tandemEventItems,
         healthStepItems,
+        workoutItems,
         noteItems,
         merged
       } = await fetchMergedWindow(window.from, window.to);
@@ -401,6 +434,7 @@ export function createDashboardGlucoseService({
         basalItems: tandemBasalItems,
         eventItems: tandemEventItems,
         stepItems: healthStepItems,
+        workoutItems,
         noteItems,
         latest: resolvedLatest,
         meta: {
@@ -416,6 +450,7 @@ export function createDashboardGlucoseService({
             resolvedLatest?.timestamp ?? null,
             tandemBasalItems.at(-1)?.timestamp ?? null,
             tandemEventItems.at(-1)?.timestamp ?? null,
+            maxWorkoutRevision(workoutItems),
             noteItems.reduce<string | null>((latestNote, note) => maxIsoDate(latestNote, note.updatedAt), null)
           ) ?? window.to
         }
@@ -442,7 +477,7 @@ export function createDashboardGlucoseService({
       }
 
       const from = new Date(sinceMs + 1).toISOString();
-      const { merged, tandemBasalItems, tandemEventItems } = await fetchMergedWindow(from, nowIso);
+      const { merged, tandemBasalItems, tandemEventItems, workoutItems } = await fetchMergedWindow(from, nowIso);
       const noteMutations = await notesPort.fetchMutationSummary(since);
       const newTandemBasalCount = tandemBasalItems.filter(
         (item) => new Date(item.timestamp).getTime() > sinceMs
@@ -450,14 +485,16 @@ export function createDashboardGlucoseService({
       const newTandemEventCount = tandemEventItems.filter(
         (item) => new Date(item.timestamp).getTime() > sinceMs
       ).length;
+      const newWorkoutMutationCount = countWorkoutMutationsSince(workoutItems, sinceMs);
 
       return {
         latest,
         meta: {
           since,
           to: nowIso,
-          newCount: merged.length + newTandemBasalCount + newTandemEventCount + noteMutations.newCount,
+          newCount: merged.length + newWorkoutMutationCount + newTandemBasalCount + newTandemEventCount + noteMutations.newCount,
           newGlucoseCount: merged.length,
+          newWorkoutMutationCount,
           newTandemBasalCount,
           newTandemEventCount,
           newNoteMutationCount: noteMutations.newCount,
@@ -465,6 +502,7 @@ export function createDashboardGlucoseService({
             latest?.timestamp ?? null,
             tandemBasalItems.at(-1)?.timestamp ?? null,
             tandemEventItems.at(-1)?.timestamp ?? null,
+            maxWorkoutRevision(workoutItems),
             noteMutations.latestRevision
           ) ?? nowIso
         }
@@ -477,5 +515,6 @@ export const dashboardGlucoseService = createDashboardGlucoseService({
   glucosePort: pulseApiGlucosePort,
   tandemPort: pulseApiTandemPort,
   healthPort: pulseApiHealthPort,
+  workoutPort: pulseApiWorkoutPort,
   notesPort: pulseApiNotesPort
 });

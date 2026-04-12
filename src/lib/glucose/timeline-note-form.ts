@@ -140,7 +140,7 @@ function toUtcIso(parts: LocalDateTimeParts, timeZone: string): string {
   return new Date(utcGuess).toISOString();
 }
 
-function buildUtcFromDraft(date: string, time: string, timeZone: string): string {
+export function buildUtcFromDraft(date: string, time: string, timeZone: string): string {
   const [year, month, day] = date.split('-').map(Number);
   const [hour, minute] = time.split(':').map(Number);
 

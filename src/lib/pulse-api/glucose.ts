@@ -67,6 +67,22 @@ export interface HealthStepHistoryResponse {
   items: HealthStepHistoryPoint[];
 }
 
+export interface WorkoutHistoryPoint {
+  id: string;
+  startAt: string;
+  endAt: string;
+  workoutType: string;
+  rawWorkoutType: string | null;
+  displayName: string | null;
+  sourceSystem: string;
+  sourceId: string | null;
+  updatedAt?: string;
+}
+
+export interface WorkoutHistoryResponse {
+  items: WorkoutHistoryPoint[];
+}
+
 const BASAL_VISUAL_STEP = 0.1;
 
 function roundBasalRate(value: number): number {
@@ -244,6 +260,28 @@ export async function fetchHealthStepHistory(
   }
 
   return response.json() as Promise<HealthStepHistoryResponse>;
+}
+
+export async function fetchWorkoutHistory(
+  from: string,
+  to: string
+): Promise<WorkoutHistoryResponse> {
+  const url = new URL(resolveUrl('/api/admin/health/workouts'));
+  url.searchParams.set('from', from);
+  url.searchParams.set('to', to);
+
+  const response = await fetch(url.toString(), {
+    cache: 'no-store',
+    headers: {
+      Authorization: `Bearer ${getAdminApiToken()}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Workout history failed with status ${response.status}`);
+  }
+
+  return response.json() as Promise<WorkoutHistoryResponse>;
 }
 
 export function pickLatestGlucoseReading(

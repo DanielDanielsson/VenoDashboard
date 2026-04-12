@@ -145,6 +145,276 @@ describe('GlucoseChart', () => {
     expect(screen.getByText('Apple HealthKit')).toBeInTheDocument();
   });
 
+  test('renders the workout band label and its info panel when workout data exists', () => {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    render(
+      <GlucoseChart
+        data={[
+          { timestamp: '2026-03-25T12:00:00.000Z', valueMmolL: 5.8, source: 'official' },
+          { timestamp: '2026-03-25T12:05:00.000Z', valueMmolL: 6.1, source: 'official' },
+        ]}
+        workoutData={[
+          {
+            id: 'workout-1',
+            startAt: '2026-03-25T11:00:00.000Z',
+            endAt: '2026-03-25T12:00:00.000Z',
+            workoutType: 'run',
+            rawWorkoutType: 'running',
+            displayName: 'Morning run',
+            sourceSystem: 'apple_health',
+            sourceId: 'apple-workout-1',
+          },
+        ]}
+        colorMode="gradient"
+      />,
+    );
+
+    expect(screen.getByText('Workouts')).toBeInTheDocument();
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'Workouts' }));
+    expect(screen.getByText('Apple Health and manual entry')).toBeInTheDocument();
+  });
+
+  test('renders workout session blocks with their display label', async () => {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() {
+        return 900;
+      }
+    });
+
+    try {
+      render(
+        <GlucoseChart
+          data={[
+            { timestamp: '2026-03-25T10:00:00.000Z', valueMmolL: 5.8, source: 'official' },
+            { timestamp: '2026-03-25T13:00:00.000Z', valueMmolL: 6.1, source: 'official' },
+          ]}
+          workoutData={[
+            {
+              id: 'workout-1',
+              startAt: '2026-03-25T11:00:00.000Z',
+              endAt: '2026-03-25T12:00:00.000Z',
+              workoutType: 'run',
+              rawWorkoutType: 'running',
+              displayName: 'Morning run',
+              sourceSystem: 'apple_health',
+              sourceId: 'apple-workout-1',
+            },
+          ]}
+          colorMode="gradient"
+        />,
+      );
+
+      expect(await screen.findByRole('button', { name: 'Morning run' })).toBeInTheDocument();
+    } finally {
+      if (clientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      } else {
+        delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      }
+    }
+  });
+
+  test('requests manual workout creation when owner clicks the workout band', async () => {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+    const onWorkoutAddRequest = vi.fn();
+
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() {
+        return 900;
+      }
+    });
+
+    try {
+      render(
+        <GlucoseChart
+          data={[
+            { timestamp: '2026-03-25T10:00:00.000Z', valueMmolL: 5.8, source: 'official' },
+            { timestamp: '2026-03-25T14:00:00.000Z', valueMmolL: 6.1, source: 'official' },
+          ]}
+          colorMode="gradient"
+          editable
+          onWorkoutAddRequest={onWorkoutAddRequest}
+        />,
+      );
+
+      fireEvent.click(await screen.findByLabelText('Workouts band'), { clientX: 450 });
+
+      expect(onWorkoutAddRequest).toHaveBeenCalledTimes(1);
+      expect(onWorkoutAddRequest.mock.calls[0]?.[0]).toMatch(/^2026-03-25T/);
+    } finally {
+      if (clientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      } else {
+        delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      }
+    }
+  });
+
+  test('shows hovered workouts in the hover panel', async () => {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getBoundingClientRect = vi.fn(() => ({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 900,
+      bottom: 400,
+      width: 900,
+      height: 400,
+      toJSON: () => ({})
+    })) as unknown as typeof HTMLCanvasElement.prototype.getBoundingClientRect;
+
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() {
+        return 900;
+      }
+    });
+
+    try {
+      render(
+        <GlucoseChart
+          data={[
+            { timestamp: '2026-03-25T10:00:00.000Z', valueMmolL: 5.8, source: 'official' },
+            { timestamp: '2026-03-25T14:00:00.000Z', valueMmolL: 6.1, source: 'official' },
+          ]}
+          workoutData={[
+            {
+              id: 'workout-1',
+              startAt: '2026-03-25T11:00:00.000Z',
+              endAt: '2026-03-25T12:00:00.000Z',
+              workoutType: 'run',
+              rawWorkoutType: 'running',
+              displayName: 'Morning run',
+              sourceSystem: 'apple_health',
+              sourceId: 'apple-workout-1',
+            },
+          ]}
+          colorMode="gradient"
+        />,
+      );
+
+      fireEvent.mouseMove(document.querySelector('canvas')!, { clientX: 392, clientY: 120 });
+
+      expect(await screen.findByText('Workout')).toBeInTheDocument();
+      expect(screen.getAllByText('Morning run')).toHaveLength(2);
+      expect(screen.getByText('Apple Health')).toBeInTheDocument();
+    } finally {
+      if (clientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      } else {
+        delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      }
+    }
+  });
+
+  test('renders a workout plus button in the workout band at the hovered timestamp', async () => {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+    const onWorkoutAddRequest = vi.fn();
+
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() {
+        return 900;
+      }
+    });
+
+    try {
+      render(
+        <GlucoseChart
+          data={[
+            { timestamp: '2026-03-25T10:00:00.000Z', valueMmolL: 5.8, source: 'official' },
+            { timestamp: '2026-03-25T14:00:00.000Z', valueMmolL: 6.1, source: 'official' },
+          ]}
+          colorMode="gradient"
+          editable
+          onWorkoutAddRequest={onWorkoutAddRequest}
+        />,
+      );
+
+      fireEvent.mouseMove(await screen.findByLabelText('Workouts band'), { clientX: 450, clientY: 8 });
+      fireEvent.click(await screen.findByRole('button', { name: 'Add workout' }));
+
+      expect(onWorkoutAddRequest).toHaveBeenCalledTimes(1);
+      expect(onWorkoutAddRequest.mock.calls[0]?.[0]).toMatch(/^2026-03-25T/);
+    } finally {
+      if (clientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      } else {
+        delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      }
+    }
+  });
+
+  test('renders workout type icons with a generic fallback', async () => {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() {
+        return 900;
+      }
+    });
+
+    try {
+      const { container } = render(
+        <GlucoseChart
+          data={[
+            { timestamp: '2026-03-25T10:00:00.000Z', valueMmolL: 5.8, source: 'official' },
+            { timestamp: '2026-03-25T15:00:00.000Z', valueMmolL: 6.1, source: 'official' },
+          ]}
+          workoutData={[
+            {
+              id: 'workout-1',
+              startAt: '2026-03-25T11:00:00.000Z',
+              endAt: '2026-03-25T12:00:00.000Z',
+              workoutType: 'run',
+              rawWorkoutType: 'running',
+              displayName: 'Morning run',
+              sourceSystem: 'apple_health',
+              sourceId: 'apple-workout-1',
+            },
+            {
+              id: 'workout-2',
+              startAt: '2026-03-25T13:00:00.000Z',
+              endAt: '2026-03-25T14:00:00.000Z',
+              workoutType: 'other',
+              rawWorkoutType: 'pickleball',
+              displayName: 'Lunch game',
+              sourceSystem: 'manual',
+              sourceId: null,
+            },
+          ]}
+          colorMode="gradient"
+        />,
+      );
+
+      expect(await screen.findByRole('button', { name: 'Morning run' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Lunch game' })).toBeInTheDocument();
+
+      const iconRefs = Array.from(container.querySelectorAll('use')).map((node) => node.getAttribute('href'));
+      expect(iconRefs).toContain('/static_assets/iconSprite.svg#workout-run');
+      expect(iconRefs).toContain('/static_assets/iconSprite.svg#activity');
+    } finally {
+      if (clientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      } else {
+        delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      }
+    }
+  });
+
   test('repositions note overlays during wheel zoom', async () => {
     HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getBoundingClientRect = vi.fn(() => ({

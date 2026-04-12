@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { formatWorkoutTimeRange } from '@/lib/glucose/workout-display';
 import { GlucoseAnalysisView } from './GlucoseAnalysisView';
 
 const historyMutateMock = vi.fn();
@@ -121,22 +122,45 @@ vi.mock('@ui/components/GlucoseAgpChart', () => ({
 vi.mock('@ui/components/GlucoseChart/GlucoseChart', () => ({
   GlucoseChart: ({
     data,
+    workoutData = [],
     noteData = [],
     onPointSelect,
     onCorrectionPreviewChange,
+    onWorkoutAddRequest,
     onNoteAddRequest,
-    onNoteSelect
+    onNoteSelect,
+    onWorkoutSelect
   }: {
     data: Array<{ readingId?: string; valueMmolL: number; source: 'official' | 'share'; correctionReason?: string | null }>;
+    workoutData?: Array<{
+      id: string;
+      displayName: string | null;
+      workoutType: string;
+      sourceSystem: string;
+      startAt: string;
+      endAt: string;
+    }>;
     noteData?: Array<{ id: string; text: string }>;
     onPointSelect?: (point: { readingId?: string; valueMmolL: number; source: 'official' | 'share'; correctionReason?: string | null }, additive: boolean) => void;
     onCorrectionPreviewChange?: (items: Array<{ readingId: string; valueMmolL: number }>) => void;
+    onWorkoutAddRequest?: (hoveredAt: string | null) => void;
     onNoteAddRequest?: (hoveredAt: string | null) => void;
     onNoteSelect?: (note: { id: string; text: string }) => void;
+    onWorkoutSelect?: (workout: {
+      id: string;
+      displayName: string | null;
+      workoutType: string;
+      sourceSystem: string;
+      startAt: string;
+      endAt: string;
+    }) => void;
   }) => (
     <div>
       <div data-testid="chart-reading-ids">
         {data.map((point) => point.readingId ?? 'missing').join(',')}
+      </div>
+      <div data-testid="chart-workout-ids">
+        {workoutData.map((workout) => workout.id).join(',')}
       </div>
       <div data-testid="chart-note-ids">
         {noteData.map((note) => note.id).join(',')}
@@ -166,9 +190,17 @@ vi.mock('@ui/components/GlucoseChart/GlucoseChart', () => ({
       <button type="button" onClick={() => onNoteAddRequest?.('2026-03-29T07:00:00.000Z')}>
         add-note
       </button>
+      <button type="button" onClick={() => onWorkoutAddRequest?.('2026-03-29T07:00:00.000Z')}>
+        add-workout
+      </button>
       {noteData.map((note) => (
         <button key={note.id} type="button" onClick={() => onNoteSelect?.(note)}>
           note-{note.id}
+        </button>
+      ))}
+      {workoutData.map((workout) => (
+        <button key={workout.id} type="button" onClick={() => onWorkoutSelect?.(workout)}>
+          workout-{workout.id}
         </button>
       ))}
     </div>
@@ -206,6 +238,7 @@ function createHistoryResponse() {
     basalItems: [],
     eventItems: [],
     stepItems: [],
+    workoutItems: [],
     noteItems: [],
     latest: {
       id: 'latest-1',
@@ -249,6 +282,42 @@ function createHistoryResponseWithNote() {
         updatedAt: '2026-03-29T06:00:00.000Z',
         createdBy: 'owner@example.com',
         updatedBy: 'owner@example.com'
+      }
+    ]
+  };
+}
+
+function createHistoryResponseWithWorkout() {
+  return {
+    ...createHistoryResponse(),
+    workoutItems: [
+      {
+        id: 'workout-1',
+        startAt: '2026-03-29T06:00:00.000Z',
+        endAt: '2026-03-29T07:00:00.000Z',
+        workoutType: 'run',
+        rawWorkoutType: 'running',
+        displayName: 'Morning run',
+        sourceSystem: 'apple_health',
+        sourceId: 'apple-workout-1'
+      }
+    ]
+  };
+}
+
+function createHistoryResponseWithManualWorkout() {
+  return {
+    ...createHistoryResponse(),
+    workoutItems: [
+      {
+        id: 'workout-manual-1',
+        startAt: '2026-03-29T07:00:00.000Z',
+        endAt: '2026-03-29T08:00:00.000Z',
+        workoutType: 'strength',
+        rawWorkoutType: null,
+        displayName: 'Gym',
+        sourceSystem: 'manual',
+        sourceId: 'manual-workout-1'
       }
     ]
   };
@@ -788,5 +857,297 @@ describe('GlucoseAnalysisView', () => {
       expect(screen.getByTestId('chart-note-ids')).toHaveTextContent('');
     });
     expect(historyMutateMock).toHaveBeenCalled();
+  });
+
+  test('passes workout items through to the chart from the initial snapshot', () => {
+    useSWRMock.mockImplementation((key: string | null) => {
+      if (!key) {
+        return {
+          data: undefined,
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      if (String(key).startsWith('/api/dashboard/glucose/updates')) {
+        return {
+          data: { latest: null, meta: { since: '', to: '', newCount: 0 } },
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      return {
+        data: undefined,
+        error: undefined,
+        isLoading: true,
+        isValidating: false,
+        mutate: historyMutateMock
+      };
+    });
+
+    render(<GlucoseAnalysisView isOwner={false} initialSnapshot={createHistoryResponseWithWorkout()} />);
+
+    expect(screen.getByTestId('chart-workout-ids')).toHaveTextContent('workout-1');
+  });
+
+  test('opens a read only workout dialog when a workout is selected', async () => {
+    useSWRMock.mockImplementation((key: string | null) => {
+      if (!key) {
+        return {
+          data: undefined,
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      if (String(key).startsWith('/api/dashboard/glucose/updates')) {
+        return {
+          data: { latest: null, meta: { since: '', to: '', newCount: 0 } },
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      return {
+        data: undefined,
+        error: undefined,
+        isLoading: true,
+        isValidating: false,
+        mutate: historyMutateMock
+      };
+    });
+
+    render(<GlucoseAnalysisView isOwner={false} initialSnapshot={createHistoryResponseWithWorkout()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'workout-workout-1' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Workout details' })).toBeInTheDocument();
+    expect(screen.getByText('Morning run')).toBeInTheDocument();
+    expect(screen.getByText('Apple Health')).toBeInTheDocument();
+    expect(screen.getByText(formatWorkoutTimeRange('2026-03-29T06:00:00.000Z', '2026-03-29T07:00:00.000Z'))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+  });
+
+  test('lets owners create a manual workout from the chart', async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        workout: {
+          id: 'workout-manual-1',
+          startAt: '2026-03-29T07:00:00.000Z',
+          endAt: '2026-03-29T08:00:00.000Z',
+          workoutType: 'strength',
+          rawWorkoutType: null,
+          displayName: 'Gym',
+          sourceSystem: 'manual',
+          sourceId: 'manual-workout-1'
+        }
+      })
+    } as Response);
+
+    render(<GlucoseAnalysisView isOwner initialSnapshot={createHistoryResponse()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'add-workout' }));
+    expect(await screen.findByRole('dialog', { name: 'New workout' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Start time')).toHaveValue('09:00');
+    expect(screen.getByLabelText('End time')).toHaveValue('10:00');
+
+    fireEvent.change(screen.getByLabelText('Workout type'), {
+      target: { value: 'strength' }
+    });
+    fireEvent.change(screen.getByLabelText('Display label'), {
+      target: { value: 'Gym' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save workout' }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/dashboard/glucose/workouts',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            startAt: '2026-03-29T07:00:00.000Z',
+            endAt: '2026-03-29T08:00:00.000Z',
+            workoutType: 'strength',
+            displayName: 'Gym'
+          })
+        })
+      );
+    });
+  });
+
+  test('lets owners edit and delete manual workouts', async () => {
+    const fetchMock = vi.mocked(fetch);
+    const initialSnapshot = createHistoryResponseWithManualWorkout();
+
+    useSWRMock.mockImplementation((key: string | null) => {
+      if (!key) {
+        return {
+          data: undefined,
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      if (String(key).startsWith('/api/dashboard/glucose/updates')) {
+        return {
+          data: { latest: null, meta: { since: '', to: '', newCount: 0 } },
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      return {
+        data: undefined,
+        error: undefined,
+        isLoading: true,
+        isValidating: false,
+        mutate: historyMutateMock
+      };
+    });
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          workout: {
+            ...initialSnapshot.workoutItems[0],
+            displayName: 'Leg day'
+          }
+        })
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ deleted: true, workoutId: 'workout-manual-1' })
+      } as Response);
+
+    render(<GlucoseAnalysisView isOwner initialSnapshot={initialSnapshot} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'workout-workout-manual-1' }));
+    expect(await screen.findByRole('dialog', { name: 'Workout' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Display label'), {
+      target: { value: 'Leg day' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save workout' }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/dashboard/glucose/workouts/workout-manual-1',
+        expect.objectContaining({
+          method: 'PUT'
+        })
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete workout' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm delete' }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/dashboard/glucose/workouts/workout-manual-1',
+        expect.objectContaining({
+          method: 'DELETE'
+        })
+      );
+    });
+  });
+
+  test('lets owners save local overrides for imported workouts', async () => {
+    const fetchMock = vi.mocked(fetch);
+    const initialSnapshot = createHistoryResponseWithWorkout();
+
+    useSWRMock.mockImplementation((key: string | null) => {
+      if (!key) {
+        return {
+          data: undefined,
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      if (String(key).startsWith('/api/dashboard/glucose/updates')) {
+        return {
+          data: { latest: null, meta: { since: '', to: '', newCount: 0 } },
+          error: undefined,
+          isLoading: false,
+          isValidating: false,
+          mutate: vi.fn()
+        };
+      }
+
+      return {
+        data: undefined,
+        error: undefined,
+        isLoading: true,
+        isValidating: false,
+        mutate: historyMutateMock
+      };
+    });
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        workout: {
+          ...initialSnapshot.workoutItems[0],
+          startAt: '2026-03-29T07:00:00.000Z',
+          endAt: '2026-03-29T08:00:00.000Z',
+          workoutType: 'strength',
+          displayName: 'Gym override'
+        }
+      })
+    } as Response);
+
+    render(<GlucoseAnalysisView isOwner initialSnapshot={initialSnapshot} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'workout-workout-1' }));
+    expect(await screen.findByRole('dialog', { name: 'Workout' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Start time'), {
+      target: { value: '09:00' }
+    });
+    fireEvent.change(screen.getByLabelText('End time'), {
+      target: { value: '10:00' }
+    });
+    fireEvent.change(screen.getByLabelText('Workout type'), {
+      target: { value: 'strength' }
+    });
+    fireEvent.change(screen.getByLabelText('Display label'), {
+      target: { value: 'Gym override' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save workout' }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/dashboard/glucose/workouts/workout-1',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({
+            startAt: '2026-03-29T07:00:00.000Z',
+            endAt: '2026-03-29T08:00:00.000Z',
+            workoutType: 'strength',
+            displayName: 'Gym override'
+          })
+        })
+      );
+    });
+
+    expect(await screen.findByRole('dialog', { name: 'Workout' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete workout' })).not.toBeInTheDocument();
   });
 });

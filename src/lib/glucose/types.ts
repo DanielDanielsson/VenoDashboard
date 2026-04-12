@@ -38,6 +38,18 @@ export interface HealthStepChartPoint {
   source: string;
 }
 
+export interface WorkoutChartPoint {
+  id: string;
+  startAt: string;
+  endAt: string;
+  workoutType: string;
+  rawWorkoutType: string | null;
+  displayName: string | null;
+  sourceSystem: string;
+  sourceId: string | null;
+  updatedAt?: string;
+}
+
 export interface TimelineNote {
   id: string;
   text: string;
@@ -71,6 +83,7 @@ export interface GlucoseApiResponse {
   basalItems: BasalChartPoint[];
   eventItems: TandemEventChartPoint[];
   stepItems: HealthStepChartPoint[];
+  workoutItems?: WorkoutChartPoint[];
   noteItems?: TimelineNote[];
   latest: LatestReading | null;
   meta: {
@@ -94,6 +107,7 @@ export interface GlucoseUpdatesResponse {
     to: string;
     newCount: number;
     newGlucoseCount?: number;
+    newWorkoutMutationCount?: number;
     newTandemBasalCount?: number;
     newTandemEventCount?: number;
     newNoteMutationCount?: number;

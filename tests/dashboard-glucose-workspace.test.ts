@@ -39,6 +39,9 @@ describe('dashboard glucose workspace', () => {
       healthPort: {
         fetchSteps: vi.fn().mockResolvedValue([])
       },
+      workoutPort: {
+        fetchWorkouts: vi.fn().mockResolvedValue([])
+      },
       notesPort: {
         fetchNotes: vi.fn().mockResolvedValue([]),
         fetchMutationSummary: vi.fn().mockResolvedValue({
@@ -186,6 +189,63 @@ describe('dashboard glucose workspace', () => {
 
     expect(refreshed.snapshot.latest?.id).toBe('official-latest');
     expect(refreshed.snapshot.items.at(-1)?.readingId).toBe('official-2');
+  });
+
+  test('refreshes an open session when workout activity advances the timeline', async () => {
+    let workoutCallCount = 0;
+
+    vi.mocked(deps.glucosePort.fetchLatest).mockResolvedValue(null);
+    vi.mocked(deps.glucosePort.fetchHistory).mockResolvedValue([]);
+    vi.mocked(deps.workoutPort.fetchWorkouts).mockImplementation(async () => {
+      workoutCallCount += 1;
+
+      if (workoutCallCount === 1) {
+        return [
+          {
+            id: 'workout-1',
+            startAt: '2026-03-03T22:00:00.000Z',
+            endAt: '2026-03-03T23:00:00.000Z',
+            workoutType: 'run',
+            rawWorkoutType: 'running',
+            displayName: 'Initial import',
+            sourceSystem: 'apple_health',
+            sourceId: 'apple-workout-1',
+            updatedAt: '2026-03-04T00:00:00.000Z'
+          }
+        ];
+      }
+
+      return [
+        {
+          id: 'workout-1',
+          startAt: '2026-03-03T22:00:00.000Z',
+          endAt: '2026-03-03T23:00:00.000Z',
+          workoutType: 'strength',
+          rawWorkoutType: 'running',
+          displayName: 'Synced override',
+          sourceSystem: 'apple_health',
+          sourceId: 'apple-workout-1',
+          updatedAt: '2026-03-04T00:04:00.000Z'
+        }
+      ];
+    });
+
+    const workspace = createDashboardGlucoseWorkspace(deps);
+
+    const session = await workspace.open({ range: '3d' });
+    currentTime = new Date('2026-03-04T00:05:00.000Z');
+
+    const refreshed = await session.refresh();
+
+    expect(session.snapshot.meta.timelineRevision).toBe('2026-03-04T00:00:00.000Z');
+    expect(refreshed.snapshot.meta.timelineRevision).toBe('2026-03-04T00:04:00.000Z');
+    expect(refreshed.snapshot.workoutItems?.[0]).toEqual(
+      expect.objectContaining({
+        id: 'workout-1',
+        workoutType: 'strength',
+        displayName: 'Synced override'
+      })
+    );
   });
 
   test('applies corrections through the workspace and returns a refreshed session', async () => {

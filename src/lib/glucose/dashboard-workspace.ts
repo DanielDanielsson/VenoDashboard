@@ -7,7 +7,8 @@ import {
   pulseApiHealthPort,
   pulseApiNotesPort,
   pulseApiTandemPort,
-  pulseApiGlucosePort
+  pulseApiGlucosePort,
+  pulseApiWorkoutPort
 } from '@/lib/glucose/dashboard-service';
 import type { TimeRange } from '@/lib/glucose/time-ranges';
 import { updateGlucoseCorrections } from '@/lib/pulse-api/glucose';
@@ -106,6 +107,7 @@ export const dashboardGlucoseWorkspace = createDashboardGlucoseWorkspace({
   glucosePort: pulseApiGlucosePort,
   tandemPort: pulseApiTandemPort,
   healthPort: pulseApiHealthPort,
+  workoutPort: pulseApiWorkoutPort,
   notesPort: pulseApiNotesPort,
   correctionsPort: {
     apply: updateGlucoseCorrections

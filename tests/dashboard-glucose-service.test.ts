@@ -3,6 +3,7 @@ import {
   createDashboardGlucoseService,
   type GlucoseTimelinePort,
   type HealthStepsPort,
+  type WorkoutTimelinePort,
   type TandemActivityPort,
   type TimelineNotesPort
 } from '@/lib/glucose/dashboard-service';
@@ -28,6 +29,7 @@ describe('dashboard glucose service', () => {
   let glucosePort: GlucoseTimelinePort;
   let tandemPort: TandemActivityPort;
   let healthPort: HealthStepsPort;
+  let workoutPort: WorkoutTimelinePort;
   let notesPort: TimelineNotesPort;
 
   beforeEach(() => {
@@ -41,6 +43,9 @@ describe('dashboard glucose service', () => {
     };
     healthPort = {
       fetchSteps: vi.fn().mockResolvedValue([])
+    };
+    workoutPort = {
+      fetchWorkouts: vi.fn().mockResolvedValue([])
     };
     notesPort = {
       fetchNotes: vi.fn().mockResolvedValue([]),
@@ -79,6 +84,7 @@ describe('dashboard glucose service', () => {
       glucosePort,
       tandemPort,
       healthPort,
+      workoutPort,
       notesPort,
       clock: () => new Date('2026-03-07T10:05:00.000Z')
     });
@@ -106,6 +112,7 @@ describe('dashboard glucose service', () => {
       glucosePort,
       tandemPort,
       healthPort,
+      workoutPort,
       notesPort,
       clock: () => new Date('2026-03-07T10:00:00.000Z')
     });
@@ -197,6 +204,7 @@ describe('dashboard glucose service', () => {
       glucosePort,
       tandemPort,
       healthPort,
+      workoutPort,
       notesPort,
       clock: () => new Date('2026-03-04T00:00:00.000Z')
     });
@@ -278,6 +286,7 @@ describe('dashboard glucose service', () => {
       glucosePort,
       tandemPort,
       healthPort,
+      workoutPort,
       notesPort,
       clock: () => new Date('2026-03-07T07:20:00.000Z')
     });
@@ -292,6 +301,42 @@ describe('dashboard glucose service', () => {
     expect(response.meta.timelineRevision).toBe('2026-03-07T07:20:00.000Z');
   });
 
+  test('getUpdatesSince counts workout mutations and advances timeline revision from workout activity', async () => {
+    vi.mocked(glucosePort.fetchLatest)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+    vi.mocked(glucosePort.fetchHistory).mockResolvedValue([]);
+    vi.mocked(workoutPort.fetchWorkouts).mockResolvedValue([
+      {
+        id: 'workout-1',
+        startAt: '2026-03-07T06:00:00.000Z',
+        endAt: '2026-03-07T07:00:00.000Z',
+        workoutType: 'run',
+        rawWorkoutType: 'running',
+        displayName: 'Morning run',
+        sourceSystem: 'apple_health',
+        sourceId: 'apple-workout-1',
+        updatedAt: '2026-03-07T07:25:00.000Z'
+      }
+    ]);
+
+    const service = createDashboardGlucoseService({
+      glucosePort,
+      tandemPort,
+      healthPort,
+      workoutPort,
+      notesPort,
+      clock: () => new Date('2026-03-07T07:30:00.000Z')
+    });
+
+    const response = await service.getUpdatesSince('2026-03-07T07:10:00.000Z');
+
+    expect(response.meta.newCount).toBe(1);
+    expect(response.meta.newGlucoseCount).toBe(0);
+    expect(response.meta.newWorkoutMutationCount).toBe(1);
+    expect(response.meta.timelineRevision).toBe('2026-03-07T07:25:00.000Z');
+  });
+
   test('getHistory throws when both glucose history sources fail', async () => {
     vi.mocked(glucosePort.fetchLatest).mockResolvedValue(null);
     vi.mocked(glucosePort.fetchHistory)
@@ -302,6 +347,7 @@ describe('dashboard glucose service', () => {
       glucosePort,
       tandemPort,
       healthPort,
+      workoutPort,
       notesPort,
       clock: () => new Date('2026-03-07T10:00:00.000Z')
     });
@@ -337,6 +383,7 @@ describe('dashboard glucose service', () => {
       glucosePort,
       tandemPort,
       healthPort,
+      workoutPort,
       notesPort,
       clock: () => new Date('2026-03-07T10:00:00.000Z')
     });
@@ -385,6 +432,7 @@ describe('dashboard glucose service', () => {
       glucosePort,
       tandemPort,
       healthPort,
+      workoutPort,
       notesPort,
       clock: () => new Date('2026-03-07T12:00:00.000Z')
     });
@@ -394,5 +442,56 @@ describe('dashboard glucose service', () => {
     expect(response.noteItems).toHaveLength(1);
     expect(response.noteItems?.[0]?.id).toBe('note-1');
     expect(response.meta.timelineRevision).toBe('2026-03-07T13:05:00.000Z');
+  });
+
+  test('getHistory includes workout items in the timeline snapshot', async () => {
+    vi.mocked(glucosePort.fetchLatest).mockResolvedValue(null);
+    vi.mocked(glucosePort.fetchHistory).mockResolvedValue([
+      reading({
+        id: 'official-1',
+        timestamp: '2026-03-07T09:00:00.000Z',
+        source: 'official'
+      })
+    ]);
+    vi.mocked(workoutPort.fetchWorkouts).mockResolvedValue([
+      {
+        id: 'workout-1',
+        startAt: '2026-03-07T07:00:00.000Z',
+        endAt: '2026-03-07T08:00:00.000Z',
+        workoutType: 'run',
+        rawWorkoutType: 'running',
+        displayName: 'Morning run',
+        sourceSystem: 'apple_health',
+        sourceId: 'apple-workout-1'
+      }
+    ]);
+
+    const service = createDashboardGlucoseService({
+      glucosePort,
+      tandemPort,
+      healthPort,
+      workoutPort,
+      notesPort,
+      clock: () => new Date('2026-03-07T12:00:00.000Z')
+    });
+
+    const response = await service.getHistory({ range: '24h' });
+
+    expect(workoutPort.fetchWorkouts).toHaveBeenCalledWith({
+      from: '2026-03-06T12:00:00.000Z',
+      to: '2026-03-07T12:00:00.000Z'
+    });
+    expect(response.workoutItems).toEqual([
+      {
+        id: 'workout-1',
+        startAt: '2026-03-07T07:00:00.000Z',
+        endAt: '2026-03-07T08:00:00.000Z',
+        workoutType: 'run',
+        rawWorkoutType: 'running',
+        displayName: 'Morning run',
+        sourceSystem: 'apple_health',
+        sourceId: 'apple-workout-1'
+      }
+    ]);
   });
 });

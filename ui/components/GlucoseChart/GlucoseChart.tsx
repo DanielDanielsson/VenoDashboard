@@ -7,7 +7,8 @@ import type {
   ChartPoint,
   HealthStepChartPoint,
   TandemEventChartPoint,
-  TimelineNote
+  TimelineNote,
+  WorkoutChartPoint
 } from '@/lib/glucose/types';
 import { getGlucoseColor, type GlucoseColorMode } from '@/lib/glucose/tints';
 import {
@@ -19,6 +20,14 @@ import {
   getTimelineNoteBandHeight,
   getTimelineNotesAtTimestamp
 } from '@/lib/glucose/timeline-note-layout';
+import {
+  formatWorkoutDuration,
+  formatWorkoutTimeRange,
+  getWorkoutDisplayLabel,
+  getWorkoutIconName,
+  getWorkoutSourceLabel
+} from '@/lib/glucose/workout-display';
+import { Icon } from '@ui/base/Icon';
 import { HoverPanel } from '../HoverPanel';
 
 export type { ChartPoint } from '@/lib/glucose/types';
@@ -28,16 +37,20 @@ interface GlucoseChartProps {
   basalData?: BasalChartPoint[];
   eventData?: TandemEventChartPoint[];
   stepData?: HealthStepChartPoint[];
+  workoutData?: WorkoutChartPoint[];
   noteData?: TimelineNote[];
   height?: number;
   yMax?: number;
   colorMode: GlucoseColorMode;
   editable?: boolean;
   selectedReadingIds?: string[];
+  selectedWorkoutId?: string | null;
   selectedNoteId?: string | null;
   previewReadingValues?: Record<string, number>;
   onPointSelect?: (point: ChartPoint, additive: boolean) => void;
   onCorrectionPreviewChange?: (items: Array<{ readingId: string; valueMmolL: number }>) => void;
+  onWorkoutSelect?: (workout: WorkoutChartPoint) => void;
+  onWorkoutAddRequest?: (hoveredAt: string | null) => void;
   onNoteSelect?: (note: TimelineNote) => void;
   onNoteAddRequest?: (hoveredAt: string | null) => void;
 }
@@ -51,6 +64,8 @@ const BASAL_BAND_GAP = 20;
 const BASAL_TICK_COUNT = 3;
 const STEP_BAND_HEIGHT = 120;
 const STEP_BAND_GAP = 20;
+const WORKOUT_BAND_HEIGHT = 44;
+const WORKOUT_BAND_GAP = 20;
 const IOB_MARKER_MIN_SPACING = 36;
 const EVENT_TRACK_HEIGHT = 120;
 const EVENT_TRACK_GAP = 20;
@@ -365,6 +380,21 @@ function getHoveredStepBucket(
   return null;
 }
 
+function getHoveredWorkouts(
+  hoveredTimestampMs: number | null,
+  workoutData: WorkoutChartPoint[]
+): WorkoutChartPoint[] {
+  if (hoveredTimestampMs === null || workoutData.length === 0) {
+    return [];
+  }
+
+  return workoutData.filter((workout) => {
+    const startAtMs = new Date(workout.startAt).getTime();
+    const endAtMs = new Date(workout.endAt).getTime();
+    return hoveredTimestampMs >= startAtMs && hoveredTimestampMs < endAtMs;
+  });
+}
+
 function buildVisibleStepDaySummaries({
   stepData,
   visibleStartMs,
@@ -645,16 +675,20 @@ export function GlucoseChart({
   basalData = [],
   eventData = [],
   stepData = [],
+  workoutData = [],
   noteData = [],
   height = 400,
   yMax = 25,
   colorMode,
   editable = false,
   selectedReadingIds = [],
+  selectedWorkoutId = null,
   selectedNoteId = null,
   previewReadingValues = {},
   onPointSelect,
   onCorrectionPreviewChange,
+  onWorkoutSelect,
+  onWorkoutAddRequest,
   onNoteSelect,
   onNoteAddRequest
 }: GlucoseChartProps) {
@@ -738,6 +772,7 @@ export function GlucoseChart({
   const hasBasalBand = basalData.length > 0;
   const hasEventTrack = eventData.length > 0;
   const hasStepBand = stepData.length > 0;
+  const hasWorkoutBand = workoutData.length > 0 || Boolean(onWorkoutAddRequest);
   const iobPoints = eventData
     .filter((e) => e.iob !== null)
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -745,6 +780,8 @@ export function GlucoseChart({
   const basalGap = hasBasalBand ? BASAL_BAND_GAP : 0;
   const stepBandHeight = hasStepBand ? STEP_BAND_HEIGHT : 0;
   const stepGap = hasStepBand ? STEP_BAND_GAP : 0;
+  const workoutBandHeight = hasWorkoutBand ? WORKOUT_BAND_HEIGHT : 0;
+  const workoutGap = hasWorkoutBand ? WORKOUT_BAND_GAP : 0;
   const eventTrackHeight = hasEventTrack ? EVENT_TRACK_HEIGHT : 0;
   const eventGap = hasEventTrack ? EVENT_TRACK_GAP : 0;
   const assignedNoteItems = assignTimelineNoteLanes(noteData);
@@ -753,8 +790,11 @@ export function GlucoseChart({
   const eventTrackTop = PADDING.top + glucosePlotHeight + eventGap;
   const basalBandTop = eventTrackTop + eventTrackHeight + basalGap;
   const stepBandTop = basalBandTop + basalBandHeight + stepGap;
-  const noteAnchorBottom = hasStepBand
-    ? stepBandTop + stepBandHeight
+  const workoutBandTop = stepBandTop + stepBandHeight + workoutGap;
+  const noteAnchorBottom = hasWorkoutBand
+    ? workoutBandTop + workoutBandHeight
+    : hasStepBand
+      ? stepBandTop + stepBandHeight
     : hasBasalBand
       ? basalBandTop + basalBandHeight
       : hasEventTrack
@@ -777,6 +817,7 @@ export function GlucoseChart({
     (e) => !SUPPRESSED_EVENT_NAMES.has(e.eventName)
   );
   const hoveredStepBucket = getHoveredStepBucket(hoveredTimestampMs, stepData);
+  const hoveredWorkouts = getHoveredWorkouts(hoveredTimestampMs, workoutData);
   const hoveredSuspendInterval = getHoveredSuspendInterval(hoveredTimestampMs, eventData);
   const hoveredIobValue = getHoveredIobValue(hoveredTimestampMs, iobPoints);
   const hoveredNotes = hoveredTimestampMs === null
@@ -1910,6 +1951,26 @@ export function GlucoseChart({
     setHoveredIndex(null);
   }
 
+  function handleWorkoutBandClick(event: React.MouseEvent<HTMLDivElement>) {
+    if (!onWorkoutAddRequest) {
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const timestampMs = getTimestampMsForCanvasX(event.clientX - rect.left + PADDING.left);
+    onWorkoutAddRequest(timestampMs === null ? null : new Date(timestampMs).toISOString());
+  }
+
+  function handleWorkoutBandMouseMove(event: React.MouseEvent<HTMLDivElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    updateHoverAtPosition(event.clientX - rect.left + PADDING.left, event.clientY - rect.top + workoutBandTop);
+  }
+
+  function handleWorkoutBandMouseLeave() {
+    setHoveredTimestampMs(null);
+    setHoveredIndex(null);
+  }
+
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
       {hasStepBand && stepBandHeight > 0 ? (
@@ -1964,6 +2025,31 @@ export function GlucoseChart({
             );
           })
         : null}
+      {hasWorkoutBand && workoutBandHeight > 0 ? (
+        <div
+          style={{
+            position: 'absolute',
+            left: 8,
+            top: workoutBandTop + 4,
+            zIndex: 12,
+            display: 'inline-flex',
+            alignItems: 'flex-start',
+            pointerEvents: 'none',
+          }}
+        >
+          <span className="ui_chart_axis_unit" style={{ color: 'var(--text-soft)', lineHeight: 1, whiteSpace: 'nowrap' }}>
+            Workouts
+          </span>
+          <div style={{ pointerEvents: 'auto' }}>
+            <HoverPanel
+              title="Workouts"
+              body="Workout sessions imported from Apple Health or added manually. Click a workout to inspect it."
+              sourceValue="Apple Health and manual entry"
+              twStyles="-ml-0.5 -mt-2"
+            />
+          </div>
+        </div>
+      ) : null}
       <div
         style={{
           position: 'absolute',
@@ -2010,6 +2096,112 @@ export function GlucoseChart({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       />
+      {hasWorkoutBand && workoutBandHeight > 0 ? (
+        <div
+          aria-label="Workouts band"
+          onMouseMove={handleWorkoutBandMouseMove}
+          onMouseLeave={handleWorkoutBandMouseLeave}
+          onClick={handleWorkoutBandClick}
+          style={{
+            position: 'absolute',
+            left: PADDING.left,
+            right: PADDING.right,
+            top: workoutBandTop,
+            height: workoutBandHeight,
+            borderRadius: 12,
+            background: isDark ? 'rgba(120, 255, 90, 0.10)' : 'rgba(132, 204, 22, 0.14)',
+            border: `1px solid ${isDark ? 'rgba(163, 230, 53, 0.28)' : 'rgba(101, 163, 13, 0.34)'}`,
+            overflow: 'hidden',
+            zIndex: 6,
+            cursor: onWorkoutAddRequest ? 'copy' : 'default'
+          }}
+        >
+          {workoutData.map((workout) => {
+            const startX = getXForTimestamp(new Date(workout.startAt).getTime());
+            const endX = getXForTimestamp(new Date(workout.endAt).getTime());
+            const left = Math.max(0, startX - PADDING.left);
+            const right = Math.max(left + 20, endX - PADDING.left);
+            const width = Math.max(20, right - left);
+            const label = getWorkoutDisplayLabel(workout);
+            const iconName = getWorkoutIconName(workout.workoutType);
+            const showLabel = width >= 84;
+            const isSelected = selectedWorkoutId === workout.id;
+
+            return (
+              <button
+                key={workout.id}
+                type="button"
+                aria-label={label}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onWorkoutSelect?.(workout);
+                }}
+                style={{
+                  position: 'absolute',
+                  left,
+                  top: 6,
+                  width,
+                  height: Math.max(28, workoutBandHeight - 12),
+                  borderRadius: 999,
+                  border: `1px solid ${isSelected ? (isDark ? 'rgba(217, 249, 157, 0.95)' : 'rgba(63, 98, 18, 0.72)') : (isDark ? 'rgba(190, 242, 100, 0.45)' : 'rgba(77, 124, 15, 0.36)')}`,
+                  background: isSelected ? (isDark ? 'rgba(101, 163, 13, 0.62)' : 'rgba(163, 230, 53, 0.42)') : (isDark ? 'rgba(77, 124, 15, 0.42)' : 'rgba(163, 230, 53, 0.28)'),
+                  color: 'var(--text)',
+                  padding: showLabel ? '0 10px' : '0 8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  gap: 6,
+                  overflow: 'hidden',
+                  cursor: 'pointer'
+                }}
+              >
+                <Icon icon={iconName} title={`${label} icon`} twStyles="h-3.5 w-3.5 shrink-0" />
+                {showLabel ? (
+                  <span
+                    className="ui_caption"
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      textAlign: 'left',
+                      flex: 1
+                    }}
+                  >
+                    {label}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+          {hoveredTimestampMs !== null && onWorkoutAddRequest ? (
+            <button
+              type="button"
+              aria-label="Add workout"
+              onClick={(event) => {
+                event.stopPropagation();
+                onWorkoutAddRequest(new Date(hoveredTimestampMs).toISOString());
+              }}
+              style={{
+                position: 'absolute',
+                left: clamp(getXForTimestamp(hoveredTimestampMs) - PADDING.left - 12, 0, Math.max(0, chartWidth - 24)),
+                top: Math.max(0, (workoutBandHeight - 24) / 2),
+                width: 24,
+                height: 24,
+                borderRadius: 999,
+                border: `1px solid ${isDark ? 'rgba(190, 242, 100, 0.5)' : 'rgba(77, 124, 15, 0.38)'}`,
+                background: isDark ? 'rgba(77, 124, 15, 0.24)' : 'rgba(163, 230, 53, 0.22)',
+                color: 'var(--text-soft)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              +
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <div
         aria-label="Notes band"
         onMouseMove={handleNoteBandMouseMove}
@@ -2103,7 +2295,7 @@ export function GlucoseChart({
           </button>
         ) : null}
       </div>
-      {(hoveredPoint || hoveredNotes.length > 0) && (
+      {(hoveredPoint || hoveredWorkouts.length > 0 || hoveredNotes.length > 0) && (
         <div
           className="rounded border border-border-strong bg-surface-strong"
           style={{
@@ -2180,6 +2372,30 @@ export function GlucoseChart({
                   minute: '2-digit'
                 })}
               </p>
+            </div>
+          ) : null}
+          {hoveredWorkouts.length > 0 ? (
+            <div className="mt-2 border-t border-border pt-2">
+              <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
+                {hoveredWorkouts.length === 1 ? 'Workout' : 'Workouts'}
+              </p>
+              <div style={{ display: 'grid', gap: 8, marginTop: 6 }}>
+                {hoveredWorkouts.map((workout) => (
+                  <div key={workout.id} style={{ display: 'grid', gap: 3 }}>
+                    <p className="body_text text-text" style={{ margin: 0 }}>
+                      {getWorkoutDisplayLabel(workout)}
+                    </p>
+                    <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
+                      {formatWorkoutTimeRange(workout.startAt, workout.endAt)}
+                      {' · '}
+                      {formatWorkoutDuration(workout.startAt, workout.endAt)}
+                    </p>
+                    <p className="ui_caption text-text-soft" style={{ margin: 0 }}>
+                      {getWorkoutSourceLabel(workout.sourceSystem)}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
           {hoveredEventItems.length > 0 && (

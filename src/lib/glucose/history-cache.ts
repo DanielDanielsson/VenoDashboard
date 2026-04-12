@@ -104,6 +104,20 @@ function pickStepItemsForWindow(
   });
 }
 
+function pickWorkoutItemsForWindow(
+  workoutItems: GlucoseApiResponse['workoutItems'] = [],
+  window: HistoryWindow
+): NonNullable<GlucoseApiResponse['workoutItems']> {
+  const fromMs = toMs(window.from);
+  const toMsValue = toMs(window.to);
+
+  return workoutItems.filter((item) => {
+    const startMs = toMs(item.startAt);
+    const endMs = toMs(item.endAt);
+    return endMs > fromMs && startMs < toMsValue;
+  });
+}
+
 function pickNoteItemsForWindow(
   noteItems: GlucoseApiResponse['noteItems'] = [],
   window: HistoryWindow
@@ -209,6 +223,7 @@ export function sliceHistoryResponseToWindow(
   const basalItems = pickBasalItemsForWindow(sourceData.basalItems, window);
   const eventItems = pickEventItemsForWindow(sourceData.eventItems, window);
   const stepItems = pickStepItemsForWindow(sourceData.stepItems, window);
+  const workoutItems = pickWorkoutItemsForWindow(sourceData.workoutItems, window);
   const noteItems = pickNoteItemsForWindow(sourceData.noteItems, window);
 
   return {
@@ -217,6 +232,7 @@ export function sliceHistoryResponseToWindow(
     basalItems,
     eventItems,
     stepItems,
+    workoutItems,
     noteItems,
     meta: {
       from: window.from,

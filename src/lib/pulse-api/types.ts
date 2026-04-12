@@ -75,6 +75,34 @@ export interface TimelineNoteDeleteResponse {
   noteId: string;
 }
 
+export interface Workout {
+  id: string;
+  startAt: string;
+  endAt: string;
+  workoutType: string;
+  rawWorkoutType: string | null;
+  displayName: string | null;
+  sourceSystem: string;
+  sourceId: string | null;
+  updatedAt?: string;
+}
+
+export interface WorkoutWritePayload {
+  startAt: string;
+  endAt: string;
+  workoutType: string;
+  displayName?: string | null;
+}
+
+export interface WorkoutMutationResponse {
+  workout: Workout;
+}
+
+export interface WorkoutDeleteResponse {
+  deleted: boolean;
+  workoutId: string;
+}
+
 export interface TimelineUpdatesResponse {
   meta: {
     since: string;

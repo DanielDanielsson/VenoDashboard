@@ -20,6 +20,13 @@ import {
   type TimelineNoteDraft
 } from '@/lib/glucose/timeline-note-form';
 import {
+  NORMALIZED_WORKOUT_TYPES,
+  createWorkoutDraft,
+  draftFromWorkout,
+  validateWorkoutDraft,
+  type WorkoutDraft
+} from '@/lib/glucose/workout-form';
+import {
   buildPresetWindow,
   getHistoryCustomKey,
   getHistoryRangeKey,
@@ -33,9 +40,25 @@ import {
   removeTimelineNoteFromHistoryResponse,
   upsertTimelineNoteInHistoryResponse
 } from '@/lib/glucose/timeline-note-history';
+import {
+  removeWorkoutFromHistoryResponse,
+  upsertWorkoutInHistoryResponse
+} from '@/lib/glucose/workout-history';
 import { GLUCOSE_TIME_RANGES } from '@/lib/glucose/time-ranges';
+import {
+  formatWorkoutDuration,
+  formatWorkoutTimeRange,
+  getWorkoutDisplayLabel,
+  getWorkoutSourceLabel
+} from '@/lib/glucose/workout-display';
 import { SecondaryButton } from '@ui/components/SecondaryButton';
-import type { ChartPoint, GlucoseApiResponse, GlucoseUpdatesResponse, TimelineNote } from '@/lib/glucose/types';
+import type {
+  ChartPoint,
+  GlucoseApiResponse,
+  GlucoseUpdatesResponse,
+  TimelineNote,
+  WorkoutChartPoint
+} from '@/lib/glucose/types';
 import type { ConsumerProfileResponse } from '@/lib/pulse-api/types';
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -117,7 +140,17 @@ function wasTimelineNoteEdited(note: TimelineNote): boolean {
   return note.updatedAt !== note.createdAt || note.updatedBy !== note.createdBy;
 }
 
-function getChartHeight(data: Pick<GlucoseApiResponse, 'basalItems' | 'eventItems' | 'stepItems' | 'noteItems'> | undefined): number {
+function formatWorkoutDate(timestamp: string): string {
+  return new Date(timestamp).toLocaleDateString([], {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+
+function getChartHeight(
+  data: Pick<GlucoseApiResponse, 'basalItems' | 'eventItems' | 'stepItems' | 'workoutItems' | 'noteItems'> | undefined
+): number {
   const glucosePlotHeight = 240;
   const paddingTop = 32;
   const paddingBottom = 48;
@@ -136,6 +169,10 @@ function getChartHeight(data: Pick<GlucoseApiResponse, 'basalItems' | 'eventItem
 
   if (data?.stepItems.length) {
     totalHeight += bandGap + bandHeight;
+  }
+
+  if (data?.workoutItems?.length) {
+    totalHeight += bandGap + 44;
   }
 
   totalHeight += bandGap + getTimelineNoteBandHeight(data?.noteItems ?? []);
@@ -173,6 +210,14 @@ export function GlucoseAnalysisView({
   const [correctionReasonInput, setCorrectionReasonInput] = useState('');
   const [isSavingCorrection, setIsSavingCorrection] = useState(false);
   const [correctionError, setCorrectionError] = useState<string | null>(null);
+  const [activeWorkoutId, setActiveWorkoutId] = useState<string | null>(null);
+  const [workoutDraft, setWorkoutDraft] = useState<WorkoutDraft | null>(null);
+  const [workoutInitialDraft, setWorkoutInitialDraft] = useState<WorkoutDraft | null>(null);
+  const [workoutLastValidPreview, setWorkoutLastValidPreview] = useState<WorkoutChartPoint | null>(null);
+  const [workoutMode, setWorkoutMode] = useState<'create' | 'edit' | 'read'>('read');
+  const [workoutError, setWorkoutError] = useState<string | null>(null);
+  const [isSavingWorkout, setIsSavingWorkout] = useState(false);
+  const [isConfirmingWorkoutDelete, setIsConfirmingWorkoutDelete] = useState(false);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState<TimelineNoteDraft | null>(null);
   const [noteInitialDraft, setNoteInitialDraft] = useState<TimelineNoteDraft | null>(null);
@@ -224,6 +269,10 @@ export function GlucoseAnalysisView({
   const visibleSavedNoteItems = buildDisplayedTimelineNotes(data?.noteItems, {
     deletedIds: deletedNoteIds
   });
+  const activeWorkout = data?.workoutItems?.find((workout) => workout.id === activeWorkoutId) ?? null;
+  const workoutValidation = workoutDraft
+    ? validateWorkoutDraft(workoutDraft, activeWorkout ?? workoutLastValidPreview)
+    : null;
   const activeSavedNote = visibleSavedNoteItems.find((note) => note.id === activeNoteId) ?? null;
   const noteValidation = noteDraft
     ? validateTimelineNoteDraft(noteDraft, activeSavedNote ?? noteLastValidPreview)
@@ -337,7 +386,12 @@ export function GlucoseAnalysisView({
     : false;
   const isMultiDayNoteDraft = noteDraft ? isMultiDayTimelineNoteDraft(noteDraft) : false;
   const isNoteReadOnly = !isOwner || noteMode === 'read';
+  const isWorkoutReadOnly = !isOwner || workoutMode === 'read';
+  const workoutDraftIsDirty = workoutDraft && workoutInitialDraft
+    ? JSON.stringify(workoutDraft) !== JSON.stringify(workoutInitialDraft)
+    : false;
   const activePanelNote = noteLastValidPreview ?? activeSavedNote;
+  const activePanelWorkout = workoutLastValidPreview ?? activeWorkout;
 
   useEffect(() => {
     if (!data?.items.length) {
@@ -413,6 +467,16 @@ export function GlucoseAnalysisView({
   }, [activeNoteId, data?.noteItems, noteDraft]);
 
   useEffect(() => {
+    if (!activeWorkoutId || !data?.workoutItems) {
+      return;
+    }
+
+    if (!data.workoutItems.some((workout) => workout.id === activeWorkoutId)) {
+      setActiveWorkoutId(null);
+    }
+  }, [activeWorkoutId, data?.workoutItems]);
+
+  useEffect(() => {
     if (!noteDraft || !isMultiDayTimelineNoteDraft(noteDraft) || noteDraft.allDay) {
       return;
     }
@@ -462,6 +526,16 @@ export function GlucoseAnalysisView({
     setIsConfirmingDelete(false);
   }
 
+  function closeWorkoutDialog() {
+    setActiveWorkoutId(null);
+    setWorkoutDraft(null);
+    setWorkoutInitialDraft(null);
+    setWorkoutLastValidPreview(null);
+    setWorkoutMode('read');
+    setWorkoutError(null);
+    setIsConfirmingWorkoutDelete(false);
+  }
+
   function confirmDiscardNoteDraft(): boolean {
     if (!noteDraftIsDirty) {
       return true;
@@ -483,6 +557,7 @@ export function GlucoseAnalysisView({
     }
 
     clearCorrectionEditor();
+    closeWorkoutDialog();
     const draft = draftFromTimelineNote(note);
     setActiveNoteId(note.id);
     setNoteDraft(draft);
@@ -494,12 +569,57 @@ export function GlucoseAnalysisView({
     setIsConfirmingDelete(false);
   }
 
+  function handleWorkoutSelect(workout: WorkoutChartPoint) {
+    if (!confirmDiscardNoteDraft()) {
+      return;
+    }
+
+    clearCorrectionEditor();
+    closeNoteEditor();
+    setActiveWorkoutId(workout.id);
+    if (isOwner) {
+      const draft = draftFromWorkout(workout, ownerTimeZone);
+      setWorkoutDraft(draft);
+      setWorkoutInitialDraft(draft);
+      setWorkoutLastValidPreview(workout);
+    } else {
+      setWorkoutDraft(null);
+      setWorkoutInitialDraft(null);
+      setWorkoutLastValidPreview(null);
+    }
+    setWorkoutMode(isOwner ? 'edit' : 'read');
+    setWorkoutError(null);
+    setIsConfirmingWorkoutDelete(false);
+  }
+
+  function handleWorkoutAddRequest(hoveredAt: string | null) {
+    if (!isOwner) {
+      return;
+    }
+
+    if (!confirmDiscardNoteDraft()) {
+      return;
+    }
+
+    clearCorrectionEditor();
+    closeNoteEditor();
+    const draft = createWorkoutDraft(ownerTimeZone, hoveredAt);
+    setActiveWorkoutId(null);
+    setWorkoutDraft(draft);
+    setWorkoutInitialDraft(draft);
+    setWorkoutLastValidPreview(null);
+    setWorkoutMode('create');
+    setWorkoutError(null);
+    setIsConfirmingWorkoutDelete(false);
+  }
+
   function handleNoteAddRequest(hoveredAt: string | null) {
     if (!confirmDiscardNoteDraft()) {
       return;
     }
 
     clearCorrectionEditor();
+    closeWorkoutDialog();
     const draft = createTimelineNoteDraft(ownerTimeZone, hoveredAt);
     setActiveNoteId(null);
     setNoteDraft(draft);
@@ -519,6 +639,7 @@ export function GlucoseAnalysisView({
       closeNoteEditor();
     }
 
+    closeWorkoutDialog();
     const readingId = point.readingId;
     const hasActiveCorrectionSession = selectedPoints.length > 0 || Object.keys(previewCorrectionValues).length > 0;
     const shouldAddToSession = additive || hasActiveCorrectionSession;
@@ -779,6 +900,89 @@ export function GlucoseAnalysisView({
     }
   }
 
+  async function saveWorkout() {
+    if (!workoutDraft || isWorkoutReadOnly) {
+      if (!isOwner) {
+        setWorkoutError('Admin sign in is required to save workouts.');
+      }
+      return;
+    }
+
+    if (!workoutValidation?.payload) {
+      setWorkoutError(workoutValidation?.error ?? null);
+      return;
+    }
+
+    setIsSavingWorkout(true);
+    setWorkoutError(null);
+
+    try {
+      const response = await fetch(
+        activeWorkoutId ? `/api/dashboard/glucose/workouts/${activeWorkoutId}` : '/api/dashboard/glucose/workouts',
+        {
+          method: activeWorkoutId ? 'PUT' : 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(workoutValidation.payload)
+        }
+      );
+
+      const json = await response.json() as { workout?: WorkoutChartPoint; error?: { message?: string } };
+      if (!response.ok || !json.workout) {
+        throw new Error(json.error?.message || 'Failed to save workout');
+      }
+
+      const savedWorkout = json.workout;
+      const nextDraft = draftFromWorkout(savedWorkout, ownerTimeZone);
+      setActiveWorkoutId(savedWorkout.id);
+      setWorkoutDraft(nextDraft);
+      setWorkoutInitialDraft(nextDraft);
+      setWorkoutLastValidPreview(savedWorkout);
+      setWorkoutMode(isOwner ? 'edit' : 'read');
+      await mutate(
+        sourceData ? upsertWorkoutInHistoryResponse(sourceData, savedWorkout) : sourceDataResponse,
+        { revalidate: true }
+      );
+    } catch (saveError) {
+      setWorkoutError(saveError instanceof Error ? saveError.message : 'Failed to save workout');
+    } finally {
+      setIsSavingWorkout(false);
+    }
+  }
+
+  async function deleteWorkout() {
+    if (!activeWorkoutId || !isOwner || activeWorkout?.sourceSystem !== 'manual') {
+      setWorkoutError('Only manual workouts can be deleted.');
+      return;
+    }
+
+    const deletingWorkoutId = activeWorkoutId;
+    setIsSavingWorkout(true);
+    setWorkoutError(null);
+
+    try {
+      const response = await fetch(`/api/dashboard/glucose/workouts/${deletingWorkoutId}`, {
+        method: 'DELETE'
+      });
+      const json = await response.json() as { error?: { message?: string } };
+      if (!response.ok) {
+        throw new Error(json.error?.message || 'Failed to delete workout');
+      }
+
+      closeWorkoutDialog();
+      await mutate(
+        sourceData ? removeWorkoutFromHistoryResponse(sourceData, deletingWorkoutId) : sourceDataResponse,
+        { revalidate: true }
+      );
+    } catch (deleteError) {
+      setWorkoutError(deleteError instanceof Error ? deleteError.message : 'Failed to delete workout');
+    } finally {
+      setIsSavingWorkout(false);
+      setIsConfirmingWorkoutDelete(false);
+    }
+  }
+
   return (
     <div className="section-stack glucose-analysis-fullwidth">
       {/* Stats Grid — always rendered to prevent layout shift */}
@@ -939,6 +1143,258 @@ export function GlucoseAnalysisView({
 
           {hasData && (
             <div style={{ position: 'relative' }}>
+              {workoutDraft ? (
+                <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: isDark ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.28)',
+                      backdropFilter: 'blur(3px)'
+                    }}
+                  />
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={activeWorkoutId ? (isWorkoutReadOnly ? 'Workout details' : 'Workout') : 'New workout'}
+                    className="relative z-10 w-[min(34rem,calc(100%-2rem))]"
+                  >
+                    <DashboardPanel title={activeWorkoutId ? (isWorkoutReadOnly ? 'Workout details' : 'Workout') : 'New workout'} twStyles="shadow-2xl">
+                      <div className="flex min-h-[14rem] flex-col gap-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <label className="grid gap-1">
+                            <span className="ui_micro_label text-text-soft">Start date</span>
+                            <input
+                              type="date"
+                              value={workoutDraft.startDate}
+                              disabled={isWorkoutReadOnly || isSavingWorkout}
+                              onChange={(event) => setWorkoutDraft((current) => current ? { ...current, startDate: event.target.value } : current)}
+                              className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none"
+                            />
+                          </label>
+                          <label className="grid gap-1">
+                            <span className="ui_micro_label text-text-soft">End date</span>
+                            <input
+                              type="date"
+                              value={workoutDraft.endDate}
+                              disabled={isWorkoutReadOnly || isSavingWorkout}
+                              onChange={(event) => setWorkoutDraft((current) => current ? { ...current, endDate: event.target.value } : current)}
+                              className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none"
+                            />
+                          </label>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <label className="grid gap-1">
+                            <span className="ui_micro_label text-text-soft">Start time</span>
+                            <input
+                              aria-label="Start time"
+                              type="time"
+                              step={300}
+                              value={workoutDraft.startTime}
+                              disabled={isWorkoutReadOnly || isSavingWorkout}
+                              onChange={(event) => setWorkoutDraft((current) => current ? { ...current, startTime: event.target.value } : current)}
+                              className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none"
+                            />
+                          </label>
+                          <label className="grid gap-1">
+                            <span className="ui_micro_label text-text-soft">End time</span>
+                            <input
+                              aria-label="End time"
+                              type="time"
+                              step={300}
+                              value={workoutDraft.endTime}
+                              disabled={isWorkoutReadOnly || isSavingWorkout}
+                              onChange={(event) => setWorkoutDraft((current) => current ? { ...current, endTime: event.target.value } : current)}
+                              className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none"
+                            />
+                          </label>
+                        </div>
+                        <label className="grid gap-1">
+                          <span className="ui_micro_label text-text-soft">Workout type</span>
+                          <select
+                            aria-label="Workout type"
+                            value={workoutDraft.workoutType}
+                            disabled={isWorkoutReadOnly || isSavingWorkout}
+                            onChange={(event) => setWorkoutDraft((current) => current ? { ...current, workoutType: event.target.value as WorkoutDraft['workoutType'] } : current)}
+                            className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none"
+                          >
+                            {NORMALIZED_WORKOUT_TYPES.map((type) => (
+                              <option key={type} value={type}>
+                                {type}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="grid gap-1">
+                          <span className="ui_micro_label text-text-soft">Display label</span>
+                          <input
+                            aria-label="Display label"
+                            value={workoutDraft.displayName}
+                            disabled={isWorkoutReadOnly || isSavingWorkout}
+                            onChange={(event) => setWorkoutDraft((current) => current ? { ...current, displayName: event.target.value } : current)}
+                            placeholder="Optional, for example Gym or Morning run"
+                            className="ui_input_text w-full rounded-[4px] border border-border bg-surface-muted px-3 py-2 text-text outline-none"
+                          />
+                        </label>
+                        {activePanelWorkout ? (
+                          <div className="grid gap-1">
+                            <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
+                              Source
+                            </p>
+                            <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
+                              {getWorkoutSourceLabel(activePanelWorkout.sourceSystem)}
+                            </p>
+                          </div>
+                        ) : null}
+                        <div className="mt-auto flex flex-wrap items-end gap-3">
+                          <SecondaryButton
+                            isActive={false}
+                            onClick={() => {
+                              void saveWorkout();
+                            }}
+                            disabled={isWorkoutReadOnly || isSavingWorkout || !workoutValidation?.payload || (!workoutDraftIsDirty && Boolean(activeWorkoutId))}
+                          >
+                            Save workout
+                          </SecondaryButton>
+                          <SecondaryButton
+                            isActive={false}
+                            onClick={() => {
+                              closeWorkoutDialog();
+                            }}
+                            disabled={isSavingWorkout}
+                          >
+                            Close
+                          </SecondaryButton>
+                          {activeWorkoutId && activeWorkout?.sourceSystem === 'manual' ? (
+                            isConfirmingWorkoutDelete ? (
+                              <>
+                                <SecondaryButton
+                                  isActive={false}
+                                  onClick={() => {
+                                    void deleteWorkout();
+                                  }}
+                                  disabled={isSavingWorkout || !isOwner}
+                                >
+                                  Confirm delete
+                                </SecondaryButton>
+                                <SecondaryButton
+                                  isActive={false}
+                                  onClick={() => setIsConfirmingWorkoutDelete(false)}
+                                  disabled={isSavingWorkout}
+                                >
+                                  Cancel delete
+                                </SecondaryButton>
+                              </>
+                            ) : (
+                              <SecondaryButton
+                                isActive={false}
+                                onClick={() => setIsConfirmingWorkoutDelete(true)}
+                                disabled={isSavingWorkout || !isOwner}
+                              >
+                                Delete workout
+                              </SecondaryButton>
+                            )
+                          ) : null}
+                        </div>
+                        {workoutValidation?.error ? (
+                          <p className="body_text text-base-error-dark">{workoutValidation.error}</p>
+                        ) : null}
+                        {workoutError ? (
+                          <p className="body_text text-base-error-dark">{workoutError}</p>
+                        ) : isWorkoutReadOnly ? (
+                          <p className="body_text text-text-soft">
+                            Admin sign in is required to edit workouts.
+                          </p>
+                        ) : null}
+                      </div>
+                    </DashboardPanel>
+                  </div>
+                </div>
+              ) : activeWorkout ? (
+                <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: isDark ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.28)',
+                      backdropFilter: 'blur(3px)'
+                    }}
+                  />
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Workout details"
+                    className="relative z-10 w-[min(28rem,calc(100%-2rem))]"
+                  >
+                    <DashboardPanel title="Workout details" twStyles="shadow-2xl">
+                      <div className="flex min-h-[12rem] flex-col gap-3">
+                        <div className="grid gap-1">
+                          <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
+                            Workout
+                          </p>
+                          <p className="body_text" style={{ margin: 0 }}>
+                            {getWorkoutDisplayLabel(activeWorkout)}
+                          </p>
+                        </div>
+                        <div className="grid gap-1 sm:grid-cols-2 sm:gap-3">
+                          <div className="grid gap-1">
+                            <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
+                              Source
+                            </p>
+                            <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
+                              {getWorkoutSourceLabel(activeWorkout.sourceSystem)}
+                            </p>
+                          </div>
+                          <div className="grid gap-1">
+                            <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
+                              Duration
+                            </p>
+                            <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
+                              {formatWorkoutDuration(activeWorkout.startAt, activeWorkout.endAt)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="grid gap-1 sm:grid-cols-2 sm:gap-3">
+                          <div className="grid gap-1">
+                            <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
+                              Date
+                            </p>
+                            <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
+                              {formatWorkoutDate(activeWorkout.startAt)}
+                            </p>
+                          </div>
+                          <div className="grid gap-1">
+                            <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
+                              Time
+                            </p>
+                            <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
+                              {formatWorkoutTimeRange(activeWorkout.startAt, activeWorkout.endAt)}
+                            </p>
+                          </div>
+                        </div>
+                        {activeWorkout.rawWorkoutType ? (
+                          <div className="grid gap-1">
+                            <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
+                              Imported type
+                            </p>
+                            <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
+                              {activeWorkout.rawWorkoutType}
+                            </p>
+                          </div>
+                        ) : null}
+                        <div className="mt-auto flex flex-wrap items-end gap-3">
+                          <SecondaryButton
+                            isActive={false}
+                            onClick={() => {
+                              closeWorkoutDialog();
+                            }}
+                          >
+                            Close
+                          </SecondaryButton>
+                        </div>
+                      </div>
+                    </DashboardPanel>
+                  </div>
+                </div>
+              ) : null}
               {noteDraft ? (
                 <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
                   <div
@@ -1199,16 +1655,20 @@ export function GlucoseAnalysisView({
                   basalData={data.basalItems}
                   eventData={data.eventItems}
                   stepData={data.stepItems}
+                  workoutData={data.workoutItems ?? []}
                   noteData={displayData?.noteItems ?? []}
                   height={chartHeight}
                   yMax={chartYMax}
                   colorMode={chartColorMode}
                   editable
                   selectedReadingIds={selectedReadingIds}
+                  selectedWorkoutId={activeWorkoutId}
                   selectedNoteId={activeNoteId}
                   previewReadingValues={previewCorrectionValues}
                   onPointSelect={handlePointSelect}
                   onCorrectionPreviewChange={handleCorrectionPreviewChange}
+                  onWorkoutSelect={handleWorkoutSelect}
+                  onWorkoutAddRequest={isOwner ? handleWorkoutAddRequest : undefined}
                   onNoteSelect={handleNoteSelect}
                   onNoteAddRequest={handleNoteAddRequest}
                 />
