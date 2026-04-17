@@ -72,3 +72,20 @@ export function formatWorkoutDuration(startAt: string, endAt: string): string {
 
   return `${minutes}m`;
 }
+
+export function formatWorkoutMetrics(
+  workout: Pick<WorkoutChartPoint, 'activeEnergyKilocalories' | 'distanceMeters'>
+): string[] {
+  const metrics: string[] = [];
+
+  if (typeof workout.activeEnergyKilocalories === 'number' && Number.isFinite(workout.activeEnergyKilocalories)) {
+    metrics.push(`${Math.round(workout.activeEnergyKilocalories)} kcal`);
+  }
+
+  if (typeof workout.distanceMeters === 'number' && Number.isFinite(workout.distanceMeters)) {
+    const distanceKilometers = workout.distanceMeters / 1000;
+    metrics.push(`${distanceKilometers.toFixed(distanceKilometers >= 10 ? 0 : 1)} km`);
+  }
+
+  return metrics;
+}

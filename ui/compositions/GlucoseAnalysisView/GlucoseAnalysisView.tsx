@@ -47,6 +47,7 @@ import {
 import { GLUCOSE_TIME_RANGES } from '@/lib/glucose/time-ranges';
 import {
   formatWorkoutDuration,
+  formatWorkoutMetrics,
   formatWorkoutTimeRange,
   getWorkoutDisplayLabel,
   getWorkoutSourceLabel
@@ -268,6 +269,7 @@ export function GlucoseAnalysisView({
     deletedIds: deletedNoteIds
   });
   const activeWorkout = data?.workoutItems?.find((workout) => workout.id === activeWorkoutId) ?? null;
+  const activeWorkoutMetrics = activeWorkout ? formatWorkoutMetrics(activeWorkout) : [];
   const workoutValidation = workoutDraft
     ? validateWorkoutDraft(workoutDraft, activeWorkout ?? workoutLastValidPreview)
     : null;
@@ -1350,6 +1352,16 @@ export function GlucoseAnalysisView({
                             </p>
                           </div>
                         </div>
+                        {activeWorkoutMetrics.length > 0 ? (
+                          <div className="grid gap-1">
+                            <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
+                              Metrics
+                            </p>
+                            <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
+                              {activeWorkoutMetrics.join(' · ')}
+                            </p>
+                          </div>
+                        ) : null}
                         <div className="grid gap-1 sm:grid-cols-2 sm:gap-3">
                           <div className="grid gap-1">
                             <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>

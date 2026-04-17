@@ -224,6 +224,8 @@ describe('GlucoseChart', () => {
               displayName: 'Morning run',
               sourceSystem: 'apple_health',
               sourceId: 'apple-workout-1',
+              activeEnergyKilocalories: 483.4,
+              distanceMeters: 5120.7,
             },
           ]}
           colorMode="gradient"
@@ -366,6 +368,8 @@ describe('GlucoseChart', () => {
               displayName: 'Morning run',
               sourceSystem: 'apple_health',
               sourceId: 'apple-workout-1',
+              activeEnergyKilocalories: 483.4,
+              distanceMeters: 5120.7,
             },
           ]}
           colorMode="gradient"
@@ -376,6 +380,7 @@ describe('GlucoseChart', () => {
 
       expect(await screen.findByText('Workout')).toBeInTheDocument();
       expect(screen.getAllByText('Morning run')).toHaveLength(2);
+      expect(screen.getByText('483 kcal · 5.1 km')).toBeInTheDocument();
       expect(screen.getByText('Apple Health')).toBeInTheDocument();
     } finally {
       if (clientWidth) {

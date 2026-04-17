@@ -76,6 +76,8 @@ export interface WorkoutHistoryPoint {
   displayName: string | null;
   sourceSystem: string;
   sourceId: string | null;
+  activeEnergyKilocalories?: number | null;
+  distanceMeters?: number | null;
   updatedAt?: string;
 }
 

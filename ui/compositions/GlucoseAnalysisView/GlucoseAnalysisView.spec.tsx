@@ -299,7 +299,9 @@ function createHistoryResponseWithWorkout() {
         rawWorkoutType: 'running',
         displayName: 'Morning run',
         sourceSystem: 'apple_health',
-        sourceId: 'apple-workout-1'
+        sourceId: 'apple-workout-1',
+        activeEnergyKilocalories: 483.4,
+        distanceMeters: 5120.7
       }
     ]
   };
@@ -991,6 +993,7 @@ describe('GlucoseAnalysisView', () => {
     expect(await screen.findByRole('dialog', { name: 'Workout details' })).toBeInTheDocument();
     expect(screen.getByText('Morning run')).toBeInTheDocument();
     expect(screen.getByText('Apple Health')).toBeInTheDocument();
+    expect(screen.getByText('483 kcal · 5.1 km')).toBeInTheDocument();
     expect(screen.getByText(formatWorkoutTimeRange('2026-03-29T06:00:00.000Z', '2026-03-29T07:00:00.000Z'))).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
   });

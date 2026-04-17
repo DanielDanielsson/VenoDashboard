@@ -462,7 +462,9 @@ describe('dashboard glucose service', () => {
         rawWorkoutType: 'running',
         displayName: 'Morning run',
         sourceSystem: 'apple_health',
-        sourceId: 'apple-workout-1'
+        sourceId: 'apple-workout-1',
+        activeEnergyKilocalories: 483.4,
+        distanceMeters: 5120.7
       }
     ]);
 
@@ -490,7 +492,9 @@ describe('dashboard glucose service', () => {
         rawWorkoutType: 'running',
         displayName: 'Morning run',
         sourceSystem: 'apple_health',
-        sourceId: 'apple-workout-1'
+        sourceId: 'apple-workout-1',
+        activeEnergyKilocalories: 483.4,
+        distanceMeters: 5120.7
       }
     ]);
   });

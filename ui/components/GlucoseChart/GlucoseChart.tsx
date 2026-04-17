@@ -22,6 +22,7 @@ import {
 } from '@/lib/glucose/timeline-note-layout';
 import {
   formatWorkoutDuration,
+  formatWorkoutMetrics,
   formatWorkoutTimeRange,
   getWorkoutDisplayLabel,
   getWorkoutIconName,
@@ -2401,21 +2402,30 @@ export function GlucoseChart({
                 {hoveredWorkouts.length === 1 ? 'Workout' : 'Workouts'}
               </p>
               <div style={{ display: 'grid', gap: 8, marginTop: 6 }}>
-                {hoveredWorkouts.map((workout) => (
-                  <div key={workout.id} style={{ display: 'grid', gap: 3 }}>
-                    <p className="body_text text-text" style={{ margin: 0 }}>
-                      {getWorkoutDisplayLabel(workout)}
-                    </p>
-                    <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
-                      {formatWorkoutTimeRange(workout.startAt, workout.endAt)}
-                      {' · '}
-                      {formatWorkoutDuration(workout.startAt, workout.endAt)}
-                    </p>
-                    <p className="ui_caption text-text-soft" style={{ margin: 0 }}>
-                      {getWorkoutSourceLabel(workout.sourceSystem)}
-                    </p>
-                  </div>
-                ))}
+                {hoveredWorkouts.map((workout) => {
+                  const metrics = formatWorkoutMetrics(workout);
+
+                  return (
+                    <div key={workout.id} style={{ display: 'grid', gap: 3 }}>
+                      <p className="body_text text-text" style={{ margin: 0 }}>
+                        {getWorkoutDisplayLabel(workout)}
+                      </p>
+                      <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
+                        {formatWorkoutTimeRange(workout.startAt, workout.endAt)}
+                        {' · '}
+                        {formatWorkoutDuration(workout.startAt, workout.endAt)}
+                      </p>
+                      {metrics.length > 0 ? (
+                        <p className="ui_caption text-text-dim" style={{ margin: 0 }}>
+                          {metrics.join(' · ')}
+                        </p>
+                      ) : null}
+                      <p className="ui_caption text-text-soft" style={{ margin: 0 }}>
+                        {getWorkoutSourceLabel(workout.sourceSystem)}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : null}

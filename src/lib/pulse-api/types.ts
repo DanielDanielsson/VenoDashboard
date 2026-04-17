@@ -84,6 +84,8 @@ export interface Workout {
   displayName: string | null;
   sourceSystem: string;
   sourceId: string | null;
+  activeEnergyKilocalories?: number | null;
+  distanceMeters?: number | null;
   updatedAt?: string;
 }
 

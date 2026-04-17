@@ -4,7 +4,7 @@
     "title": "VenoAPI",
     "version": "1.0.0",
     "description": "Machine readable OpenAPI contract for VenoAPI consumer and operational endpoints.",
-    "x-generatedAt": "2026-04-12T10:59:42.112Z"
+    "x-generatedAt": "2026-04-17T05:50:01.250Z"
   },
   "servers": [
     {
@@ -740,6 +740,8 @@
                       "displayName": "Morning run",
                       "sourceSystem": "apple_health",
                       "sourceId": "apple-workout-1",
+                      "activeEnergyKilocalories": 483.4,
+                      "distanceMeters": 5120.7,
                       "rawMetadataJson": {
                         "HKIndoorWorkout": "0"
                       }
@@ -780,6 +782,8 @@
                     "displayName": "Morning run",
                     "sourceSystem": "apple_health",
                     "sourceId": "apple-workout-1",
+                    "activeEnergyKilocalories": 483.4,
+                    "distanceMeters": 5120.7,
                     "rawMetadataJson": {
                       "HKIndoorWorkout": "0"
                     }
@@ -1953,6 +1957,8 @@
                       "displayName": "Morning run",
                       "sourceSystem": "apple_health",
                       "sourceId": "apple-workout-1",
+                      "activeEnergyKilocalories": 483.4,
+                      "distanceMeters": 5120.7,
                       "rawMetadataJson": {
                         "HKIndoorWorkout": "0"
                       }
@@ -2007,6 +2013,8 @@
                     "displayName": "Gym",
                     "sourceSystem": "manual",
                     "sourceId": "manual-workout-1",
+                    "activeEnergyKilocalories": null,
+                    "distanceMeters": null,
                     "rawMetadataJson": null
                   }
                 }
@@ -2060,6 +2068,8 @@
                     "displayName": "Gym",
                     "sourceSystem": "manual",
                     "sourceId": "manual-workout-1",
+                    "activeEnergyKilocalories": null,
+                    "distanceMeters": null,
                     "rawMetadataJson": null
                   }
                 }
