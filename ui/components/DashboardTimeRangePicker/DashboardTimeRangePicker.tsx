@@ -434,7 +434,10 @@ export function DashboardTimeRangePicker({
 
   return (
     <div ref={rootRef} className="relative flex flex-wrap items-center gap-2">
-      <div className="inline-flex overflow-hidden rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-bg text-dashboard-time-picker-text shadow-sm">
+      <div
+        className="inline-flex overflow-hidden rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-bg text-dashboard-time-picker-text shadow-sm"
+        data-testid="dashboard-time-range-picker-toolbar"
+      >
         <Button
           ariaLabel="Move time range backwards"
           twStyles="grid h-9 w-9 place-items-center border-r border-dashboard-time-picker-border text-dashboard-time-picker-text-muted transition-colors hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text"
@@ -473,7 +476,10 @@ export function DashboardTimeRangePicker({
       <span className="ui_caption text-text-soft">{timeZone}</span>
 
       {isOpen && (
-        <section className="absolute left-0 top-[calc(100%+0.5rem)] z-30 h-[min(31rem,calc(100vh-8rem))] w-[min(calc(100vw-2rem),42rem)] overflow-hidden rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-panel-bg text-dashboard-time-picker-text shadow-dashboard-time-picker-panel max-lg:w-[min(calc(100vw-2rem),31rem)]">
+        <section
+          className="absolute left-0 top-[calc(100%+0.5rem)] z-30 h-[min(31rem,calc(100vh-8rem))] w-[min(calc(100vw-2rem),42rem)] overflow-hidden rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-panel-bg text-dashboard-time-picker-text shadow-dashboard-time-picker-panel max-lg:w-[min(calc(100vw-2rem),31rem)]"
+          data-testid="dashboard-time-range-picker-panel"
+        >
           <div className="grid h-full min-h-0 grid-cols-1 overflow-hidden md:grid-cols-[1fr_15rem]">
             <div className="grid min-h-0 content-start gap-4 overflow-auto border-b border-dashboard-time-picker-border-soft p-3 md:border-b-0 md:border-r">
               <div className="grid gap-3">
