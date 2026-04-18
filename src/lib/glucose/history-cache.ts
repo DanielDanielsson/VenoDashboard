@@ -1,4 +1,5 @@
 import { GLUCOSE_TIME_RANGES, getTimeRangeHours, type TimeRange } from './time-ranges';
+import type { RawTimeRangeInput } from './time-range-expressions';
 import type { GlucoseApiResponse } from './types';
 
 export interface HistoryWindow {
@@ -8,7 +9,7 @@ export interface HistoryWindow {
 
 export type HistorySelection =
   | { kind: 'preset'; range: TimeRange }
-  | { kind: 'custom'; window: HistoryWindow };
+  | { kind: 'custom'; window: HistoryWindow; raw?: RawTimeRangeInput; label?: string };
 
 interface HistoryCacheEntry {
   data?: GlucoseApiResponse;

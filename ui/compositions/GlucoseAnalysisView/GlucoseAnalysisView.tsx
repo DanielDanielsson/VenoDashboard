@@ -5,6 +5,7 @@ import useSWR, { useSWRConfig } from 'swr';
 import { GlucoseChart } from '@ui/components/GlucoseChart/GlucoseChart';
 import { GlucoseAgpChart } from '@ui/components/GlucoseAgpChart/GlucoseAgpChart';
 import { GlucoseDateRangePicker } from '@ui/components/GlucoseDateRangePicker/GlucoseDateRangePicker';
+import { DashboardTimeRangePicker } from '@ui/components/DashboardTimeRangePicker';
 import { GlucoseStatRing } from '@ui/components/GlucoseStatRing/GlucoseStatRing';
 import { DashboardPanel } from '@ui/components/DashboardPanel';
 import { NumberInput } from '@ui/components/NumberInput';
@@ -104,14 +105,6 @@ function getStoredChartColorMode(): GlucoseColorMode {
   }
 }
 
-function getInitialIsDark(): boolean {
-  try {
-    return document.documentElement.classList.contains('theme-dark');
-  } catch {
-    return true;
-  }
-}
-
 function roundCorrectionValue(value: number): number {
   return Number(value.toFixed(1));
 }
@@ -190,11 +183,12 @@ export function GlucoseAnalysisView({
     kind: 'preset',
     range: '3d'
   });
-  const [isDark, setIsDark] = useState(getInitialIsDark);
+  const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
     const read = () => document.documentElement.classList.contains('theme-dark');
     const handleChange = () => setIsDark(read());
+    handleChange();
     window.addEventListener('pulse-theme-change', handleChange);
     window.addEventListener('storage', handleChange);
     return () => {
@@ -334,6 +328,15 @@ export function GlucoseAnalysisView({
 
   const activePreset = selection.kind === 'preset' ? selection.range : null;
   const customValue = selection.kind === 'custom' ? selection.window : null;
+
+  function applyHistorySelection(nextSelection: HistorySelection) {
+    if (!confirmDiscardNoteDraft()) {
+      return;
+    }
+
+    closeNoteEditor();
+    setSelection(nextSelection);
+  }
 
   function updateChartColorMode(mode: GlucoseColorMode) {
     setChartColorMode(mode);
@@ -985,6 +988,13 @@ export function GlucoseAnalysisView({
 
   return (
     <div className="section-stack glucose-analysis-fullwidth">
+      <DashboardTimeRangePicker
+        selection={selection}
+        currentWindow={targetWindow}
+        timeZone={ownerTimeZone}
+        onChange={applyHistorySelection}
+      />
+
       {/* Stats Grid — always rendered to prevent layout shift */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <DashboardPanel

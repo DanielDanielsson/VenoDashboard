@@ -175,14 +175,6 @@ function buildBandSegments(
   return paths;
 }
 
-function getInitialIsDark(): boolean {
-  try {
-    return document.documentElement.classList.contains('theme-dark');
-  } catch {
-    return true;
-  }
-}
-
 export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -190,11 +182,12 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
   const [hoveredDisabledFilter, setHoveredDisabledFilter] = useState<AgpWeekdayFilter | null>(null);
   const [hoveredBucketIndex, setHoveredBucketIndex] = useState<number | null>(null);
   const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
-  const [isDark, setIsDark] = useState(getInitialIsDark);
+  const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
     const read = () => document.documentElement.classList.contains('theme-dark');
     const handleChange = () => setIsDark(read());
+    handleChange();
     window.addEventListener('pulse-theme-change', handleChange);
     window.addEventListener('storage', handleChange);
     return () => {

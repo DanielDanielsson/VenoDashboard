@@ -717,15 +717,12 @@ export function GlucoseChart({
   const viewportFrameRef = useRef<number>(0);
   const [, setViewportVersion] = useState(0);
   const dataSignatureRef = useRef('');
-  const [isDark, setIsDark] = useState(() =>
-    typeof document !== 'undefined'
-      ? document.documentElement.classList.contains('theme-dark')
-      : true
-  );
+  const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
     const handleChange = () =>
       setIsDark(document.documentElement.classList.contains('theme-dark'));
+    handleChange();
     window.addEventListener('pulse-theme-change', handleChange);
     window.addEventListener('storage', handleChange);
     return () => {

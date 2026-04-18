@@ -1,0 +1,46 @@
+@layer theme {
+    :root {
+        --color-dashboard-time-picker-bg-value: var(--color-base-paper-strong);
+        --color-dashboard-time-picker-bg-hover-value: var(--color-base-surface-panel-light-muted);
+        --color-dashboard-time-picker-panel-bg-value: var(--color-base-paper-strong);
+        --color-dashboard-time-picker-panel-muted-value: var(--color-base-paper-surface-strong);
+        --color-dashboard-time-picker-border-value: var(--color-base-border-warm-input);
+        --color-dashboard-time-picker-border-soft-value: var(--color-base-border-warm-medium);
+        --color-dashboard-time-picker-text-value: var(--color-base-ink);
+        --color-dashboard-time-picker-text-muted-value: var(--color-base-ink-muted);
+        --color-dashboard-time-picker-accent-value: var(--color-base-accent);
+        --color-dashboard-time-picker-accent-soft-value: var(--color-base-accent-soft-light);
+        --color-dashboard-time-picker-warning-value: var(--color-base-warning);
+        --shadow-dashboard-time-picker-panel-value: var(--color-base-shadow-warm-lg);
+    }
+
+    .theme-dark {
+        --color-dashboard-time-picker-bg-value: var(--color-base-night-strong);
+        --color-dashboard-time-picker-bg-hover-value: var(--color-base-panel-dark-bright);
+        --color-dashboard-time-picker-panel-bg-value: var(--color-base-night-strong);
+        --color-dashboard-time-picker-panel-muted-value: var(--color-base-panel-dark-bright);
+        --color-dashboard-time-picker-border-value: var(--color-base-border-cool-input);
+        --color-dashboard-time-picker-border-soft-value: var(--color-base-border-cool-strong);
+        --color-dashboard-time-picker-text-value: var(--color-base-white-soft);
+        --color-dashboard-time-picker-text-muted-value: var(--color-base-white-muted);
+        --color-dashboard-time-picker-accent-value: var(--color-base-accent-bright);
+        --color-dashboard-time-picker-accent-soft-value: var(--color-base-accent-soft-dark);
+        --color-dashboard-time-picker-warning-value: var(--color-base-warning-dark);
+        --shadow-dashboard-time-picker-panel-value: var(--color-base-shadow-dark-lg);
+    }
+}
+
+@theme inline {
+    --color-dashboard-time-picker-bg: var(--color-dashboard-time-picker-bg-value);
+    --color-dashboard-time-picker-bg-hover: var(--color-dashboard-time-picker-bg-hover-value);
+    --color-dashboard-time-picker-panel-bg: var(--color-dashboard-time-picker-panel-bg-value);
+    --color-dashboard-time-picker-panel-muted: var(--color-dashboard-time-picker-panel-muted-value);
+    --color-dashboard-time-picker-border: var(--color-dashboard-time-picker-border-value);
+    --color-dashboard-time-picker-border-soft: var(--color-dashboard-time-picker-border-soft-value);
+    --color-dashboard-time-picker-text: var(--color-dashboard-time-picker-text-value);
+    --color-dashboard-time-picker-text-muted: var(--color-dashboard-time-picker-text-muted-value);
+    --color-dashboard-time-picker-accent: var(--color-dashboard-time-picker-accent-value);
+    --color-dashboard-time-picker-accent-soft: var(--color-dashboard-time-picker-accent-soft-value);
+    --color-dashboard-time-picker-warning: var(--color-dashboard-time-picker-warning-value);
+    --shadow-dashboard-time-picker-panel: var(--shadow-dashboard-time-picker-panel-value);
+}
