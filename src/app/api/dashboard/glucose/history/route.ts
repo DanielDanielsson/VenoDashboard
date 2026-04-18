@@ -6,6 +6,8 @@ import type { TimeRange } from '@/lib/glucose/time-ranges';
 
 export const dynamic = 'force-dynamic';
 
+const CUSTOM_HISTORY_MAX_RANGE_MS = 90 * 24 * 60 * 60 * 1000;
+
 function parseLimit(value: string | null): number | null {
   if (!value) {
     return null;
@@ -17,6 +19,30 @@ function parseLimit(value: string | null): number | null {
   }
 
   return parsed;
+}
+
+function parseIsoMs(value: string): number | null {
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function validateCustomWindow(from: string, to: string): string | null {
+  const fromMs = parseIsoMs(from);
+  const toMs = parseIsoMs(to);
+
+  if (fromMs == null || toMs == null) {
+    return 'Custom glucose history ranges must use valid from and to dates.';
+  }
+
+  if (toMs < fromMs) {
+    return 'Custom glucose history range end must be after the start.';
+  }
+
+  if (toMs - fromMs > CUSTOM_HISTORY_MAX_RANGE_MS) {
+    return 'Custom glucose history ranges are limited to 90 days.';
+  }
+
+  return null;
 }
 
 export async function GET(request: NextRequest) {
@@ -37,6 +63,21 @@ export async function GET(request: NextRequest) {
   const limit = parseLimit(params.get('limit'));
 
   try {
+    if (from && to) {
+      const validationError = validateCustomWindow(from, to);
+      if (validationError) {
+        return NextResponse.json(
+          { error: { message: validationError } },
+          {
+            status: 400,
+            headers: {
+              'Cache-Control': 'no-store'
+            }
+          }
+        );
+      }
+    }
+
     if (range) {
       const session = await dashboardGlucoseWorkspace.open({
         range: range as TimeRange,

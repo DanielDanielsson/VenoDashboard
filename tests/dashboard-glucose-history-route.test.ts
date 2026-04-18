@@ -283,4 +283,23 @@ describe('dashboard glucose history route', () => {
     expect(getHistory).not.toHaveBeenCalled();
     expect(json).toEqual(snapshot);
   });
+
+  test('rejects custom windows above the dashboard range cap', async () => {
+    const { GET } = await import('@/app/api/dashboard/glucose/history/route');
+    const response = await GET(
+      new NextRequest(
+        'http://localhost/api/dashboard/glucose/history?from=2026-01-01T00:00:00.000Z&to=2026-04-15T00:00:00.000Z'
+      )
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json).toEqual({
+      error: {
+        message: 'Custom glucose history ranges are limited to 90 days.'
+      }
+    });
+    expect(open).not.toHaveBeenCalled();
+    expect(getHistory).not.toHaveBeenCalled();
+  });
 });
