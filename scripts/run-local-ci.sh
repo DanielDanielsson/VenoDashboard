@@ -7,6 +7,9 @@ export PULSE_API_BASE_URL="${PULSE_API_BASE_URL:-https://api.venoplatform.com}"
 echo "==> lint"
 npm run lint
 
+echo "==> theme tokens"
+npm run theme:check
+
 echo "==> typecheck"
 npm run typecheck
 
