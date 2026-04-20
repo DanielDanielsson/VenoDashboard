@@ -14,6 +14,7 @@ export type IconName =
   | 'workout-swim'
   | 'workout-hike'
   | 'info'
+  | 'edit'
   | 'settings'
   | 'key'
   | 'glucose'

@@ -5,7 +5,7 @@ import { DashboardPanel } from './DashboardPanel';
 
 describe('DashboardPanel', () => {
   test('renders title, header content, and children', () => {
-    render(
+    const { container } = render(
       <DashboardPanel title="Stats" headerRight={<span>Right</span>}>
         <p>Body</p>
       </DashboardPanel>,
@@ -14,5 +14,7 @@ describe('DashboardPanel', () => {
     expect(screen.getByRole('heading', { name: 'Stats' })).toBeInTheDocument();
     expect(screen.getByText('Right')).toBeInTheDocument();
     expect(screen.getByText('Body')).toBeInTheDocument();
+    expect(container.firstChild).toHaveClass('rounded-[5px]');
+    expect(container.firstChild).not.toHaveClass('rounded-tr-none');
   });
 });

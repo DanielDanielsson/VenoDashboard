@@ -10,6 +10,16 @@ describe('Button', () => {
     const button = screen.getByRole('button', { name: 'Open panel' });
     expect(button).toHaveAttribute('type', 'button');
     expect(button).toHaveTextContent('Open');
+    expect(button).toHaveClass('cursor-pointer');
+  });
+
+  test('uses a not allowed cursor when disabled', () => {
+    render(<Button disabled>Save</Button>);
+
+    const button = screen.getByRole('button', { name: 'Save' });
+
+    expect(button).toHaveClass('cursor-not-allowed');
+    expect(button).not.toHaveClass('cursor-pointer');
   });
 
   test('merges classes and forwards click events', () => {

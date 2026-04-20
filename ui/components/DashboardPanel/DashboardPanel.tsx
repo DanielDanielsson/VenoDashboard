@@ -11,21 +11,32 @@ export const DashboardPanel = ({
   title,
   children,
   headerRight,
+  headerClassName,
+  headerRightClassName,
   twStyles,
   theme,
 }: DashboardPanelProps): ReactElement => (
   <section
     className={twMerge(
-      'overflow-hidden rounded-lg rounded-tr-none bg-dashboard-panel-bg',
+      'overflow-hidden rounded-[5px] bg-dashboard-panel-bg',
       theme && THEME_CLASS[theme],
       twStyles,
     )}
   >
-    <header className="flex items-center justify-between gap-4 bg-dashboard-panel-header-bg px-6 py-4">
+    <header
+      className={twMerge(
+        'dashboard-panel-drag-handle flex items-center justify-between gap-4 bg-dashboard-panel-header-bg px-6 py-4',
+        headerClassName,
+      )}
+    >
       <h2 className="panel_title text-dashboard-panel-title">
         {title}
       </h2>
-      {headerRight && <div className="flex shrink-0 items-center">{headerRight}</div>}
+      {headerRight && (
+        <div className={twMerge('grid-drag-cancel flex shrink-0 items-center', headerRightClassName)}>
+          {headerRight}
+        </div>
+      )}
     </header>
     <div className="p-6">
       {children}

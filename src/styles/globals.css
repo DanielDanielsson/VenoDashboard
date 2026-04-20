@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "@xyflow/react/dist/style.css";
+@import "react-grid-layout/css/styles.css";
+@import "react-resizable/css/styles.css";
 @import "../../public/fonts/fonts.css";
 
 /* Config */
@@ -71,5 +73,38 @@
   textarea,
   select {
     font: inherit;
+  }
+}
+
+@layer components {
+  .dashboard-grid > .react-grid-item.cssTransforms {
+    transition-property: none !important;
+  }
+
+  .dashboard-grid.react-grid-layout--enable-move-animations > .react-grid-item.cssTransforms {
+    transition-property: transform !important;
+  }
+
+  .dashboard-grid > .react-grid-item > .react-resizable-handle {
+    display: none;
+    background-image: none !important;
+  }
+
+  .dashboard-grid.dashboard-grid--editing > .react-grid-item > .react-resizable-handle {
+    display: block;
+    opacity: 1 !important;
+  }
+
+  .dashboard-grid.dashboard-grid--editing > .react-grid-item > .react-resizable-handle::after {
+    border-right-color: var(--text-soft) !important;
+    border-bottom-color: var(--text-soft) !important;
+    border-width: 0 2px 2px 0;
+    height: 10px;
+    width: 10px;
+  }
+
+  .theme-dark .dashboard-grid.dashboard-grid--editing > .react-grid-item > .react-resizable-handle::after {
+    border-right-color: rgb(255 255 255 / 0.92) !important;
+    border-bottom-color: rgb(255 255 255 / 0.92) !important;
   }
 }
