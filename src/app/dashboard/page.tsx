@@ -1,10 +1,8 @@
 import { DashboardErrorState } from '@ui/components/DashboardErrorState/DashboardErrorState';
-import { ConnectionsMapPanel } from '@ui/compositions/ConnectionsMapPanel';
-import { LiveGlucosePanel } from '@ui/compositions/LiveGlucosePanel';
-import { SharedTimersPanel } from '@ui/compositions/SharedTimersPanel/SharedTimersPanel';
-import { TimeInRangePanel } from '@ui/compositions/TimeInRangePanel';
+import { DashboardDefinitionRenderer, overviewPanelRegistry } from '@ui/compositions/DashboardDefinitionRenderer';
 import { getOwnerSession } from '@/lib/auth';
 import type { PulseApiStatusReport } from '@/lib/pulse-api/types';
+import { loadDashboardDefinition } from '@/lib/dashboard/settings';
 import {
   PulseApiClientError,
   fetchAdminHealthSteps,
@@ -27,6 +25,7 @@ export default async function DashboardPage() {
   let report: PulseApiStatusReport | null = null;
   let message: string | null = null;
   let greetingName: string | null = null;
+  const dashboardState = await loadDashboardDefinition('overview');
   const now = new Date();
   const healthStepsFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const healthStepsTo = now.toISOString();
@@ -105,22 +104,18 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <LiveGlucosePanel
-          enableStream={Boolean(session)}
-          latestReadingTimestamp={latestSource?.latestReading?.timestamp}
-        />
-
-        <SharedTimersPanel readOnly={!session} />
-
-        <TimeInRangePanel />
-
-        {initialConnectionSnapshot ? (
-          <div className="md:col-span-3">
-            <ConnectionsMapPanel initialSnapshot={initialConnectionSnapshot} />
-          </div>
-        ) : null}
-      </div>
+      <DashboardDefinitionRenderer
+        dashboard={dashboardState.dashboard}
+        dashboardVersion={dashboardState.version}
+        panelRegistry={overviewPanelRegistry}
+        isOwner={Boolean(session)}
+        timeInRangeDefaultLayout="overview"
+        context={{
+          isOwner: Boolean(session),
+          latestReadingTimestamp: latestSource?.latestReading?.timestamp,
+          initialConnectionSnapshot,
+        }}
+      />
     </div>
   );
 }
