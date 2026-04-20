@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { twMerge } from 'tailwind-merge';
 import { Button } from '@ui/base/Button';
 import {
@@ -13,7 +13,7 @@ import {
   zoomOutTimeWindow,
   type RawTimeRangeInput,
 } from '@/lib/glucose/time-range-expressions';
-import { GLUCOSE_TIME_RANGES } from '@/lib/glucose/time-ranges';
+import { GLUCOSE_TIME_RANGES, type TimeRange } from '@/lib/glucose/time-ranges';
 import type { HistorySelection, HistoryWindow } from '@/lib/glucose/history-cache';
 import './dashboardTimeRangePicker.css';
 
@@ -22,6 +22,7 @@ interface DashboardTimeRangePickerProps {
   currentWindow: HistoryWindow | null;
   timeZone: string;
   onChange: (selection: HistorySelection) => void;
+  toolbarControls?: ReactNode;
 }
 
 interface CalendarDay {
@@ -195,7 +196,8 @@ export function DashboardTimeRangePicker({
   selection,
   currentWindow,
   timeZone,
-  onChange
+  onChange,
+  toolbarControls
 }: DashboardTimeRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [fromInput, setFromInput] = useState(() => rawForSelection(selection, timeZone).from);
@@ -209,6 +211,7 @@ export function DashboardTimeRangePicker({
   const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const label = labelForSelection(selection, timeZone);
+  const activePreset = selection.kind === 'preset' ? selection.range : null;
   const nextForwardWindow = currentWindow ? shiftTimeWindow(currentWindow, 1) : null;
   const canMoveForward = Boolean(nextForwardWindow && !windowEndsInFuture(nextForwardWindow));
 
@@ -277,6 +280,11 @@ export function DashboardTimeRangePicker({
       raw,
       label: resolved.display
     });
+    setIsOpen(false);
+  }
+
+  function applyPresetRange(range: TimeRange) {
+    onChange({ kind: 'preset', range });
     setIsOpen(false);
   }
 
@@ -415,7 +423,7 @@ export function DashboardTimeRangePicker({
                 key={day.date.toISOString()}
                 type="button"
                 className={twMerge(
-                  'ui_caption min-h-7 rounded-[4px] border border-transparent text-center transition-colors',
+                  'ui_caption min-h-7 cursor-pointer rounded-[4px] border border-transparent text-center transition-colors',
                   day.inCurrentMonth ? 'text-dashboard-time-picker-text' : 'text-dashboard-time-picker-text-muted',
                   inRange && 'bg-dashboard-time-picker-accent-soft',
                   (isStart || isEnd) && 'border-dashboard-time-picker-accent bg-dashboard-time-picker-accent-soft text-dashboard-time-picker-accent'
@@ -473,7 +481,7 @@ export function DashboardTimeRangePicker({
         </Button>
       </div>
 
-      <span className="ui_caption text-text-soft">{timeZone}</span>
+      {toolbarControls}
 
       {isOpen && (
         <section
@@ -483,7 +491,10 @@ export function DashboardTimeRangePicker({
           <div className="grid h-full min-h-0 grid-cols-1 overflow-hidden md:grid-cols-[1fr_15rem]">
             <div className="grid min-h-0 content-start gap-4 overflow-auto border-b border-dashboard-time-picker-border-soft p-3 md:border-b-0 md:border-r">
               <div className="grid gap-3">
-                <p className="ui_micro_label text-dashboard-time-picker-text-muted">Absolute time range</p>
+                <div className="flex items-center justify-between gap-4">
+                  <p className="ui_micro_label text-dashboard-time-picker-text-muted">Absolute time range</p>
+                  <span className="ui_caption text-dashboard-time-picker-text-muted">{timeZone}</span>
+                </div>
                 <label className="grid gap-1">
                   <span className="ui_caption text-dashboard-time-picker-text-muted">From</span>
                   <div className="flex overflow-hidden rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-panel-muted">
@@ -598,7 +609,25 @@ export function DashboardTimeRangePicker({
               )}
             </div>
 
-            <div className="grid min-h-0 grid-rows-[auto_1fr] overflow-hidden">
+            <div className="grid min-h-0 grid-rows-[auto_auto_1fr] overflow-hidden">
+              <div className="border-b border-dashboard-time-picker-border-soft p-2">
+                <div className="flex flex-wrap gap-1">
+                  {GLUCOSE_TIME_RANGES.map((range) => (
+                    <Button
+                      key={range.key}
+                      twStyles={twMerge(
+                        'ui_caption rounded-[4px] px-2 py-1.5 transition-colors',
+                        activePreset === range.key
+                          ? 'bg-dashboard-time-picker-bg-hover text-dashboard-time-picker-text'
+                          : 'text-dashboard-time-picker-text-muted hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text'
+                      )}
+                      onClick={() => applyPresetRange(range.key)}
+                    >
+                      {range.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
               <div className="border-b border-dashboard-time-picker-border-soft p-2">
                 <input
                   className="ui_caption w-full rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-panel-muted px-2 py-2 text-dashboard-time-picker-text outline-none"

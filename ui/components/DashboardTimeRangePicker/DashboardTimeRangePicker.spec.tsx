@@ -33,6 +33,30 @@ describe('DashboardTimeRangePicker', () => {
     }));
   });
 
+  test('applies a dashboard preset range', () => {
+    const onChange = vi.fn();
+
+    render(
+      <DashboardTimeRangePicker
+        selection={{ kind: 'preset', range: '3d' }}
+        currentWindow={{
+          from: '2026-04-14T08:00:00.000Z',
+          to: '2026-04-17T08:00:00.000Z'
+        }}
+        timeZone="UTC"
+        onChange={onChange}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Time range selected/i }));
+    fireEvent.click(screen.getByRole('button', { name: '2 weeks' }));
+
+    expect(onChange).toHaveBeenCalledWith({
+      kind: 'preset',
+      range: '14d'
+    });
+  });
+
   test('disables quick ranges above the safety cap', () => {
     render(
       <DashboardTimeRangePicker
@@ -109,5 +133,30 @@ describe('DashboardTimeRangePicker', () => {
         to: '2026-04-17T09:00:00.000Z'
       }
     }));
+  });
+
+  test('renders toolbar controls beside the time range selector and timezone inside the panel heading', () => {
+    render(
+      <DashboardTimeRangePicker
+        selection={{ kind: 'preset', range: '3d' }}
+        currentWindow={{
+          from: '2026-04-14T08:00:00.000Z',
+          to: '2026-04-17T08:00:00.000Z'
+        }}
+        timeZone="UTC"
+        toolbarControls={<button type="button">Edit dashboard</button>}
+        onChange={vi.fn()}
+      />
+    );
+
+    const root = screen.getByTestId('dashboard-time-range-picker-toolbar').parentElement;
+    expect(root).toContainElement(screen.getByRole('button', { name: 'Edit dashboard' }));
+    expect(screen.getByRole('button', { name: /Time range selected/i })).toHaveClass('cursor-pointer');
+
+    fireEvent.click(screen.getByRole('button', { name: /Time range selected/i }));
+
+    const panel = screen.getByTestId('dashboard-time-range-picker-panel');
+    expect(panel).toContainElement(screen.getByText('Absolute time range'));
+    expect(panel).toContainElement(screen.getByText('UTC'));
   });
 });

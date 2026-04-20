@@ -1,0 +1,152 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { Button } from '@ui/base/Button';
+import type { HistoryWindow } from '@/lib/glucose/history-cache';
+import {
+  DASHBOARD_REFRESH_AUTO,
+  DASHBOARD_REFRESH_OFF,
+  resolveRefreshIntervalMs,
+} from '@/lib/dashboard/refresh';
+
+interface DashboardRefreshPickerProps {
+  value: string;
+  intervals: string[];
+  currentWindow: HistoryWindow | null;
+  onChange: (value: string) => void;
+  onRefresh: () => void | Promise<void>;
+}
+
+function RefreshIcon(): ReactElement {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M20 12a8 8 0 0 1-13.657 5.657M4 12A8 8 0 0 1 17.657 6.343M17 3v4h4M7 21v-4H3"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function refreshLabel(value: string): string {
+  if (value === DASHBOARD_REFRESH_OFF) {
+    return 'Off';
+  }
+
+  if (value === DASHBOARD_REFRESH_AUTO) {
+    return 'Auto';
+  }
+
+  return value;
+}
+
+export function DashboardRefreshPicker({
+  value,
+  intervals,
+  currentWindow,
+  onChange,
+  onRefresh,
+}: DashboardRefreshPickerProps): ReactElement {
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window === 'undefined' ? 1440 : window.innerWidth || 1440,
+  );
+  const refreshInFlightRef = useRef(false);
+  const pendingVisibleRefreshRef = useRef(false);
+  const intervalMs = useMemo(
+    () => resolveRefreshIntervalMs(value, currentWindow, viewportWidth),
+    [currentWindow, value, viewportWidth],
+  );
+
+  const runRefresh = useCallback(async () => {
+    if (refreshInFlightRef.current) {
+      return;
+    }
+
+    refreshInFlightRef.current = true;
+    try {
+      await onRefresh();
+    } finally {
+      refreshInFlightRef.current = false;
+    }
+  }, [onRefresh]);
+
+  useEffect(() => {
+    function handleResize() {
+      setViewportWidth(window.innerWidth || 1440);
+    }
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (!intervalMs) {
+      pendingVisibleRefreshRef.current = false;
+      return;
+    }
+
+    function tick() {
+      if (document.hidden) {
+        pendingVisibleRefreshRef.current = true;
+        return;
+      }
+
+      void runRefresh();
+    }
+
+    function handleVisibilityChange() {
+      if (document.hidden || !pendingVisibleRefreshRef.current) {
+        return;
+      }
+
+      pendingVisibleRefreshRef.current = false;
+      void runRefresh();
+    }
+
+    const timer = window.setInterval(tick, intervalMs);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [intervalMs, runRefresh]);
+
+  return (
+    <div
+      className="inline-flex h-9 overflow-hidden rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-bg text-dashboard-time-picker-text shadow-sm"
+      data-testid="dashboard-refresh-picker"
+    >
+      <Button
+        ariaLabel="Refresh dashboard"
+        twStyles="grid h-9 w-9 place-items-center border-r border-dashboard-time-picker-border text-dashboard-time-picker-text-muted transition-colors hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text"
+        onClick={() => void runRefresh()}
+      >
+        <RefreshIcon />
+      </Button>
+      <label className="relative flex h-9 items-center">
+        <span className="sr-only">Dashboard refresh interval</span>
+        <select
+          aria-label="Dashboard refresh interval"
+          className="ui_caption h-9 min-w-[5.25rem] cursor-pointer appearance-none bg-transparent px-3 pr-7 text-dashboard-time-picker-text outline-none transition-colors hover:bg-dashboard-time-picker-bg-hover"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          <option value={DASHBOARD_REFRESH_OFF}>Off</option>
+          <option value={DASHBOARD_REFRESH_AUTO}>Auto</option>
+          {intervals.map((interval) => (
+            <option key={interval} value={interval}>
+              {refreshLabel(interval)}
+            </option>
+          ))}
+        </select>
+        <span className="pointer-events-none absolute right-2 text-dashboard-time-picker-text-muted" aria-hidden="true">
+          ▾
+        </span>
+      </label>
+    </div>
+  );
+}
