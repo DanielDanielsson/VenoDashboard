@@ -1,15 +1,25 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactElement, type ReactNode } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { GlucoseChart } from '@ui/components/GlucoseChart/GlucoseChart';
 import { GlucoseAgpChart } from '@ui/components/GlucoseAgpChart/GlucoseAgpChart';
-import { GlucoseDateRangePicker } from '@ui/components/GlucoseDateRangePicker/GlucoseDateRangePicker';
 import { DashboardTimeRangePicker } from '@ui/components/DashboardTimeRangePicker';
-import { GlucoseStatRing } from '@ui/components/GlucoseStatRing/GlucoseStatRing';
+import { DashboardRefreshPicker } from '@ui/components/DashboardRefreshPicker';
 import { DashboardPanel } from '@ui/components/DashboardPanel';
+import { DialogPanel } from '@ui/components/DialogPanel';
+import { FloatingPanel } from '@ui/components/FloatingPanel';
+import { TimeInRangePanel, createTimeInRangePanelSettingsRegistration } from '@ui/compositions/TimeInRangePanel';
+import {
+  useDashboardPanelSettings,
+  type DashboardPanelSettingsRegistry,
+} from '@ui/compositions/DashboardGrid';
+import { DashboardDefinitionRenderer } from '@ui/compositions/DashboardDefinitionRenderer';
 import { NumberInput } from '@ui/components/NumberInput';
 import { SegmentedControl } from '@ui/components/SegmentedControl';
+import { createPanelRegistry } from '@/lib/dashboard/panel-registry';
+import { getDashboardDefinition } from '@/lib/dashboard/registry';
+import type { DashboardDefinition } from '@/lib/dashboard/schema';
 import { GLUCOSE_COLOR_MODES, type GlucoseColorMode } from '@/lib/glucose/tints';
 import { computeGlucoseStats } from '@/lib/glucose/metrics';
 import { getTimelineNoteBandHeight } from '@/lib/glucose/timeline-note-layout';
@@ -45,7 +55,6 @@ import {
   removeWorkoutFromHistoryResponse,
   upsertWorkoutInHistoryResponse
 } from '@/lib/glucose/workout-history';
-import { GLUCOSE_TIME_RANGES } from '@/lib/glucose/time-ranges';
 import {
   formatWorkoutDuration,
   formatWorkoutMetrics,
@@ -74,8 +83,45 @@ async function fetchJson<T>(url: string): Promise<T> {
   return json;
 }
 
-const GLUCOSE_CHART_COLOR_MODE_STORAGE_KEY = 'pulse-glucose-chart-color-mode';
 const DEFAULT_GLUCOSE_CHART_COLOR_MODE: GlucoseColorMode = 'threeColors';
+const GLUCOSE_TIMELINE_PANEL_ID = 'panel-glucose-timeline';
+const STATISTICS_DASHBOARD_EDIT_CONTROLS_ID = 'statistics-dashboard-edit-controls';
+
+type GlucoseTimelinePanelSettings = {
+  colorMode: GlucoseColorMode;
+  yAxisMax: number;
+};
+
+interface StatisticsDashboardContext {
+  renderAverageGlucosePanel: () => ReactNode;
+  renderTimeInRangePanel: () => ReactNode;
+  renderGlucoseTimelinePanel: () => ReactNode;
+  renderAgpPanel: () => ReactNode;
+}
+
+const DEFAULT_GLUCOSE_TIMELINE_PANEL_SETTINGS: GlucoseTimelinePanelSettings = {
+  colorMode: DEFAULT_GLUCOSE_CHART_COLOR_MODE,
+  yAxisMax: 25,
+};
+
+const statisticsPanelRegistry = createPanelRegistry<StatisticsDashboardContext>([
+  {
+    group: 'veno.average-glucose',
+    render: ({ context }) => context.renderAverageGlucosePanel(),
+  },
+  {
+    group: 'veno.time-in-range',
+    render: ({ context }) => context.renderTimeInRangePanel(),
+  },
+  {
+    group: 'veno.glucose-timeline',
+    render: ({ context }) => context.renderGlucoseTimelinePanel(),
+  },
+  {
+    group: 'veno.glucose-agp',
+    render: ({ context }) => context.renderAgpPanel(),
+  },
+]);
 
 function getUpdatesKey(revision: string): string {
   return `/api/dashboard/glucose/updates?since=${encodeURIComponent(revision)}`;
@@ -96,13 +142,9 @@ function getSelectionTargetWindow(
   return buildPresetWindow(sourceData.meta.to, selection.range);
 }
 
-function getStoredChartColorMode(): GlucoseColorMode {
-  try {
-    const stored = globalThis.localStorage?.getItem(GLUCOSE_CHART_COLOR_MODE_STORAGE_KEY);
-    return stored === 'threeColors' || stored === 'gradient' ? stored : DEFAULT_GLUCOSE_CHART_COLOR_MODE;
-  } catch {
-    return DEFAULT_GLUCOSE_CHART_COLOR_MODE;
-  }
+function parseChartYMax(yAxisMax: number): number {
+  const parsed = Number(yAxisMax);
+  return Number.isFinite(parsed) ? Math.max(12, parsed) : 25;
 }
 
 function roundCorrectionValue(value: number): number {
@@ -132,6 +174,73 @@ function getTimelineNoteSignature(note: TimelineNote | null): string | null {
 
 function wasTimelineNoteEdited(note: TimelineNote): boolean {
   return note.updatedAt !== note.createdAt || note.updatedBy !== note.createdBy;
+}
+
+function GlucoseTimelineSettingsFields({
+  settings,
+  updateSettings,
+}: {
+  settings: GlucoseTimelinePanelSettings;
+  updateSettings: (updater: (current: GlucoseTimelinePanelSettings) => GlucoseTimelinePanelSettings) => void;
+}): ReactElement {
+  return (
+    <div className="flex items-end gap-4">
+      <div className="grid gap-2">
+        <span className="ui_micro_label text-text-soft">Color Mode</span>
+        <SegmentedControl
+          options={GLUCOSE_COLOR_MODES}
+          value={settings.colorMode}
+          onChange={(value) => {
+            updateSettings((current) => ({ ...current, colorMode: value }));
+          }}
+        />
+      </div>
+      <div className="grid gap-2">
+        <span className="ui_micro_label text-text-soft">Y-Axis Max</span>
+        <NumberInput
+          label="Top"
+          value={String(settings.yAxisMax)}
+          min={12}
+          onChange={(value) => {
+            const parsed = Number(value);
+            updateSettings((current) => ({
+              ...current,
+              yAxisMax: Number.isFinite(parsed) ? parsed : current.yAxisMax,
+            }));
+          }}
+          ariaLabel="Chart top value in mmol/L"
+        />
+      </div>
+    </div>
+  );
+}
+
+function GlucoseTimelineChart(
+  props: Omit<ComponentProps<typeof GlucoseChart>, 'colorMode' | 'yMax'>,
+): ReactElement {
+  const [settings] = useDashboardPanelSettings(
+    GLUCOSE_TIMELINE_PANEL_ID,
+    DEFAULT_GLUCOSE_TIMELINE_PANEL_SETTINGS,
+  );
+
+  return (
+    <GlucoseChart
+      {...props}
+      colorMode={settings.colorMode}
+      yMax={parseChartYMax(settings.yAxisMax)}
+    />
+  );
+}
+
+function GlucoseAgpWithPanelSettings(
+  props: Omit<ComponentProps<typeof GlucoseAgpChart>, 'yMax'>,
+): ReactElement {
+  const [settings] = useDashboardPanelSettings(
+    GLUCOSE_TIMELINE_PANEL_ID,
+    DEFAULT_GLUCOSE_TIMELINE_PANEL_SETTINGS,
+  );
+
+  return <GlucoseAgpChart {...props} yMax={parseChartYMax(settings.yAxisMax)} />;
 }
 
 function formatWorkoutDate(timestamp: string): string {
@@ -174,15 +283,20 @@ function getChartHeight(
 
 export function GlucoseAnalysisView({
   isOwner = false,
-  initialSnapshot
+  initialSnapshot,
+  dashboardDefinition = getDashboardDefinition('statistics'),
+  dashboardVersion = null,
 }: {
   isOwner?: boolean;
   initialSnapshot?: GlucoseApiResponse;
+  dashboardDefinition?: DashboardDefinition;
+  dashboardVersion?: number | null;
 }) {
   const [selection, setSelection] = useState<HistorySelection>({
     kind: 'preset',
     range: '3d'
   });
+  const [autoRefresh, setAutoRefresh] = useState(dashboardDefinition.spec.timeSettings.autoRefresh);
   const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
@@ -196,8 +310,6 @@ export function GlucoseAnalysisView({
       window.removeEventListener('storage', handleChange);
     };
   }, []);
-  const [chartYMaxInput, setChartYMaxInput] = useState('25');
-  const [chartColorMode, setChartColorMode] = useState<GlucoseColorMode>(DEFAULT_GLUCOSE_CHART_COLOR_MODE);
   const [selectedPoints, setSelectedPoints] = useState<ChartPoint[]>([]);
   const [previewCorrectionValues, setPreviewCorrectionValues] = useState<Record<string, number>>({});
   const [correctionReasonInput, setCorrectionReasonInput] = useState('');
@@ -256,6 +368,13 @@ export function GlucoseAnalysisView({
 
   const sourceData = sourceDataResponse ?? (sourceKey === getHistoryRangeKey('3d') ? initialSnapshot : undefined);
   const targetWindow = getSelectionTargetWindow(selection, sourceData);
+  const dashboardTimeSettings = useMemo(
+    () => ({
+      ...dashboardDefinition.spec.timeSettings,
+      autoRefresh,
+    }),
+    [autoRefresh, dashboardDefinition.spec.timeSettings],
+  );
   const data = sourceData && targetWindow
     ? sliceHistoryResponseToWindow(sourceData, targetWindow)
     : sourceData;
@@ -311,23 +430,32 @@ export function GlucoseAnalysisView({
     }
   }, [data?.latest]);
 
-  useEffect(() => {
-    const frameId = window.requestAnimationFrame(() => {
-      setChartColorMode(getStoredChartColorMode());
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, []);
-
   const stats = computeGlucoseStats(data?.items ?? []);
   const newUpdatesCount = updates?.meta.newCount ?? 0;
-  const parsedChartYMax = Number(chartYMaxInput);
-  const chartYMax = Number.isFinite(parsedChartYMax) ? Math.max(12, parsedChartYMax) : 25;
 
-  const activePreset = selection.kind === 'preset' ? selection.range : null;
-  const customValue = selection.kind === 'custom' ? selection.window : null;
+  const settingsRegistry = useMemo<DashboardPanelSettingsRegistry>(
+    () => ({
+      [GLUCOSE_TIMELINE_PANEL_ID]: {
+        defaultSettings: DEFAULT_GLUCOSE_TIMELINE_PANEL_SETTINGS,
+        render: ({ settings, updateSettings }) => (
+          <GlucoseTimelineSettingsFields
+            settings={settings as GlucoseTimelinePanelSettings}
+            updateSettings={updateSettings as (updater: (current: GlucoseTimelinePanelSettings) => GlucoseTimelinePanelSettings) => void}
+          />
+        ),
+      },
+      'panel-time-in-range': createTimeInRangePanelSettingsRegistration('statistics'),
+    }),
+    [],
+  );
+
+  const refreshDashboard = useCallback(async () => {
+    await mutate();
+  }, [mutate]);
+
+  useEffect(() => {
+    setAutoRefresh(dashboardDefinition.spec.timeSettings.autoRefresh);
+  }, [dashboardDefinition.spec.timeSettings.autoRefresh]);
 
   function applyHistorySelection(nextSelection: HistorySelection) {
     if (!confirmDiscardNoteDraft()) {
@@ -336,16 +464,6 @@ export function GlucoseAnalysisView({
 
     closeNoteEditor();
     setSelection(nextSelection);
-  }
-
-  function updateChartColorMode(mode: GlucoseColorMode) {
-    setChartColorMode(mode);
-
-    try {
-      localStorage.setItem(GLUCOSE_CHART_COLOR_MODE_STORAGE_KEY, mode);
-    } catch {
-      return;
-    }
   }
 
   useEffect(() => {
@@ -371,7 +489,6 @@ export function GlucoseAnalysisView({
 
   const lowColor  = isDark ? '#fb7185' : '#be123c';
   const highColor = isDark ? '#a855f7' : '#7e22ce';
-  const veryHighColor = isDark ? '#7c3aed' : '#6b21a8';
   const normColor = isDark ? '#34d399' : '#059669';
   const avgColor  = stats.avg < 4 ? lowColor : stats.avg > 10 ? highColor : normColor;
 
@@ -992,20 +1109,42 @@ export function GlucoseAnalysisView({
         selection={selection}
         currentWindow={targetWindow}
         timeZone={ownerTimeZone}
+        toolbarControls={(
+          <>
+            <DashboardRefreshPicker
+              value={autoRefresh}
+              intervals={dashboardDefinition.spec.timeSettings.autoRefreshIntervals}
+              currentWindow={targetWindow}
+              onChange={setAutoRefresh}
+              onRefresh={refreshDashboard}
+            />
+            <div id={STATISTICS_DASHBOARD_EDIT_CONTROLS_ID} />
+          </>
+        )}
         onChange={applyHistorySelection}
       />
 
-      {/* Stats Grid — always rendered to prevent layout shift */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <DashboardPanel
-          title="Average Glucose"
-          twStyles="flex flex-col [&>div:last-child]:flex-1 [&>div:last-child]:flex [&>div:last-child]:items-center [&>div:last-child]:justify-center"
-          headerRight={
-            updatesError
-              ? <span className="ui_micro_label ui_mono_text text-base-error-dark">Stale</span>
-              : undefined
-          }
-        >
+      <DashboardDefinitionRenderer
+        dashboard={dashboardDefinition}
+        dashboardVersion={dashboardVersion}
+        panelRegistry={statisticsPanelRegistry}
+        isOwner={isOwner}
+        settingsRegistry={settingsRegistry}
+        timeSettings={dashboardTimeSettings}
+        onDiscardTimeSettings={(timeSettings) => setAutoRefresh(timeSettings.autoRefresh)}
+        timeInRangeDefaultLayout="statistics"
+        editControlsPortalId={STATISTICS_DASHBOARD_EDIT_CONTROLS_ID}
+        context={{
+          renderAverageGlucosePanel: () => (
+          <DashboardPanel
+            title="Average Glucose"
+            twStyles="flex flex-col [&>div:last-child]:flex-1 [&>div:last-child]:flex [&>div:last-child]:items-center [&>div:last-child]:justify-center"
+            headerRight={
+              updatesError
+                ? <span className="ui_micro_label ui_mono_text text-base-error-dark">Stale</span>
+                : undefined
+            }
+          >
           {hasData ? (
             <div className="flex items-end justify-center gap-6" style={{ opacity: isTransitioning ? 0.45 : 1, transition: 'opacity 200ms ease' }}>
               <div className="grid gap-4 justify-items-center pb-0.5">
@@ -1037,92 +1176,24 @@ export function GlucoseAnalysisView({
               </div>
             </div>
           )}
-        </DashboardPanel>
-
-        <DashboardPanel title="Settings" twStyles="overflow-visible">
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <span className="ui_micro_label text-text-soft">Time Range</span>
-              <div className="flex flex-wrap items-center gap-1">
-                {GLUCOSE_TIME_RANGES.map((timeRange) => (
-                  <SecondaryButton
-                    key={timeRange.key}
-                    isActive={activePreset === timeRange.key}
-                    onClick={() => {
-                      if (!confirmDiscardNoteDraft()) {
-                        return;
-                      }
-                      closeNoteEditor();
-                      setSelection({ kind: 'preset', range: timeRange.key });
-                    }}
-                  >
-                    {timeRange.label}
-                  </SecondaryButton>
-                ))}
-                <GlucoseDateRangePicker
-                  value={customValue}
-                  onApply={(window) => {
-                    if (!confirmDiscardNoteDraft()) {
-                      return;
-                    }
-                    closeNoteEditor();
-                    setSelection({ kind: 'custom', window });
-                  }}
-                />
-              </div>
-            </div>
-            <div className="flex items-end gap-4">
-              <div className="grid gap-2">
-                <span className="ui_micro_label text-text-soft">Color Mode</span>
-                <SegmentedControl
-                  options={GLUCOSE_COLOR_MODES}
-                  value={chartColorMode}
-                  onChange={updateChartColorMode}
-                />
-              </div>
-              <div className="grid gap-2">
-                <span className="ui_micro_label text-text-soft">Y-Axis Max</span>
-                <NumberInput
-                  label="Top"
-                  value={chartYMaxInput}
-                  min={12}
-                  onChange={setChartYMaxInput}
-                  ariaLabel="Chart top value in mmol/L"
-                />
-              </div>
-            </div>
-          </div>
-        </DashboardPanel>
-
-        <DashboardPanel title="Time in Range" twStyles="flex flex-col [&>div:last-child]:flex-1 [&>div:last-child]:flex [&>div:last-child]:items-center [&>div:last-child]:justify-center">
-          {hasData ? (
-            <div className="flex items-end justify-center gap-3" style={{ opacity: isTransitioning ? 0.45 : 1, transition: 'opacity 200ms ease' }}>
-              <GlucoseStatRing label="Very low" percentage={stats.veryLow.percentage} color={isDark ? '#e11d48' : '#be123c'} size="sm" />
-              <GlucoseStatRing label="Low" percentage={stats.low.percentage} color={isDark ? '#fb7185' : '#be123c'} size="md" />
-              <GlucoseStatRing label="In range" percentage={stats.inRange.percentage} color={isDark ? '#34d399' : '#059669'} size="lg" />
-              <GlucoseStatRing label="High" percentage={stats.high.percentage} color={isDark ? '#a855f7' : '#7e22ce'} size="md" />
-              <GlucoseStatRing label="Very high" percentage={stats.veryHigh.percentage} color={veryHighColor} size="sm" />
-            </div>
-          ) : (
-            <div className="flex items-end justify-center gap-3">
-              <div className="glucose-skeleton-circle" style={{ width: 44, height: 44 }} />
-              <div className="glucose-skeleton-circle" style={{ width: 62, height: 62 }} />
-              <div className="glucose-skeleton-circle" style={{ width: 90, height: 90 }} />
-              <div className="glucose-skeleton-circle" style={{ width: 62, height: 62 }} />
-              <div className="glucose-skeleton-circle" style={{ width: 44, height: 44 }} />
-            </div>
-          )}
-        </DashboardPanel>
-      </div>
-
-      {/* Glucose Chart */}
-      <DashboardPanel
-        title="Glucose Timeline"
-        twStyles="overflow-visible"
-        headerRight={
-          <span className="ui_caption tracking-wide text-text-soft">⌘ + Scroll to zoom · Drag to pan</span>
-        }
-      >
+          </DashboardPanel>
+          ),
+          renderTimeInRangePanel: () => (
+          <TimeInRangePanel
+            defaultLayout="statistics"
+            stats={hasData ? stats : null}
+            loading={isTransitioning}
+            isDark={isDark}
+          />
+          ),
+          renderGlucoseTimelinePanel: () => (
+          <DashboardPanel
+            title="Glucose Timeline"
+            twStyles="overflow-visible"
+            headerRight={
+              <span className="ui_caption tracking-wide text-text-soft">⌘ + Scroll to zoom · Drag to pan</span>
+            }
+          >
         <div style={{ position: 'relative', minHeight: chartHeight, margin: '-1.5rem' }}>
           {isFirstLoad && (
             <div className="absolute inset-0 z-5 flex flex-col items-center justify-center gap-3">
@@ -1154,21 +1225,7 @@ export function GlucoseAnalysisView({
           {hasData && (
             <div style={{ position: 'relative' }}>
               {workoutDraft ? (
-                <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      background: isDark ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.28)',
-                      backdropFilter: 'blur(3px)'
-                    }}
-                  />
-                  <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label={activeWorkoutId ? (isWorkoutReadOnly ? 'Workout details' : 'Workout') : 'New workout'}
-                    className="relative z-10 w-[min(34rem,calc(100%-2rem))]"
-                  >
-                    <DashboardPanel title={activeWorkoutId ? (isWorkoutReadOnly ? 'Workout details' : 'Workout') : 'New workout'} twStyles="shadow-2xl">
+                <DialogPanel title={activeWorkoutId ? (isWorkoutReadOnly ? 'Workout details' : 'Workout') : 'New workout'}>
                       <div className="flex min-h-[14rem] flex-col gap-3">
                         <div className="grid grid-cols-2 gap-3">
                           <label className="grid gap-1">
@@ -1316,25 +1373,9 @@ export function GlucoseAnalysisView({
                           </p>
                         ) : null}
                       </div>
-                    </DashboardPanel>
-                  </div>
-                </div>
+                </DialogPanel>
               ) : activeWorkout ? (
-                <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      background: isDark ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.28)',
-                      backdropFilter: 'blur(3px)'
-                    }}
-                  />
-                  <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Workout details"
-                    className="relative z-10 w-[min(28rem,calc(100%-2rem))]"
-                  >
-                    <DashboardPanel title="Workout details" twStyles="shadow-2xl">
+                <DialogPanel title="Workout details" widthClassName="w-[min(28rem,calc(100%-2rem))]">
                       <div className="flex min-h-[12rem] flex-col gap-3">
                         <div className="grid gap-1">
                           <p className="ui_micro_label text-text-soft" style={{ margin: 0 }}>
@@ -1411,27 +1452,10 @@ export function GlucoseAnalysisView({
                           </SecondaryButton>
                         </div>
                       </div>
-                    </DashboardPanel>
-                  </div>
-                </div>
+                </DialogPanel>
               ) : null}
               {noteDraft ? (
-                <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
-                  <div
-                    data-testid="note-editor-overlay"
-                    className="absolute inset-0"
-                    style={{
-                      background: isDark ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.28)',
-                      backdropFilter: 'blur(3px)'
-                    }}
-                  />
-                  <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label={activeNoteId ? 'Timeline note' : 'New timeline note'}
-                    className="relative z-10 w-[min(34rem,calc(100%-2rem))]"
-                  >
-                    <DashboardPanel title={activeNoteId ? 'Timeline note' : 'New timeline note'} twStyles="shadow-2xl">
+                <DialogPanel title={activeNoteId ? 'Timeline note' : 'New timeline note'} overlayTestId="note-editor-overlay">
                       <div className="flex min-h-[14rem] flex-col gap-3">
                         <label className="grid gap-1">
                           <span className="ui_micro_label text-text-soft">Start date</span>
@@ -1578,13 +1602,11 @@ export function GlucoseAnalysisView({
                           </p>
                         ) : null}
                       </div>
-                    </DashboardPanel>
-                  </div>
-                </div>
+                </DialogPanel>
               ) : null}
               {selectedPoints.length > 0 ? (
                 <div className="absolute right-4 top-4 z-10 w-[min(30rem,calc(100%-2rem))]">
-                  <DashboardPanel title="Active readings" twStyles="shadow-2xl">
+                  <FloatingPanel title="Active readings">
                     <div className="flex min-h-[10.5rem] flex-col gap-3">
                       <p className="body_text text-text-soft">
                         {canRemoveCorrection
@@ -1661,7 +1683,7 @@ export function GlucoseAnalysisView({
                         </p>
                       ) : null}
                     </div>
-                  </DashboardPanel>
+                  </FloatingPanel>
                 </div>
               ) : null}
               {isTransitioning && (
@@ -1670,7 +1692,7 @@ export function GlucoseAnalysisView({
                 </div>
               )}
               <div style={{ opacity: isTransitioning ? 0.35 : 1, transition: 'opacity 200ms ease' }}>
-                <GlucoseChart
+                <GlucoseTimelineChart
                   data={data.items}
                   basalData={data.basalItems}
                   eventData={data.eventItems}
@@ -1678,8 +1700,6 @@ export function GlucoseAnalysisView({
                   workoutData={data.workoutItems ?? []}
                   noteData={displayData?.noteItems ?? []}
                   height={chartHeight}
-                  yMax={chartYMax}
-                  colorMode={chartColorMode}
                   editable
                   selectedReadingIds={selectedReadingIds}
                   selectedWorkoutId={activeWorkoutId}
@@ -1696,10 +1716,10 @@ export function GlucoseAnalysisView({
             </div>
           )}
         </div>
-      </DashboardPanel>
-
-      {/* AGP Chart */}
-      <DashboardPanel title="Ambulatory Glucose Profile">
+          </DashboardPanel>
+          ),
+          renderAgpPanel: () => (
+          <DashboardPanel title="Ambulatory Glucose Profile">
         <div style={{ margin: '-1.5rem' }}>
           {hasData ? (
             <div style={{ position: 'relative' }}>
@@ -1709,7 +1729,7 @@ export function GlucoseAnalysisView({
                 </div>
               )}
               <div style={{ opacity: isTransitioning ? 0.35 : 1, transition: 'opacity 200ms ease' }}>
-                <GlucoseAgpChart data={data.items} height={400} yMax={chartYMax} />
+                <GlucoseAgpWithPanelSettings data={data.items} height={400} />
               </div>
             </div>
           ) : (
@@ -1718,7 +1738,10 @@ export function GlucoseAnalysisView({
             </div>
           )}
         </div>
-      </DashboardPanel>
+          </DashboardPanel>
+          ),
+        }}
+      />
     </div>
   );
 }

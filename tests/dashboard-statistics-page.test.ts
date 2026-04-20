@@ -1,24 +1,31 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 const getOwnerSession = vi.fn();
 const open = vi.fn();
+const loadDashboardDefinition = vi.fn();
 const GlucoseAnalysisView = vi.fn(
   ({
     isOwner,
-    initialSnapshot
+    initialSnapshot,
+    dashboardDefinition,
+    dashboardVersion,
   }: {
     isOwner: boolean;
     initialSnapshot?: { meta: { from: string; to: string } };
+    dashboardDefinition?: { spec: { uid: string; title: string } };
+    dashboardVersion?: number | null;
   }) =>
     React.createElement(
       'div',
       null,
       React.createElement('span', null, `isOwner:${String(isOwner)}`),
       React.createElement('span', null, `from:${initialSnapshot?.meta.from ?? 'none'}`),
-      React.createElement('span', null, `to:${initialSnapshot?.meta.to ?? 'none'}`)
+      React.createElement('span', null, `to:${initialSnapshot?.meta.to ?? 'none'}`),
+      React.createElement('span', null, `dashboard:${dashboardDefinition?.spec.title ?? 'none'}`),
+      React.createElement('span', null, `version:${String(dashboardVersion ?? 'none')}`)
     )
 );
 
@@ -32,11 +39,40 @@ vi.mock('@/lib/glucose/dashboard-workspace', () => ({
   }
 }));
 
+vi.mock('@/lib/dashboard/settings', () => ({
+  loadDashboardDefinition,
+}));
+
 vi.mock('@ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView', () => ({
   GlucoseAnalysisView
 }));
 
 describe('dashboard statistics page', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    getOwnerSession.mockReset();
+    open.mockReset();
+    loadDashboardDefinition.mockReset();
+    GlucoseAnalysisView.mockClear();
+    loadDashboardDefinition.mockResolvedValue({
+      dashboard: {
+        kind: 'Dashboard',
+        spec: {
+          uid: 'statistics',
+          title: 'Saved Statistics',
+          elements: {},
+          layout: {
+            kind: 'GridLayout',
+            spec: {
+              items: [],
+            },
+          },
+        },
+      },
+      version: 7,
+    });
+  });
+
   test('hydrates the analysis view with the default workspace snapshot', async () => {
     getOwnerSession.mockResolvedValue({ user: { email: 'owner@example.com' } });
     open.mockResolvedValue({
@@ -63,9 +99,17 @@ describe('dashboard statistics page', () => {
     render(await DashboardStatisticsPage());
 
     expect(open).toHaveBeenCalledWith({ range: '3d' });
+    expect(loadDashboardDefinition).toHaveBeenCalledWith('statistics');
     expect(GlucoseAnalysisView).toHaveBeenCalledWith(
       expect.objectContaining({
         isOwner: true,
+        dashboardVersion: 7,
+        dashboardDefinition: expect.objectContaining({
+          spec: expect.objectContaining({
+            uid: 'statistics',
+            title: 'Saved Statistics',
+          }),
+        }),
         initialSnapshot: expect.objectContaining({
           meta: expect.objectContaining({
             from: '2026-03-01T00:00:00.000Z',
@@ -77,5 +121,6 @@ describe('dashboard statistics page', () => {
     );
     expect(screen.getByText('isOwner:true')).toBeInTheDocument();
     expect(screen.getByText('from:2026-03-01T00:00:00.000Z')).toBeInTheDocument();
+    expect(screen.getByText('dashboard:Saved Statistics')).toBeInTheDocument();
   });
 });

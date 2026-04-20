@@ -1,6 +1,7 @@
 import { GlucoseAnalysisView } from '@ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView';
 import { getOwnerSession } from '@/lib/auth';
 import { dashboardGlucoseWorkspace } from '@/lib/glucose/dashboard-workspace';
+import { loadDashboardDefinition } from '@/lib/dashboard/settings';
 
 export const metadata = {
   title: 'Statistics'
@@ -8,6 +9,7 @@ export const metadata = {
 
 export default async function DashboardStatisticsPage() {
   const session = await getOwnerSession();
+  const dashboardState = await loadDashboardDefinition('statistics');
   let initialSnapshot;
 
   try {
@@ -31,7 +33,12 @@ export default async function DashboardStatisticsPage() {
         </div>
       </header>
 
-      <GlucoseAnalysisView isOwner={Boolean(session)} initialSnapshot={initialSnapshot} />
+      <GlucoseAnalysisView
+        isOwner={Boolean(session)}
+        initialSnapshot={initialSnapshot}
+        dashboardDefinition={dashboardState.dashboard}
+        dashboardVersion={dashboardState.version}
+      />
     </div>
   );
 }

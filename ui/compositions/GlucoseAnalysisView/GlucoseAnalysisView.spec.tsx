@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import type { ReactNode } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { formatWorkoutTimeRange } from '@/lib/glucose/workout-display';
+import { getDashboardDefinition } from '@/lib/dashboard/registry';
 import { GlucoseAnalysisView } from './GlucoseAnalysisView';
 
 const historyMutateMock = vi.fn();
@@ -122,6 +123,8 @@ vi.mock('@ui/components/GlucoseAgpChart', () => ({
 vi.mock('@ui/components/GlucoseChart/GlucoseChart', () => ({
   GlucoseChart: ({
     data,
+    colorMode,
+    yMax,
     workoutData = [],
     noteData = [],
     onPointSelect,
@@ -132,6 +135,8 @@ vi.mock('@ui/components/GlucoseChart/GlucoseChart', () => ({
     onWorkoutSelect
   }: {
     data: Array<{ readingId?: string; valueMmolL: number; source: 'official' | 'share'; correctionReason?: string | null }>;
+    colorMode?: string;
+    yMax?: number;
     workoutData?: Array<{
       id: string;
       displayName: string | null;
@@ -156,6 +161,9 @@ vi.mock('@ui/components/GlucoseChart/GlucoseChart', () => ({
     }) => void;
   }) => (
     <div>
+      <div data-testid="chart-settings">
+        {colorMode ?? 'missing'}:{String(yMax ?? 'missing')}
+      </div>
       <div data-testid="chart-reading-ids">
         {data.map((point) => point.readingId ?? 'missing').join(',')}
       </div>
@@ -402,6 +410,10 @@ function createOwnerProfileResponse() {
 }
 
 describe('GlucoseAnalysisView', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     swrCache.clear();
@@ -506,6 +518,28 @@ describe('GlucoseAnalysisView', () => {
     expect(screen.queryByText('Loading glucose data...')).not.toBeInTheDocument();
   });
 
+  test('refreshes the dashboard history query from the refresh picker', () => {
+    render(<GlucoseAnalysisView isOwner />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh dashboard' }));
+
+    expect(historyMutateMock).toHaveBeenCalled();
+  });
+
+  test('uses saved dashboard auto refresh settings to refresh history', async () => {
+    const dashboardDefinition = structuredClone(getDashboardDefinition('statistics'));
+    dashboardDefinition.spec.timeSettings.autoRefresh = '5s';
+    vi.useFakeTimers();
+
+    render(<GlucoseAnalysisView isOwner dashboardDefinition={dashboardDefinition} />);
+
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+
+    expect(historyMutateMock).toHaveBeenCalled();
+  });
+
   test('reuses a loaded superset range when switching back to 3 days', async () => {
     const initialSnapshot = createHistoryResponse();
     const twoWeekResponse = createTwoWeekHistoryResponse();
@@ -562,6 +596,7 @@ describe('GlucoseAnalysisView', () => {
 
     render(<GlucoseAnalysisView isOwner={false} initialSnapshot={initialSnapshot} />);
 
+    fireEvent.click(screen.getByRole('button', { name: /Time range selected/i }));
     fireEvent.click(screen.getByRole('button', { name: '2 weeks' }));
     swrCache.set('/api/dashboard/glucose/history?range=14d', { data: twoWeekResponse });
 
@@ -571,6 +606,7 @@ describe('GlucoseAnalysisView', () => {
       );
     });
 
+    fireEvent.click(screen.getByRole('button', { name: /Time range selected/i }));
     fireEvent.click(screen.getByRole('button', { name: '3 days' }));
 
     await waitFor(() => {
@@ -599,6 +635,94 @@ describe('GlucoseAnalysisView', () => {
     expect(screen.getByText('1 reading is being adjusted.')).toBeInTheDocument();
     expect(screen.getByText('Preview is available to everyone. Admin sign in is required to apply corrections.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Apply preview' })).toBeDisabled();
+  });
+
+  test('lets public visitors edit glucose timeline settings locally and shows disabled save', async () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+
+    render(<GlucoseAnalysisView isOwner={false} />);
+
+    expect(screen.getByTestId('chart-settings')).toHaveTextContent('threeColors:25');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel actions for Glucose Timeline' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+
+    const drawer = screen.getByRole('complementary', { name: 'Panel settings for Glucose Timeline' });
+
+    expect(within(drawer).getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(within(drawer).getByText('Admin sign in is required to save dashboard settings.')).toBeInTheDocument();
+
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Gradient' }));
+    fireEvent.change(within(drawer).getByLabelText('Chart top value in mmol/L'), {
+      target: { value: '18' }
+    });
+
+    expect(screen.getByTestId('chart-settings')).toHaveTextContent('gradient:18');
+    expect(setItemSpy).not.toHaveBeenCalled();
+  });
+
+  test('applies persisted glucose timeline settings from the dashboard definition', () => {
+    const dashboardDefinition = structuredClone(getDashboardDefinition('statistics'));
+    dashboardDefinition.spec.elements['panel-glucose-timeline'].spec.vizConfig.spec.options = {
+      colorMode: 'gradient',
+      yAxisMax: 18,
+    };
+
+    render(<GlucoseAnalysisView isOwner={false} dashboardDefinition={dashboardDefinition} />);
+
+    expect(screen.getByTestId('chart-settings')).toHaveTextContent('gradient:18');
+  });
+
+  test('resets public glucose timeline settings after remount', async () => {
+    const { unmount } = render(<GlucoseAnalysisView isOwner={false} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel actions for Glucose Timeline' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+
+    const drawer = screen.getByRole('complementary', { name: 'Panel settings for Glucose Timeline' });
+
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Gradient' }));
+    fireEvent.change(within(drawer).getByLabelText('Chart top value in mmol/L'), {
+      target: { value: '18' }
+    });
+
+    expect(screen.getByTestId('chart-settings')).toHaveTextContent('gradient:18');
+
+    unmount();
+    render(<GlucoseAnalysisView isOwner={false} />);
+
+    expect(screen.getByTestId('chart-settings')).toHaveTextContent('threeColors:25');
+  });
+
+  test('does not render the old standalone statistics settings panel', () => {
+    render(<GlucoseAnalysisView isOwner={false} />);
+
+    expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Time range selected: Last 3 days' })).toBeInTheDocument();
+  });
+
+  test('switches the time in range panel layout from panel settings', () => {
+    render(<GlucoseAnalysisView isOwner={false} />);
+
+    expect(screen.queryByRole('button', { name: '24d' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Time in Range' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel actions for Time in Range' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+
+    const drawer = screen.getByRole('complementary', { name: 'Panel settings for Time in Range' });
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Overview' }));
+
+    expect(screen.queryByRole('button', { name: '24d' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Time In Range' })).toBeInTheDocument();
+
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Statistics' }));
+
+    expect(screen.queryByRole('button', { name: '24d' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Time in Range' })).toBeInTheDocument();
   });
 
   test('submits preview corrections with a required reason for owners', async () => {
