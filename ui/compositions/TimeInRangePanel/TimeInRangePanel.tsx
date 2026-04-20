@@ -1,11 +1,25 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { animate } from 'framer-motion';
 import { DashboardPanel } from '@ui/components/DashboardPanel';
+import { GlucoseStatRing } from '@ui/components/GlucoseStatRing/GlucoseStatRing';
+import { SegmentedControl } from '@ui/components/SegmentedControl';
+import {
+  useDashboardPanelSettings,
+  type DashboardPanelSettingsRegistration,
+} from '@ui/compositions/DashboardGrid';
 import { computeGlucoseStats } from '@/lib/glucose/metrics';
 import type { GlucoseStats } from '@/lib/glucose/metrics';
 import type { GlucoseApiResponse } from '@/lib/glucose/types';
+
+export type TimeInRangePanelLayout = 'overview' | 'statistics';
+
+type TimeInRangePanelSettings = {
+  layout: TimeInRangePanelLayout;
+};
+
+const TIME_IN_RANGE_PANEL_ID = 'panel-time-in-range';
 
 const SEGMENTS = [
   { key: 'veryLow' as const, label: 'Very Low', color: 'var(--color-base-glucose-low-dark)' },
@@ -14,17 +28,17 @@ const SEGMENTS = [
   { key: 'high' as const, label: 'High', color: 'var(--color-base-glucose-high-dark)' },
   { key: 'veryHigh' as const, label: 'Very High', color: 'var(--color-base-glucose-very-high-dark)' },
 ] as const;
-
-const TIME_RANGES = [
-  { label: '3d', hours: 72 },
-  { label: '24d', hours: 576 },
-  { label: '30d', hours: 720 },
-] as const;
+const DEFAULT_DASHBOARD_RANGE_HOURS = 72;
 
 const SIZE = 160;
 const CX = SIZE / 2;
 const CY = SIZE / 2;
 const R = 68;
+
+const TIME_IN_RANGE_LAYOUT_OPTIONS = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'statistics', label: 'Statistics' },
+] satisfies Array<{ value: TimeInRangePanelLayout; label: string }>;
 
 function slicePath(cx: number, cy: number, r: number, startDeg: number, sweepDeg: number): string {
   const sweep = Math.max(0.001, Math.min(359.999, sweepDeg));
@@ -58,34 +72,93 @@ async function fetchHistory(hours: number): Promise<GlucoseApiResponse> {
   return res.json() as Promise<GlucoseApiResponse>;
 }
 
-export function TimeInRangePanel() {
-  const [selectedRange, setSelectedRange] = useState(0);
-  const [loadedRange, setLoadedRange] = useState<number | null>(null);
-  const [stats, setStats] = useState<GlucoseStats | null>(null);
+function createDefaultSettings(layout: TimeInRangePanelLayout): TimeInRangePanelSettings {
+  return { layout };
+}
+
+export function createTimeInRangePanelSettingsRegistration(
+  defaultLayout: TimeInRangePanelLayout,
+): DashboardPanelSettingsRegistration {
+  return {
+    defaultSettings: createDefaultSettings(defaultLayout),
+    render: ({ settings, updateSettings }) => {
+      const typedSettings = settings as TimeInRangePanelSettings;
+      const updateTypedSettings = updateSettings as (
+        updater: (current: TimeInRangePanelSettings) => TimeInRangePanelSettings
+      ) => void;
+
+      return (
+        <div className="grid gap-2">
+          <span className="ui_micro_label text-text-soft">Layout</span>
+          <SegmentedControl
+            options={TIME_IN_RANGE_LAYOUT_OPTIONS}
+            value={typedSettings.layout}
+            onChange={(value) => {
+              updateTypedSettings((current) => ({ ...current, layout: value as TimeInRangePanelLayout }));
+            }}
+          />
+        </div>
+      );
+    },
+  };
+}
+
+interface TimeInRangePanelProps {
+  defaultLayout?: TimeInRangePanelLayout;
+  dashboardRangeHours?: number;
+  stats?: GlucoseStats | null;
+  loading?: boolean;
+  isDark?: boolean;
+}
+
+export function TimeInRangePanel({
+  defaultLayout = 'overview',
+  dashboardRangeHours = DEFAULT_DASHBOARD_RANGE_HOURS,
+  stats: providedStats,
+  loading: providedLoading,
+  isDark = true,
+}: TimeInRangePanelProps) {
+  const defaultSettings = useMemo(() => createDefaultSettings(defaultLayout), [defaultLayout]);
+  const [settings] = useDashboardPanelSettings(TIME_IN_RANGE_PANEL_ID, defaultSettings);
+  const [fetchedStats, setFetchedStats] = useState<GlucoseStats | null>(null);
+  const [isFetching, setIsFetching] = useState(providedStats === undefined);
   const [displayPercs, setDisplayPercs] = useState<number[]>([0, 0, 0, 0, 0]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const animatedPercs = useRef<number[]>([0, 0, 0, 0, 0]);
 
-  const loading = loadedRange !== selectedRange;
+  const stats = providedStats === undefined ? fetchedStats : providedStats;
+  const loading = providedLoading ?? (providedStats === undefined ? isFetching : false);
 
   useEffect(() => {
+    if (providedStats !== undefined) {
+      return;
+    }
+
     let cancelled = false;
-    fetchHistory(TIME_RANGES[selectedRange].hours)
+    const loadingTimer = window.setTimeout(() => {
+      if (!cancelled) {
+        setIsFetching(true);
+      }
+    }, 0);
+    fetchHistory(dashboardRangeHours)
       .then((data) => {
         if (cancelled) return;
-        setStats(computeGlucoseStats(data.items));
-        setLoadedRange(selectedRange);
+        setFetchedStats(computeGlucoseStats(data.items));
         setErrorMessage(null);
+        setIsFetching(false);
       })
       .catch((error) => {
         if (!cancelled) {
-          setStats(null);
-          setLoadedRange(selectedRange);
+          setFetchedStats(null);
           setErrorMessage(error instanceof Error ? error.message : 'Failed to load glucose history');
+          setIsFetching(false);
         }
       });
-    return () => { cancelled = true; };
-  }, [selectedRange]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(loadingTimer);
+    };
+  }, [dashboardRangeHours, providedStats]);
 
   useEffect(() => {
     const target = statsToPercs(stats);
@@ -113,38 +186,37 @@ export function TimeInRangePanel() {
     return slicePath(CX, CY, R, startDeg, sweep);
   });
 
+  if (settings.layout === 'statistics') {
+    const lowColor  = isDark ? '#fb7185' : '#be123c';
+    const highColor = isDark ? '#a855f7' : '#7e22ce';
+    const veryHighColor = isDark ? '#7c3aed' : '#6b21a8';
+    const normColor = isDark ? '#34d399' : '#059669';
+
+    return (
+      <DashboardPanel title="Time in Range" twStyles="flex flex-col [&>div:last-child]:flex-1 [&>div:last-child]:flex [&>div:last-child]:items-center [&>div:last-child]:justify-center">
+        {stats ? (
+          <div className="flex items-center justify-center gap-5" style={{ opacity: loading ? 0.45 : 1, transition: 'opacity 200ms ease' }}>
+            <GlucoseStatRing label="Very low" percentage={stats.veryLow.percentage} color={isDark ? '#e11d48' : '#be123c'} size="sm" />
+            <GlucoseStatRing label="Low" percentage={stats.low.percentage} color={lowColor} size="md" />
+            <GlucoseStatRing label="In range" percentage={stats.inRange.percentage} color={normColor} size="lg" />
+            <GlucoseStatRing label="High" percentage={stats.high.percentage} color={highColor} size="md" />
+            <GlucoseStatRing label="Very high" percentage={stats.veryHigh.percentage} color={veryHighColor} size="sm" />
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-5">
+            <div className="glucose-skeleton-circle" style={{ width: 44, height: 44 }} />
+            <div className="glucose-skeleton-circle" style={{ width: 62, height: 62 }} />
+            <div className="glucose-skeleton-circle" style={{ width: 90, height: 90 }} />
+            <div className="glucose-skeleton-circle" style={{ width: 62, height: 62 }} />
+            <div className="glucose-skeleton-circle" style={{ width: 44, height: 44 }} />
+          </div>
+        )}
+      </DashboardPanel>
+    );
+  }
+
   return (
-    <DashboardPanel
-      title="Time In Range"
-      headerRight={
-        <div style={{ display: 'flex', gap: 4 }}>
-          {TIME_RANGES.map((r, i) => (
-            <button
-              key={r.label}
-              onClick={() => {
-                setErrorMessage(null);
-                setSelectedRange(i);
-              }}
-              style={{
-                padding: '2px 8px',
-                borderRadius: 4,
-                border: '1px solid',
-                borderColor: selectedRange === i ? 'var(--text)' : 'var(--color-base-border-cool-input)',
-                background: selectedRange === i ? 'var(--text)' : 'transparent',
-                color: selectedRange === i ? 'var(--bg)' : 'var(--text-soft)',
-                fontSize: 11,
-                fontWeight: 600,
-                cursor: 'pointer',
-                letterSpacing: '0.05em',
-                lineHeight: 1.6,
-              }}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-      }
-    >
+    <DashboardPanel title="Time In Range">
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
         <svg
           width={SIZE}
