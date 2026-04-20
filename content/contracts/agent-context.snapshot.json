@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-04-17T05:50:01.248Z",
+  "generatedAt": "2026-04-20T16:52:49.556Z",
   "baseUrl": "https://api.veno.local",
   "scope": "mixed",
   "endpoints": [
@@ -409,6 +409,28 @@
       "source": "mixed",
       "tags": [
         "Admin and Ops"
+      ]
+    },
+    {
+      "id": "admin-dashboard-settings-get",
+      "method": "GET",
+      "path": "/api/admin/dashboard-settings/{dashboardUid}",
+      "summary": "Read persisted dashboard settings",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Dashboard Settings"
+      ]
+    },
+    {
+      "id": "admin-dashboard-settings-put",
+      "method": "PUT",
+      "path": "/api/admin/dashboard-settings/{dashboardUid}",
+      "summary": "Save persisted dashboard settings",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Dashboard Settings"
       ]
     },
     {

@@ -178,6 +178,11 @@ export interface ConsumerProfileUpdatePayload {
   defaultAlarmSoundId: string | null;
 }
 
+export interface DashboardSettingsSavePayload {
+  expectedVersion?: number | null;
+  dashboard: unknown;
+}
+
 export interface ApiKeySummary {
   id: string;
   name: string;

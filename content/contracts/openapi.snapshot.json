@@ -4,7 +4,7 @@
     "title": "VenoAPI",
     "version": "1.0.0",
     "description": "Machine readable OpenAPI contract for VenoAPI consumer and operational endpoints.",
-    "x-generatedAt": "2026-04-17T05:50:01.250Z"
+    "x-generatedAt": "2026-04-20T16:52:49.558Z"
   },
   "servers": [
     {
@@ -1838,6 +1838,504 @@
                       "apiKeyId": null,
                       "apiKeyName": null
                     }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      }
+    },
+    "/api/admin/dashboard-settings/{dashboardUid}": {
+      "get": {
+        "operationId": "admin-dashboard-settings-get",
+        "summary": "Read persisted dashboard settings",
+        "description": "Returns the persisted VenoDashboard settings document for one dashboard uid. VenoDashboard calls this server side with admin auth and falls back to built in JSON when a document is not found.",
+        "tags": [
+          "Dashboard Settings"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dashboardUid",
+            "in": "path",
+            "required": true,
+            "description": "Dashboard uid, for example overview or statistics.",
+            "schema": {
+              "type": "string",
+              "example": "statistics"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "dashboardSettings": {
+                    "dashboardUid": "statistics",
+                    "schemaVersion": "veno.dashboard-settings.v2",
+                    "version": 3,
+                    "dashboard": {
+                      "schemaVersion": "veno.dashboard-settings.v2",
+                      "kind": "Dashboard",
+                      "spec": {
+                        "uid": "statistics",
+                        "title": "Statistics",
+                        "timeSettings": {
+                          "autoRefresh": "",
+                          "autoRefreshIntervals": [
+                            "5s",
+                            "10s",
+                            "30s",
+                            "1m",
+                            "5m",
+                            "15m",
+                            "30m",
+                            "1h"
+                          ]
+                        },
+                        "elements": {
+                          "panel-time-in-range": {
+                            "kind": "Panel",
+                            "spec": {
+                              "id": 103,
+                              "title": "Time in Range",
+                              "vizConfig": {
+                                "kind": "VizConfig",
+                                "group": "veno.time-in-range",
+                                "version": "v1",
+                                "spec": {
+                                  "options": {
+                                    "layout": "statistics"
+                                  },
+                                  "fieldConfig": {
+                                    "defaults": {},
+                                    "overrides": []
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "panel-glucose-timeline": {
+                            "kind": "Panel",
+                            "spec": {
+                              "id": 104,
+                              "title": "Glucose Timeline",
+                              "vizConfig": {
+                                "kind": "VizConfig",
+                                "group": "veno.glucose-timeline",
+                                "version": "v1",
+                                "spec": {
+                                  "options": {
+                                    "colorMode": "threeColors",
+                                    "yAxisMax": 25
+                                  },
+                                  "fieldConfig": {
+                                    "defaults": {},
+                                    "overrides": []
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "layout": {
+                          "kind": "GridLayout",
+                          "spec": {
+                            "items": [
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 4,
+                                  "height": 6,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-time-in-range"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 6,
+                                  "width": 12,
+                                  "height": 24,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-glucose-timeline"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "updatedAt": "2026-02-16T12:00:00.000Z",
+                    "updatedBy": {
+                      "actor": "admin",
+                      "apiKeyId": null,
+                      "apiKeyName": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request did not include admin authentication.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "missing_admin_token",
+                    "message": "Admin authentication is required."
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The request included admin authentication that did not match server configuration.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "invalid_admin_token",
+                    "message": "Invalid admin authentication."
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No persisted dashboard settings document exists for the requested dashboard uid.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "dashboard_settings_not_found",
+                    "message": "Dashboard settings were not found."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-pulseglucose-auth": "admin",
+        "x-pulseglucose-source": "mixed"
+      },
+      "put": {
+        "operationId": "admin-dashboard-settings-put",
+        "summary": "Save persisted dashboard settings",
+        "description": "Persists the complete VenoDashboard settings document for one dashboard uid. The document contains content and layout in the Veno dashboard schema so it can be copied or restored as JSON.",
+        "tags": [
+          "Dashboard Settings"
+        ],
+        "security": [
+          {
+            "AdminBearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dashboardUid",
+            "in": "path",
+            "required": true,
+            "description": "Dashboard uid. Must match dashboard.spec.uid in the request body.",
+            "schema": {
+              "type": "string",
+              "example": "statistics"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "expectedVersion": 2,
+                "dashboard": {
+                  "schemaVersion": "veno.dashboard-settings.v2",
+                  "kind": "Dashboard",
+                  "spec": {
+                    "uid": "statistics",
+                    "title": "Statistics",
+                    "timeSettings": {
+                      "autoRefresh": "",
+                      "autoRefreshIntervals": [
+                        "5s",
+                        "10s",
+                        "30s",
+                        "1m",
+                        "5m",
+                        "15m",
+                        "30m",
+                        "1h"
+                      ]
+                    },
+                    "elements": {
+                      "panel-time-in-range": {
+                        "kind": "Panel",
+                        "spec": {
+                          "id": 103,
+                          "title": "Time in Range",
+                          "vizConfig": {
+                            "kind": "VizConfig",
+                            "group": "veno.time-in-range",
+                            "version": "v1",
+                            "spec": {
+                              "options": {
+                                "layout": "statistics"
+                              },
+                              "fieldConfig": {
+                                "defaults": {},
+                                "overrides": []
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "panel-glucose-timeline": {
+                        "kind": "Panel",
+                        "spec": {
+                          "id": 104,
+                          "title": "Glucose Timeline",
+                          "vizConfig": {
+                            "kind": "VizConfig",
+                            "group": "veno.glucose-timeline",
+                            "version": "v1",
+                            "spec": {
+                              "options": {
+                                "colorMode": "threeColors",
+                                "yAxisMax": 25
+                              },
+                              "fieldConfig": {
+                                "defaults": {},
+                                "overrides": []
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "layout": {
+                      "kind": "GridLayout",
+                      "spec": {
+                        "items": [
+                          {
+                            "kind": "GridLayoutItem",
+                            "spec": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 4,
+                              "height": 6,
+                              "element": {
+                                "kind": "ElementReference",
+                                "name": "panel-time-in-range"
+                              }
+                            }
+                          },
+                          {
+                            "kind": "GridLayoutItem",
+                            "spec": {
+                              "x": 0,
+                              "y": 6,
+                              "width": 12,
+                              "height": 24,
+                              "element": {
+                                "kind": "ElementReference",
+                                "name": "panel-glucose-timeline"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "dashboardSettings": {
+                    "dashboardUid": "statistics",
+                    "schemaVersion": "veno.dashboard-settings.v2",
+                    "version": 3,
+                    "dashboard": {
+                      "schemaVersion": "veno.dashboard-settings.v2",
+                      "kind": "Dashboard",
+                      "spec": {
+                        "uid": "statistics",
+                        "title": "Statistics",
+                        "timeSettings": {
+                          "autoRefresh": "",
+                          "autoRefreshIntervals": [
+                            "5s",
+                            "10s",
+                            "30s",
+                            "1m",
+                            "5m",
+                            "15m",
+                            "30m",
+                            "1h"
+                          ]
+                        },
+                        "elements": {
+                          "panel-time-in-range": {
+                            "kind": "Panel",
+                            "spec": {
+                              "id": 103,
+                              "title": "Time in Range",
+                              "vizConfig": {
+                                "kind": "VizConfig",
+                                "group": "veno.time-in-range",
+                                "version": "v1",
+                                "spec": {
+                                  "options": {
+                                    "layout": "statistics"
+                                  },
+                                  "fieldConfig": {
+                                    "defaults": {},
+                                    "overrides": []
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "panel-glucose-timeline": {
+                            "kind": "Panel",
+                            "spec": {
+                              "id": 104,
+                              "title": "Glucose Timeline",
+                              "vizConfig": {
+                                "kind": "VizConfig",
+                                "group": "veno.glucose-timeline",
+                                "version": "v1",
+                                "spec": {
+                                  "options": {
+                                    "colorMode": "threeColors",
+                                    "yAxisMax": 25
+                                  },
+                                  "fieldConfig": {
+                                    "defaults": {},
+                                    "overrides": []
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "layout": {
+                          "kind": "GridLayout",
+                          "spec": {
+                            "items": [
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 4,
+                                  "height": 6,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-time-in-range"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 6,
+                                  "width": 12,
+                                  "height": 24,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-glucose-timeline"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "updatedAt": "2026-02-16T12:00:00.000Z",
+                    "updatedBy": {
+                      "actor": "admin",
+                      "apiKeyId": null,
+                      "apiKeyName": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request did not include admin authentication.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "missing_admin_token",
+                    "message": "Admin authentication is required."
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The request included admin authentication that did not match server configuration.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "invalid_admin_token",
+                    "message": "Invalid admin authentication."
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The expectedVersion value did not match the current stored version.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "dashboard_settings_conflict",
+                    "message": "Dashboard settings changed before this save."
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The body failed schema validation, the path dashboard uid did not match the document uid, or the layout referenced a missing element.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "invalid_dashboard_settings",
+                    "message": "Dashboard settings payload is invalid."
                   }
                 }
               }

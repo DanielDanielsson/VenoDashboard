@@ -5,12 +5,14 @@ import type {
   CreateSharedTimerPayload,
   ConsumerProfileResponse,
   ConsumerProfileUpdatePayload,
+  DashboardSettingsSavePayload,
   PulseApiErrorResponse,
   PulseApiStatusReport,
   SharedTimer,
   SharedTimerMutationResponse,
   SharedTimerListResponse
 } from '@/lib/pulse-api/types';
+import type { DashboardSettingsResponse } from '@/lib/dashboard/settings';
 import {
   getApiBaseUrl,
   getAdminApiToken,
@@ -175,6 +177,28 @@ export async function updateConsumerProfile(
     headers,
     body: JSON.stringify(payload)
   });
+}
+
+export async function saveDashboardSettings(
+  dashboardUid: string,
+  payload: DashboardSettingsSavePayload,
+): Promise<DashboardSettingsResponse> {
+  return adminJson<DashboardSettingsResponse>(
+    `/api/admin/dashboard-settings/${encodeURIComponent(dashboardUid)}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function fetchDashboardSettings(dashboardUid: string): Promise<DashboardSettingsResponse> {
+  return adminJson<DashboardSettingsResponse>(
+    `/api/admin/dashboard-settings/${encodeURIComponent(dashboardUid)}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 export async function listApiKeys(): Promise<ApiKeyListResponse> {
