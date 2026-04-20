@@ -21,7 +21,7 @@ Do not treat this repo as the source of truth for glucose ingestion or storage. 
 3. `ui/compositions` contains higher level dashboard sections and page level compositions.
 4. `src/lib` contains auth, API clients, data shaping, caching, and server side helpers.
 5. `src/styles/config` is the canonical home for theme and font utilities.
-6. `.claude/skills` contains repo-local skills that apply only to `VenoDashboard`
+6. `.agents/skills` contains repo-local skills that apply only to `VenoDashboard`
 
 ## Local Agent Context
 
@@ -30,9 +30,71 @@ This repo is intended to be usable on its own.
 Repo-specific guidance should live here:
 
 1. `AGENTS.md` for always-on repo rules
-2. `.claude/skills` for focused local workflows like theming
+2. `.agents/skills` for focused local workflows like theming
 
 Do not assume the parent `PulseGlucose` workspace structure is available when writing repo-local guidance for `VenoDashboard`.
+
+## Dashboard Panels
+
+Dashboard pages are now data driven.
+
+Do not add new dashboard panels by hardcoding page level grid JSX.
+
+Use the dashboard JSON, registry, and renderer structure that already exists.
+
+Core files:
+
+1. `src/lib/dashboard/schema.ts`
+2. `src/lib/dashboard/registry.ts`
+3. `src/lib/dashboard/definitions/overview.json`
+4. `src/lib/dashboard/definitions/statistics.json`
+5. `src/lib/dashboard/panel-registry.ts`
+6. `ui/compositions/DashboardDefinitionRenderer/DashboardDefinitionRenderer.tsx`
+7. `ui/compositions/DashboardGrid/DashboardGrid.tsx`
+8. `ui/compositions/DashboardGrid/DashboardGridPanel.tsx`
+9. `src/lib/dashboard/settings.ts`
+
+Important structure rules:
+
+1. a dashboard definition is the source of truth for panel membership and layout
+2. every dashboard panel must exist as an element in dashboard JSON
+3. layout belongs in `spec.layout`
+4. content identity belongs in `spec.elements`
+5. a panel renderer is selected through `panel.spec.vizConfig.group`
+6. group to component mapping belongs in a panel registry, not in the page component
+7. dashboard pages should render through `DashboardDefinitionRenderer`, not custom grid markup
+8. only dashboard grid panels should use `DashboardGridPanel`
+9. popovers, dialogs, and other floating layers must stay separate from dashboard grid panel structure
+
+Current dashboard split:
+
+1. overview uses `ui/compositions/DashboardDefinitionRenderer/overviewPanelRegistry.tsx`
+2. statistics builds its registry inside `ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView.tsx`
+
+When adding a new panel:
+
+1. create or update the composition that renders the actual panel content
+2. register a stable `vizConfig.group` string for it
+3. add the panel element to the dashboard JSON definition
+4. add the layout item to the dashboard JSON definition
+5. register the renderer in the correct dashboard panel registry
+6. if the panel has editable settings, define a typed settings shape and add a settings registration through `DashboardPanelSettingsRegistry`
+7. keep persisted settings in `vizConfig.spec.options`
+8. make sure the panel still works with built in defaults when persisted settings are missing or the settings backend is unavailable
+
+Settings rules:
+
+1. panel settings are edited in the shared right side settings drawer owned by `DashboardGrid`
+2. panel settings UI belongs in settings registrations, not inside the panel chrome itself
+3. default settings should be merged with persisted settings so partial saved state does not break the panel
+4. public visitors may preview settings locally
+5. only admin saves persist through the dashboard settings path
+
+Naming rules:
+
+1. use stable panel ids like `panel-time-in-range`
+2. use stable group names like `veno.time-in-range`
+3. avoid renaming ids or groups casually because saved dashboard settings depend on them
 
 ## Routing And Auth
 
@@ -256,6 +318,15 @@ Contract scripts:
 3. `scripts/validate-contracts.mjs`
 
 These read from `PULSE_API_BASE_URL`. If that env var is wrong, CI style validation will fail or validate the wrong backend.
+
+When debugging locally, treat local API targets as a first check, not a later guess.
+
+Rules:
+
+1. if `PULSE_API_BASE_URL` points to `localhost` or `127.0.0.1`, verify that the target port is actually listening before debugging dashboard code
+2. verify that `GET /api/status?format=json` responds from that local API target before assuming the dashboard has a frontend bug
+3. if the local API depends on Docker services, check that Docker is running before investigating dashboard rendering or data flow
+4. if the local API is down, say so explicitly and treat missing dashboard data as an environment problem first
 
 ## Testing And Pre Push
 
