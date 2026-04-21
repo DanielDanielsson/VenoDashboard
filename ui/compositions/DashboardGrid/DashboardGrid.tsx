@@ -32,6 +32,7 @@ interface DashboardGridProps {
   currentTimeSettings?: DashboardTimeSettingsKind;
   onDiscardTimeSettings?: (timeSettings: DashboardTimeSettingsKind) => void;
   editControlsPortalId?: string;
+  onUnauthorizedSaveDashboard?: () => void;
   onSaveDashboard?: (input: {
     panelSettings: Record<string, unknown>;
     layout: Layout;
@@ -186,6 +187,7 @@ export function DashboardGrid({
   currentTimeSettings = initialTimeSettings,
   onDiscardTimeSettings,
   editControlsPortalId,
+  onUnauthorizedSaveDashboard,
   onSaveDashboard,
 }: DashboardGridProps): ReactElement {
   const initialLayout = useMemo(() => toReactGridLayoutItems(layout.spec.items), [layout]);
@@ -306,10 +308,15 @@ export function DashboardGrid({
   const hasSaveableDashboardChanges = hasUnsavedLayout || hasUnsavedSettings || hasUnsavedTimeSettings;
   const hasUnsavedDashboardChanges = hasUnsavedLayout || hasUnsavedSettings || (isEditMode && hasUnsavedTimeSettings);
   const shouldGuardUnsavedDashboardChanges = isOwner && hasUnsavedDashboardChanges;
-  const canSaveDashboard = Boolean(isOwner && onSaveDashboard && isEditMode && hasSaveableDashboardChanges && !isSavingDashboard);
+  const canAttemptSaveDashboard = Boolean(onSaveDashboard && isEditMode && hasSaveableDashboardChanges && !isSavingDashboard);
 
   async function handleSaveDashboard() {
-    if (!canSaveDashboard || !onSaveDashboard) {
+    if (!canAttemptSaveDashboard || !onSaveDashboard) {
+      return;
+    }
+
+    if (!isOwner) {
+      onUnauthorizedSaveDashboard?.();
       return;
     }
 
@@ -481,7 +488,7 @@ export function DashboardGrid({
             <Button
               aria-label="Save dashboard"
               twStyles={DASHBOARD_EDIT_BUTTON_STYLES}
-              disabled={!canSaveDashboard}
+              disabled={!canAttemptSaveDashboard}
               onClick={handleSaveDashboard}
             >
               {isSavingDashboard ? 'Saving' : 'Save'}
@@ -614,7 +621,7 @@ export function DashboardGrid({
                   <button
                     type="button"
                     className="ui_caption rounded-[4px] border border-border px-3 py-2 text-text-soft disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={!canSaveDashboard}
+                    disabled={!canAttemptSaveDashboard}
                     onClick={handleSaveDashboard}
                   >
                     {isSavingDashboard ? 'Saving' : 'Save'}

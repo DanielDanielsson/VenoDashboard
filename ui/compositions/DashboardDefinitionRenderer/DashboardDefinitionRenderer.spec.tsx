@@ -1,9 +1,14 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { render as rtlRender, screen } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 import { createPanelRegistry } from '@/lib/dashboard/panel-registry';
+import { NotificationsProvider } from '@ui/compositions/NotificationsProvider';
 import { getDashboardDefinition } from '@/lib/dashboard/registry';
 import { DashboardDefinitionRenderer } from './DashboardDefinitionRenderer';
+
+function render(ui: React.ReactElement) {
+  return rtlRender(<NotificationsProvider>{ui}</NotificationsProvider>);
+}
 
 describe('DashboardDefinitionRenderer', () => {
   test('renders panels from the dashboard layout in order', () => {

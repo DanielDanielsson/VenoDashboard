@@ -10,6 +10,7 @@ import {
   createTimeInRangePanelSettingsRegistration,
   type TimeInRangePanelLayout,
 } from '@ui/compositions/TimeInRangePanel';
+import { useDashboardNotifications } from './useDashboardNotifications';
 
 interface DashboardGridRuntimeProps {
   dashboardUid: string;
@@ -43,6 +44,11 @@ export function DashboardGridRuntime({
   editControlsPortalId,
 }: DashboardGridRuntimeProps): ReactElement {
   const [savedVersion, setSavedVersion] = useState<number | null>(dashboardVersion);
+  const {
+    notifyDashboardSaveFailed,
+    notifyDashboardSaveRequiresAdmin,
+    notifyDashboardSaved,
+  } = useDashboardNotifications({ dashboardUid });
   const settingsRegistry = useMemo<DashboardPanelSettingsRegistry>(() => {
     const registry: DashboardPanelSettingsRegistry = { ...providedSettingsRegistry };
 
@@ -63,32 +69,39 @@ export function DashboardGridRuntime({
     layout: Layout;
     timeSettings?: DashboardTimeSettingsKind;
   }) => {
-    const response = await fetch(`/api/dashboard/settings/dashboards/${encodeURIComponent(dashboardUid)}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        expectedVersion: savedVersion,
-        panelSettings: input.panelSettings,
-        layout: toDashboardGridLayoutItems(input.layout).map((item) => ({
-          element: item.spec.element.name,
-          x: item.spec.x,
-          y: item.spec.y,
-          width: item.spec.width,
-          height: item.spec.height,
-        })),
-        timeSettings: input.timeSettings,
-      }),
-    });
-    const json = await response.json() as DashboardSettingsResponse & { error?: { message?: string } };
+    try {
+      const response = await fetch(`/api/dashboard/settings/dashboards/${encodeURIComponent(dashboardUid)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          expectedVersion: savedVersion,
+          panelSettings: input.panelSettings,
+          layout: toDashboardGridLayoutItems(input.layout).map((item) => ({
+            element: item.spec.element.name,
+            x: item.spec.x,
+            y: item.spec.y,
+            width: item.spec.width,
+            height: item.spec.height,
+          })),
+          timeSettings: input.timeSettings,
+        }),
+      });
+      const json = await response.json() as DashboardSettingsResponse & { error?: { message?: string } };
 
-    if (!response.ok) {
-      throw new Error(json.error?.message || 'Failed to save dashboard settings.');
+      if (!response.ok) {
+        throw new Error(json.error?.message || 'Failed to save dashboard settings.');
+      }
+
+      setSavedVersion(json.dashboardSettings.version);
+      notifyDashboardSaved();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save dashboard settings.';
+      notifyDashboardSaveFailed(message);
+      throw error;
     }
-
-    setSavedVersion(json.dashboardSettings.version);
-  }, [dashboardUid, savedVersion]);
+  }, [dashboardUid, notifyDashboardSaveFailed, notifyDashboardSaved, savedVersion]);
 
   return (
     <DashboardGrid
@@ -100,6 +113,7 @@ export function DashboardGridRuntime({
       currentTimeSettings={currentTimeSettings}
       onDiscardTimeSettings={onDiscardTimeSettings}
       editControlsPortalId={editControlsPortalId}
+      onUnauthorizedSaveDashboard={notifyDashboardSaveRequiresAdmin}
       onSaveDashboard={handleSaveDashboard}
     >
       {children}

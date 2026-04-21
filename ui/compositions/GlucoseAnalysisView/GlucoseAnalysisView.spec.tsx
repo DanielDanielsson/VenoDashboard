@@ -4,11 +4,16 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { formatWorkoutTimeRange } from '@/lib/glucose/workout-display';
 import { getDashboardDefinition } from '@/lib/dashboard/registry';
+import { NotificationsProvider } from '@ui/compositions/NotificationsProvider';
 import { GlucoseAnalysisView } from './GlucoseAnalysisView';
 
 const historyMutateMock = vi.fn();
 const useSWRMock = vi.fn();
 const swrCache = new Map<string, { data?: unknown }>();
+
+function renderWithProviders(ui: React.ReactElement) {
+  return render(<NotificationsProvider>{ui}</NotificationsProvider>);
+}
 
 vi.mock('swr', () => ({
   __esModule: true,
@@ -512,14 +517,14 @@ describe('GlucoseAnalysisView', () => {
       };
     });
 
-    render(<GlucoseAnalysisView isOwner={false} initialSnapshot={initialSnapshot} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner={false} initialSnapshot={initialSnapshot} />);
 
     expect(await screen.findByRole('button', { name: 'select-reading-1' })).toBeInTheDocument();
     expect(screen.queryByText('Loading glucose data...')).not.toBeInTheDocument();
   });
 
   test('refreshes the dashboard history query from the refresh picker', () => {
-    render(<GlucoseAnalysisView isOwner />);
+    renderWithProviders(<GlucoseAnalysisView isOwner />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh dashboard' }));
 
@@ -531,7 +536,7 @@ describe('GlucoseAnalysisView', () => {
     dashboardDefinition.spec.timeSettings.autoRefresh = '5s';
     vi.useFakeTimers();
 
-    render(<GlucoseAnalysisView isOwner dashboardDefinition={dashboardDefinition} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner dashboardDefinition={dashboardDefinition} />);
 
     act(() => {
       vi.advanceTimersByTime(5_000);
@@ -594,7 +599,7 @@ describe('GlucoseAnalysisView', () => {
       };
     });
 
-    render(<GlucoseAnalysisView isOwner={false} initialSnapshot={initialSnapshot} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner={false} initialSnapshot={initialSnapshot} />);
 
     fireEvent.click(screen.getByRole('button', { name: /Time range selected/i }));
     fireEvent.click(screen.getByRole('button', { name: '2 weeks' }));
@@ -626,7 +631,7 @@ describe('GlucoseAnalysisView', () => {
   });
 
   test('lets visitors preview corrections but not apply them', async () => {
-    render(<GlucoseAnalysisView isOwner={false} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner={false} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'select-reading-1' }));
     fireEvent.click(screen.getByRole('button', { name: 'preview-reading-1' }));
@@ -640,7 +645,7 @@ describe('GlucoseAnalysisView', () => {
   test('lets public visitors edit glucose timeline settings locally and shows disabled save', async () => {
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
 
-    render(<GlucoseAnalysisView isOwner={false} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner={false} />);
 
     expect(screen.getByTestId('chart-settings')).toHaveTextContent('threeColors:25');
 
@@ -669,13 +674,13 @@ describe('GlucoseAnalysisView', () => {
       yAxisMax: 18,
     };
 
-    render(<GlucoseAnalysisView isOwner={false} dashboardDefinition={dashboardDefinition} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner={false} dashboardDefinition={dashboardDefinition} />);
 
     expect(screen.getByTestId('chart-settings')).toHaveTextContent('gradient:18');
   });
 
   test('resets public glucose timeline settings after remount', async () => {
-    const { unmount } = render(<GlucoseAnalysisView isOwner={false} />);
+    const { unmount } = renderWithProviders(<GlucoseAnalysisView isOwner={false} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
     fireEvent.click(screen.getByRole('button', { name: 'Open panel actions for Glucose Timeline' }));
@@ -691,20 +696,20 @@ describe('GlucoseAnalysisView', () => {
     expect(screen.getByTestId('chart-settings')).toHaveTextContent('gradient:18');
 
     unmount();
-    render(<GlucoseAnalysisView isOwner={false} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner={false} />);
 
     expect(screen.getByTestId('chart-settings')).toHaveTextContent('threeColors:25');
   });
 
   test('does not render the old standalone statistics settings panel', () => {
-    render(<GlucoseAnalysisView isOwner={false} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner={false} />);
 
     expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Time range selected: Last 3 days' })).toBeInTheDocument();
   });
 
   test('switches the time in range panel layout from panel settings', () => {
-    render(<GlucoseAnalysisView isOwner={false} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner={false} />);
 
     expect(screen.queryByRole('button', { name: '24d' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Time in Range' })).toBeInTheDocument();
@@ -728,7 +733,7 @@ describe('GlucoseAnalysisView', () => {
   test('submits preview corrections with a required reason for owners', async () => {
     const fetchMock = vi.mocked(fetch);
 
-    render(<GlucoseAnalysisView isOwner />);
+    renderWithProviders(<GlucoseAnalysisView isOwner />);
 
     fireEvent.click(screen.getByRole('button', { name: 'select-reading-1' }));
     fireEvent.click(screen.getByRole('button', { name: 'preview-reading-1' }));
@@ -766,7 +771,7 @@ describe('GlucoseAnalysisView', () => {
       json: async () => ({ updated: 0, cleared: 1 })
     } as Response);
 
-    render(<GlucoseAnalysisView isOwner />);
+    renderWithProviders(<GlucoseAnalysisView isOwner />);
 
     fireEvent.click(screen.getByRole('button', { name: 'select-reading-2' }));
     fireEvent.click(screen.getByRole('button', { name: 'Remove correction' }));
@@ -794,7 +799,7 @@ describe('GlucoseAnalysisView', () => {
   });
 
   test('keeps building one correction session when more readings are clicked', async () => {
-    render(<GlucoseAnalysisView isOwner />);
+    renderWithProviders(<GlucoseAnalysisView isOwner />);
 
     fireEvent.click(screen.getByRole('button', { name: 'select-reading-1' }));
     expect(await screen.findByText('1 reading selected. Click more readings to add them to this correction.')).toBeInTheDocument();
@@ -806,7 +811,7 @@ describe('GlucoseAnalysisView', () => {
   test('shows note length validation only after save is attempted', async () => {
     const fetchMock = vi.mocked(fetch);
 
-    render(<GlucoseAnalysisView isOwner />);
+    renderWithProviders(<GlucoseAnalysisView isOwner />);
 
     fireEvent.click(screen.getByRole('button', { name: 'add-note' }));
 
@@ -828,7 +833,7 @@ describe('GlucoseAnalysisView', () => {
   });
 
   test('focuses the note textarea when creating a new note', async () => {
-    render(<GlucoseAnalysisView isOwner />);
+    renderWithProviders(<GlucoseAnalysisView isOwner />);
 
     fireEvent.click(screen.getByRole('button', { name: 'add-note' }));
 
@@ -843,7 +848,7 @@ describe('GlucoseAnalysisView', () => {
   });
 
   test('hides all day and time controls for multi day notes', async () => {
-    render(<GlucoseAnalysisView isOwner />);
+    renderWithProviders(<GlucoseAnalysisView isOwner />);
 
     fireEvent.click(screen.getByRole('button', { name: 'add-note' }));
     fireEvent.change(await screen.findByLabelText('End date'), {
@@ -898,7 +903,7 @@ describe('GlucoseAnalysisView', () => {
       };
     });
 
-    render(<GlucoseAnalysisView isOwner initialSnapshot={createHistoryResponseWithNote()} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner initialSnapshot={createHistoryResponseWithNote()} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'note-note-1' }));
 
@@ -962,7 +967,7 @@ describe('GlucoseAnalysisView', () => {
       })
     } as Response);
 
-    render(<GlucoseAnalysisView isOwner initialSnapshot={initialSnapshot} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner initialSnapshot={initialSnapshot} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'note-note-1' }));
     fireEvent.change(await screen.findByLabelText('Note'), {
@@ -1029,7 +1034,7 @@ describe('GlucoseAnalysisView', () => {
       json: async () => ({})
     } as Response);
 
-    render(<GlucoseAnalysisView isOwner initialSnapshot={initialSnapshot} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner initialSnapshot={initialSnapshot} />);
 
     expect(screen.getByTestId('chart-note-ids')).toHaveTextContent('note-1');
 
@@ -1074,7 +1079,7 @@ describe('GlucoseAnalysisView', () => {
       };
     });
 
-    render(<GlucoseAnalysisView isOwner={false} initialSnapshot={createHistoryResponseWithWorkout()} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner={false} initialSnapshot={createHistoryResponseWithWorkout()} />);
 
     expect(screen.getByTestId('chart-workout-ids')).toHaveTextContent('workout-1');
   });
@@ -1110,7 +1115,7 @@ describe('GlucoseAnalysisView', () => {
       };
     });
 
-    render(<GlucoseAnalysisView isOwner={false} initialSnapshot={createHistoryResponseWithWorkout()} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner={false} initialSnapshot={createHistoryResponseWithWorkout()} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'workout-workout-1' }));
 
@@ -1140,7 +1145,7 @@ describe('GlucoseAnalysisView', () => {
       })
     } as Response);
 
-    render(<GlucoseAnalysisView isOwner initialSnapshot={createHistoryResponse()} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner initialSnapshot={createHistoryResponse()} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'add-workout' }));
     expect(await screen.findByRole('dialog', { name: 'New workout' })).toBeInTheDocument();
@@ -1230,7 +1235,7 @@ describe('GlucoseAnalysisView', () => {
         json: async () => ({ deleted: true, workoutId: 'workout-manual-1' })
       } as Response);
 
-    render(<GlucoseAnalysisView isOwner initialSnapshot={initialSnapshot} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner initialSnapshot={initialSnapshot} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'workout-workout-manual-1' }));
     expect(await screen.findByRole('dialog', { name: 'Workout' })).toBeInTheDocument();
@@ -1318,7 +1323,7 @@ describe('GlucoseAnalysisView', () => {
       })
     } as Response);
 
-    render(<GlucoseAnalysisView isOwner initialSnapshot={initialSnapshot} />);
+    renderWithProviders(<GlucoseAnalysisView isOwner initialSnapshot={initialSnapshot} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'workout-workout-1' }));
     expect(await screen.findByRole('dialog', { name: 'Workout' })).toBeInTheDocument();

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { ApiKeySummary } from '@/lib/pulse-api/types';
 import { isSystemApiKeyName } from '@/lib/pulse-api/key-visibility';
+import { useNotifications } from '@ui/compositions/NotificationsProvider';
 
 interface ApiKeysManagerProps {
   initialItems: ApiKeySummary[];
@@ -22,6 +23,7 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
   const [messageTone, setMessageTone] = useState<'neutral' | 'error' | 'success'>('neutral');
   const [busy, setBusy] = useState(false);
   const [secret, setSecret] = useState<SecretState | null>(null);
+  const { notifySuccess } = useNotifications();
 
   async function loadItems() {
     const response = await fetch('/api/dashboard/api-keys/list', { cache: 'no-store' });
@@ -127,6 +129,7 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
     await navigator.clipboard.writeText(value);
     setMessage(`${label} copied`);
     setMessageTone('success');
+    notifySuccess(`${label} copied`);
   }
 
   return (

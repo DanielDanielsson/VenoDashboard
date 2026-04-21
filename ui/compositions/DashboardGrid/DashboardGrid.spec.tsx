@@ -291,6 +291,62 @@ describe('DashboardGrid', () => {
     });
   });
 
+  test('shows a save-attempt callback for non-admin users without calling the save handler', async () => {
+    const onSaveDashboard = vi.fn().mockResolvedValue(undefined);
+    const onUnauthorizedSaveDashboard = vi.fn();
+
+    render(
+      <DashboardGrid
+        layout={createLayout()}
+        onSaveDashboard={onSaveDashboard}
+        onUnauthorizedSaveDashboard={onUnauthorizedSaveDashboard}
+        initialPanelSettings={{
+          'panel-current-glucose': { colorMode: 'threeColors' },
+        }}
+        settingsRegistry={{
+          'panel-current-glucose': {
+            defaultSettings: { colorMode: 'threeColors' },
+            render: ({ updateSettings }) => (
+              <button
+                type="button"
+                onClick={() => {
+                  updateSettings((current) => ({
+                    ...(current as { colorMode: string }),
+                    colorMode: 'gradient',
+                  }));
+                }}
+              >
+                Gradient
+              </button>
+            ),
+          },
+        }}
+      >
+        <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+          Current glucose panel
+        </DashboardGridPanel>
+      </DashboardGrid>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel actions for Current Glucose' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+
+    const drawer = screen.getByRole('complementary', { name: 'Panel settings for Current Glucose' });
+    const saveButton = within(drawer).getByRole('button', { name: 'Save' });
+
+    expect(saveButton).toBeDisabled();
+
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Gradient' }));
+
+    expect(saveButton).toBeEnabled();
+
+    fireEvent.click(saveButton);
+
+    expect(onUnauthorizedSaveDashboard).toHaveBeenCalledTimes(1);
+    expect(onSaveDashboard).not.toHaveBeenCalled();
+  });
+
   test('enables layout editing only in dashboard edit mode', () => {
     const { rerender } = render(
       <DashboardGrid layout={createLayout()}>

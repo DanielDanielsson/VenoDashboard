@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { NotificationsProvider } from '@ui/compositions/NotificationsProvider';
 import '../styles/globals.css';
 
 const themeInitScript = `
@@ -52,7 +53,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body className="antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        {children}
+        <NotificationsProvider>{children}</NotificationsProvider>
       </body>
     </html>
   );

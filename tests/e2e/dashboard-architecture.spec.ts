@@ -96,8 +96,11 @@ test('statistics dashboard supports panel view, edit, and public local preview',
 
   await expect(page.getByRole('button', { name: '24d' })).toHaveCount(0);
   await expect(page.locator('h2').filter({ hasText: /^Time In Range$/ })).toBeVisible();
-  await expect(drawer.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await expect(drawer.getByRole('button', { name: 'Save' })).toBeEnabled();
   await expect(drawer.getByText('Admin sign in is required to save dashboard settings.')).toBeVisible();
+  await drawer.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Admin sign in required')).toBeVisible();
+  await expect(page.getByText('Sign in with admin access before saving dashboard changes.')).toBeVisible();
 });
 
 test('admin can save panel settings when the backend dashboard settings path is available', async ({ page }) => {
