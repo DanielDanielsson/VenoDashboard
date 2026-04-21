@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
+import * as React from 'react';
 import type { ReactNode } from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { DASHBOARD_TIMER_STARTED_EVENT } from '@ui/compositions/DashboardTimersBridge/dashboardTimerEvents';
 import { SharedTimersPanel } from './SharedTimersPanel';
 
 const useSWRMock = vi.fn();
+const eventSourceSpy = vi.fn();
 
 vi.mock('swr', () => ({
   __esModule: true,
@@ -48,11 +51,27 @@ vi.mock('@ui/components/SecondaryButton', () => ({
 describe('SharedTimersPanel', () => {
   beforeEach(() => {
     useSWRMock.mockReset();
-    useSWRMock.mockReturnValue({
-      data: { items: [], serverNow: new Date().toISOString() },
-      error: undefined,
-      mutate: vi.fn()
+    eventSourceSpy.mockReset();
+    useSWRMock.mockImplementation(() => {
+      const [data, setData] = React.useState({ items: [], serverNow: new Date().toISOString() });
+
+      return {
+        data,
+        error: undefined,
+        mutate: async (updater: unknown) => {
+          setData((current) => typeof updater === 'function'
+            ? (updater as (value: typeof current) => typeof current)(current)
+            : updater as typeof current);
+        }
+      };
     });
+    vi.stubGlobal('EventSource', class {
+      constructor() {
+        eventSourceSpy();
+      }
+      addEventListener() {}
+      close() {}
+    } as unknown as typeof EventSource);
   });
 
   test('does not fetch timers when rendered in read only mode', () => {
@@ -64,5 +83,31 @@ describe('SharedTimersPanel', () => {
       expect.objectContaining({ revalidateOnFocus: false })
     );
     expect(screen.getByRole('button', { name: 'Admin sign in to start timers' })).toBeDisabled();
+  });
+
+  test('updates the rendered timer list from shared timer bridge events without opening its own stream', () => {
+    render(<SharedTimersPanel />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(DASHBOARD_TIMER_STARTED_EVENT, {
+        detail: {
+          timer: {
+            id: 'timer-1',
+            durationSeconds: 600,
+            createdAt: '2026-04-21T05:00:00.000Z',
+            fireAt: '2099-04-21T05:10:00.000Z',
+            removedAt: null,
+            createdBy: {
+              apiKeyId: null,
+              apiKeyName: null,
+            },
+          },
+          serverNow: '2026-04-21T05:00:00.000Z',
+        },
+      }));
+    });
+
+    expect(eventSourceSpy).not.toHaveBeenCalled();
+    expect(screen.getByText('10m')).toBeInTheDocument();
   });
 });

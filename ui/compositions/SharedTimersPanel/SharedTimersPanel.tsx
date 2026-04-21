@@ -5,13 +5,23 @@ import useSWR from 'swr';
 import { DashboardPanel } from '@ui/components/DashboardPanel';
 import { SecondaryButton } from '@ui/components/SecondaryButton';
 import type {
-  SharedTimer,
   SharedTimerMutationResponse,
   SharedTimerListResponse,
-  TimerRemovedPayload,
-  TimerStartedPayload,
-  SharedTimerStreamConnectedPayload
 } from '@/lib/pulse-api/types';
+import {
+  DASHBOARD_TIMER_REMOVED_EVENT,
+  DASHBOARD_TIMER_STARTED_EVENT,
+  DASHBOARD_TIMERS_CONNECTED_EVENT,
+  type DashboardTimerRemovedDetail,
+  type DashboardTimerStartedDetail,
+  type DashboardTimersConnectedDetail,
+} from '@ui/compositions/DashboardTimersBridge/dashboardTimerEvents';
+import {
+  formatDurationLabel,
+  getServerOffsetMs,
+  sortTimers,
+  upsertTimer,
+} from './sharedTimerUtils';
 
 const TIMER_PRESETS = [5, 10, 15, 20] as const;
 
@@ -30,17 +40,6 @@ async function fetchJson<T>(url: string): Promise<T> {
   return payload;
 }
 
-function formatDurationLabel(totalSeconds: number): string {
-  const seconds = Math.max(1, Math.round(totalSeconds));
-  if (seconds % 3600 === 0) {
-    return `${seconds / 3600}h`;
-  }
-  if (seconds % 60 === 0) {
-    return `${seconds / 60}m`;
-  }
-  return `${seconds}s`;
-}
-
 function formatCountdown(targetIso: string, nowMs: number): string {
   const remaining = Math.max(0, Math.ceil((new Date(targetIso).getTime() - nowMs) / 1000));
   const hours = Math.floor(remaining / 3600);
@@ -50,10 +49,6 @@ function formatCountdown(targetIso: string, nowMs: number): string {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
-function getServerOffsetMs(serverNow: string): number {
-  return new Date(serverNow).getTime() - Date.now();
 }
 
 function parseDurationInput(value: string): number | null {
@@ -101,22 +96,6 @@ function parseDurationInput(value: string): number | null {
   return Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes * 60) : null;
 }
 
-function sortTimers(items: SharedTimer[]): SharedTimer[] {
-  return [...items].sort((left, right) => {
-    const fireDiff = new Date(left.fireAt).getTime() - new Date(right.fireAt).getTime();
-    if (fireDiff !== 0) {
-      return fireDiff;
-    }
-    return new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
-  });
-}
-
-function upsertTimer(items: SharedTimer[], timer: SharedTimer): SharedTimer[] {
-  const nextItems = items.filter((item) => item.id !== timer.id);
-  nextItems.push(timer);
-  return sortTimers(nextItems);
-}
-
 export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) {
   const [showStartForm, setShowStartForm] = useState(false);
   const [selectedMinutes, setSelectedMinutes] = useState<number>(TIMER_PRESETS[0]);
@@ -150,106 +129,62 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
       return;
     }
 
-    let eventSource: EventSource | null = null;
-    let reconnectTimer: number | null = null;
-    let closed = false;
-
-    const clearReconnectTimer = () => {
-      if (reconnectTimer !== null) {
-        window.clearTimeout(reconnectTimer);
-        reconnectTimer = null;
-      }
-    };
-
-    const scheduleReconnect = () => {
-      if (closed || reconnectTimer !== null) {
-        return;
-      }
-
-      reconnectTimer = window.setTimeout(() => {
-        reconnectTimer = null;
-        connect();
-      }, 3000);
-    };
-
     const handleConnected = (event: Event) => {
-      const messageEvent = event as MessageEvent<string>;
-
-      try {
-        const payload = JSON.parse(messageEvent.data) as SharedTimerStreamConnectedPayload;
-        setServerOffsetMs(getServerOffsetMs(payload.serverNow));
-        setNowMs(Date.now() + getServerOffsetMs(payload.serverNow));
-        void mutate({ items: sortTimers(payload.items || []), serverNow: payload.serverNow }, false);
-      } catch {
+      const customEvent = event as CustomEvent<DashboardTimersConnectedDetail>;
+      const payload = customEvent.detail;
+      if (!payload?.serverNow) {
         return;
       }
+
+      setServerOffsetMs(getServerOffsetMs(payload.serverNow));
+      setNowMs(Date.now() + getServerOffsetMs(payload.serverNow));
+      void mutate({ items: sortTimers(payload.items || []), serverNow: payload.serverNow }, false);
     };
 
     const handleStarted = (event: Event) => {
-      const messageEvent = event as MessageEvent<string>;
-
-      try {
-        const payload = JSON.parse(messageEvent.data) as TimerStartedPayload;
-        if (!payload.timer || !payload.serverNow) {
-          return;
-        }
-
-        setServerOffsetMs(getServerOffsetMs(payload.serverNow));
-        setNowMs(Date.now() + getServerOffsetMs(payload.serverNow));
-        void mutate(
-          (current) => ({
-            items: upsertTimer(current?.items || [], payload.timer as SharedTimer),
-            serverNow: payload.serverNow || current?.serverNow || new Date().toISOString()
-          }),
-          false
-        );
-      } catch {
+      const customEvent = event as CustomEvent<DashboardTimerStartedDetail>;
+      const payload = customEvent.detail;
+      if (!payload?.timer || !payload.serverNow) {
         return;
       }
+
+      setServerOffsetMs(getServerOffsetMs(payload.serverNow));
+      setNowMs(Date.now() + getServerOffsetMs(payload.serverNow));
+      void mutate(
+        (current) => ({
+          items: upsertTimer(current?.items || [], payload.timer),
+          serverNow: payload.serverNow || current?.serverNow || new Date().toISOString()
+        }),
+        false
+      );
     };
 
     const handleRemoved = (event: Event) => {
-      const messageEvent = event as MessageEvent<string>;
-
-      try {
-        const payload = JSON.parse(messageEvent.data) as TimerRemovedPayload;
-        if (!payload.timerId || !payload.serverNow) {
-          return;
-        }
-
-        setServerOffsetMs(getServerOffsetMs(payload.serverNow));
-        setNowMs(Date.now() + getServerOffsetMs(payload.serverNow));
-        void mutate(
-          (current) => ({
-            items: (current?.items || []).filter((item) => item.id !== payload.timerId),
-            serverNow: payload.serverNow || current?.serverNow || new Date().toISOString()
-          }),
-          false
-        );
-      } catch {
+      const customEvent = event as CustomEvent<DashboardTimerRemovedDetail>;
+      const payload = customEvent.detail;
+      if (!payload?.timerId || !payload.serverNow) {
         return;
       }
+
+      setServerOffsetMs(getServerOffsetMs(payload.serverNow));
+      setNowMs(Date.now() + getServerOffsetMs(payload.serverNow));
+      void mutate(
+        (current) => ({
+          items: (current?.items || []).filter((item) => item.id !== payload.timerId),
+          serverNow: payload.serverNow || current?.serverNow || new Date().toISOString()
+        }),
+        false
+      );
     };
 
-    const handleError = () => {
-      eventSource?.close();
-      scheduleReconnect();
-    };
-
-    const connect = () => {
-      eventSource = new EventSource('/api/dashboard/timers/stream');
-      eventSource.addEventListener('connected', handleConnected);
-      eventSource.addEventListener('timer_started', handleStarted);
-      eventSource.addEventListener('timer_removed', handleRemoved);
-      eventSource.addEventListener('error', handleError);
-    };
-
-    connect();
+    window.addEventListener(DASHBOARD_TIMERS_CONNECTED_EVENT, handleConnected as EventListener);
+    window.addEventListener(DASHBOARD_TIMER_STARTED_EVENT, handleStarted as EventListener);
+    window.addEventListener(DASHBOARD_TIMER_REMOVED_EVENT, handleRemoved as EventListener);
 
     return () => {
-      closed = true;
-      clearReconnectTimer();
-      eventSource?.close();
+      window.removeEventListener(DASHBOARD_TIMERS_CONNECTED_EVENT, handleConnected as EventListener);
+      window.removeEventListener(DASHBOARD_TIMER_STARTED_EVENT, handleStarted as EventListener);
+      window.removeEventListener(DASHBOARD_TIMER_REMOVED_EVENT, handleRemoved as EventListener);
     };
   }, [mutate, readOnly]);
 

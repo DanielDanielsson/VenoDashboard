@@ -1,4 +1,5 @@
 import { DashboardNotificationsBridge } from '@ui/compositions/DashboardNotificationsBridge/DashboardNotificationsBridge';
+import { DashboardTimersBridge } from '@ui/compositions/DashboardTimersBridge';
 import { MobileDesktopNotice } from '@ui/compositions/MobileDesktopNotice/MobileDesktopNotice';
 import { SideBarNavigation } from '@ui/compositions/SideBarNavigation';
 import { DynamicFavicon } from '@ui/components/DynamicFavicon/DynamicFavicon';
@@ -15,6 +16,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         <main className="px-4 pb-20 pt-dashboard-top md:ml-[230px] md:pb-8">
           <DynamicFavicon />
           {session ? <DashboardNotificationsBridge /> : null}
+          {session ? <DashboardTimersBridge /> : null}
           <div className="dashboard-fullwidth-container section-stack">
             {children}
           </div>
