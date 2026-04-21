@@ -34,6 +34,27 @@ Repo-specific guidance should live here:
 
 Do not assume the parent `PulseGlucose` workspace structure is available when writing repo-local guidance for `VenoDashboard`.
 
+## Notifications
+
+The app now has a shared notification foundation for toast style feedback.
+
+Core rules:
+
+1. the notification provider is mounted at the app root so client components can trigger notifications from anywhere
+2. use the shared notification hook instead of inventing one off toast systems
+3. preferred public helpers are `notify`, `notifySuccess`, `notifyWarning`, and `notifyError`
+4. treat the shared notification API as the default path for cross page feedback that should float above current content
+5. do not build feature specific toast containers inside pages, panels, drawers, or dialogs
+6. when adding a feature specific notification pattern, prefer a small domain helper that delegates to the shared notification API
+7. if a feature still keeps inline status text for local context, that does not justify bypassing the shared notification path for the global feedback event
+
+Timer specific rules:
+
+1. dashboard timer stream ownership lives in `ui/compositions/DashboardTimersBridge`
+2. `SharedTimersPanel` should react to shared browser timer events, not open its own `EventSource`
+3. timer started and timer finished notifications should flow through the shared notifications API from the global timer bridge
+4. if timer stream payload handling changes, update the bridge event contract before changing panel level behavior
+
 ## Dashboard Panels
 
 Dashboard pages are now data driven.

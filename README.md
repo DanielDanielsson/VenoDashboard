@@ -35,6 +35,24 @@ It is also a side project built as a real product sandbox. The dashboard is wher
 - Connections and system status surfaces
 - API key and settings management for admin users
 
+## Notifications
+
+The app now has a shared notification foundation mounted at the app root.
+
+Use the shared notification hook in client components when feedback should appear above the current page state:
+
+- `notify(title, options?)`
+- `notifySuccess(title, options?)`
+- `notifyWarning(title, options?)`
+- `notifyError(title, options?)`
+
+Current intent:
+
+- one shared toast viewport in the top right
+- one shared API for future cross-page feedback
+- no feature-specific toast containers
+- dashboard timer events are owned by a global timer bridge, so timer UI and timer notifications both react to the same stream source
+
 ## Environment
 
 `VenoDashboard` should stay simple. These are the only env vars that matter in normal use:
