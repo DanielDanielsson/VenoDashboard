@@ -1,0 +1,22 @@
+@layer theme {
+  :root {
+    --color-line-chart-grid: var(--color-base-grid-warm);
+    --color-line-chart-axis: var(--color-base-text-warm-soft);
+    --color-line-chart-series: var(--color-base-accent);
+    --color-line-chart-area: var(--color-base-accent-soft-light);
+  }
+
+  .theme-dark {
+    --color-line-chart-grid: var(--color-base-grid-cool);
+    --color-line-chart-axis: var(--color-base-ink-soft);
+    --color-line-chart-series: var(--color-base-accent-bright);
+    --color-line-chart-area: var(--color-base-accent-soft-dark);
+  }
+}
+
+@theme inline {
+  --color-line-chart-grid: var(--color-line-chart-grid);
+  --color-line-chart-axis: var(--color-line-chart-axis);
+  --color-line-chart-series: var(--color-line-chart-series);
+  --color-line-chart-area: var(--color-line-chart-area);
+}

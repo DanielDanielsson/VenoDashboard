@@ -1,0 +1,43 @@
+@layer theme {
+  :root {
+    --color-pie-chart-track: var(--color-base-paper-strong);
+    --color-pie-chart-separator: var(--color-base-surface-panel-light);
+    --color-pie-chart-center-value: var(--color-base-ink);
+    --color-pie-chart-center-label: var(--color-base-text-warm-soft);
+    --color-pie-chart-legend-label: var(--color-base-text-warm-soft);
+    --color-pie-chart-legend-value: var(--color-base-ink);
+    --color-pie-chart-empty: var(--color-base-surface-panel-light-strong);
+    --color-pie-chart-palette-1: var(--color-base-accent);
+    --color-pie-chart-palette-2: var(--color-base-warning);
+    --color-pie-chart-palette-3: var(--color-base-error);
+    --color-pie-chart-palette-4: var(--color-base-glucose-high-light);
+    --color-pie-chart-palette-5: var(--color-base-glucose-very-high-light);
+    --color-pie-chart-palette-6: var(--color-base-ink-soft-strong);
+  }
+
+  .theme-dark {
+    --color-pie-chart-track: var(--color-base-night-surface);
+    --color-pie-chart-separator: var(--color-base-panel-dark-bright);
+    --color-pie-chart-center-value: var(--color-base-white-soft);
+    --color-pie-chart-center-label: var(--color-base-ink-soft);
+    --color-pie-chart-legend-label: var(--color-base-ink-soft);
+    --color-pie-chart-legend-value: var(--color-base-white-soft);
+    --color-pie-chart-empty: var(--color-base-panel-dark-bright);
+    --color-pie-chart-palette-1: var(--color-base-accent-bright);
+    --color-pie-chart-palette-2: var(--color-base-warning-dark);
+    --color-pie-chart-palette-3: var(--color-base-error-dark);
+    --color-pie-chart-palette-4: var(--color-base-glucose-high-dark);
+    --color-pie-chart-palette-5: var(--color-base-glucose-very-high-dark);
+    --color-pie-chart-palette-6: var(--color-base-white-muted);
+  }
+}
+
+@theme inline {
+  --color-pie-chart-track: var(--color-pie-chart-track);
+  --color-pie-chart-separator: var(--color-pie-chart-separator);
+  --color-pie-chart-center-value: var(--color-pie-chart-center-value);
+  --color-pie-chart-center-label: var(--color-pie-chart-center-label);
+  --color-pie-chart-legend-label: var(--color-pie-chart-legend-label);
+  --color-pie-chart-legend-value: var(--color-pie-chart-legend-value);
+  --color-pie-chart-empty: var(--color-pie-chart-empty);
+}

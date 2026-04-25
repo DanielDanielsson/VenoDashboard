@@ -21,6 +21,9 @@ describe('TimeInRangePanel', () => {
 
     expect(screen.queryByRole('button', { name: '24d' })).not.toBeInTheDocument();
     expect(screen.getByText('Very Low')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Time in range distribution' })).toBeInTheDocument();
+    expect(screen.getByText('In range')).toBeInTheDocument();
+    expect(screen.getAllByText('70%')).toHaveLength(2);
   });
 
   test('renders the statistics layout when configured', () => {

@@ -1,0 +1,22 @@
+@layer theme {
+  :root {
+    --color-histogram-chart-grid: var(--color-base-grid-warm);
+    --color-histogram-chart-axis: var(--color-base-text-warm-soft);
+    --color-histogram-chart-bar: var(--color-base-accent);
+    --color-histogram-chart-bar-alt: var(--color-base-warning);
+  }
+
+  .theme-dark {
+    --color-histogram-chart-grid: var(--color-base-grid-cool);
+    --color-histogram-chart-axis: var(--color-base-ink-soft);
+    --color-histogram-chart-bar: var(--color-base-accent-bright);
+    --color-histogram-chart-bar-alt: var(--color-base-warning-dark);
+  }
+}
+
+@theme inline {
+  --color-histogram-chart-grid: var(--color-histogram-chart-grid);
+  --color-histogram-chart-axis: var(--color-histogram-chart-axis);
+  --color-histogram-chart-bar: var(--color-histogram-chart-bar);
+  --color-histogram-chart-bar-alt: var(--color-histogram-chart-bar-alt);
+}
