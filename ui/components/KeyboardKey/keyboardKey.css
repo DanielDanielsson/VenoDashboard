@@ -1,0 +1,22 @@
+@layer theme {
+  :root {
+    --color-keyboard-key-bg: var(--color-base-surface-panel-light-strong);
+    --color-keyboard-key-border: var(--color-base-border-warm-strong);
+    --color-keyboard-key-text: var(--color-base-text-warm-strong);
+    --shadow-keyboard-key: var(--color-base-shadow-key-light);
+  }
+
+  .theme-dark {
+    --color-keyboard-key-bg: var(--color-base-panel-dark-warm);
+    --color-keyboard-key-border: var(--color-base-border-cool-input);
+    --color-keyboard-key-text: var(--color-base-white-soft);
+    --shadow-keyboard-key: var(--color-base-shadow-key-dark);
+  }
+}
+
+@theme inline {
+  --color-keyboard-key-bg: var(--color-keyboard-key-bg);
+  --color-keyboard-key-border: var(--color-keyboard-key-border);
+  --color-keyboard-key-text: var(--color-keyboard-key-text);
+  --shadow-keyboard-key: var(--shadow-keyboard-key);
+}

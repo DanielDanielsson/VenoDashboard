@@ -2,18 +2,29 @@ import { GlucoseAnalysisView } from '@ui/compositions/GlucoseAnalysisView/Glucos
 import { getOwnerSession } from '@/lib/auth';
 import { dashboardGlucoseWorkspace } from '@/lib/glucose/dashboard-workspace';
 import { loadDashboardDefinition } from '@/lib/dashboard/settings';
+import { parseStatisticsDashboardUrlState } from '@/lib/dashboard/url-state';
 
 export const metadata = {
   title: 'Statistics'
 };
 
-export default async function DashboardStatisticsPage() {
+interface DashboardStatisticsPageProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function DashboardStatisticsPage({ searchParams }: DashboardStatisticsPageProps = {}) {
   const session = await getOwnerSession();
   const dashboardState = await loadDashboardDefinition('statistics');
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const initialUrlState = parseStatisticsDashboardUrlState(resolvedSearchParams);
   let initialSnapshot;
 
   try {
-    const workspaceSession = await dashboardGlucoseWorkspace.open({ range: '3d' });
+    const workspaceSession = await dashboardGlucoseWorkspace.open(
+      initialUrlState.initialSelection?.kind === 'custom'
+        ? { window: initialUrlState.initialSelection.window }
+        : { range: '3d' },
+    );
     initialSnapshot = workspaceSession.snapshot;
   } catch {
     initialSnapshot = undefined;
@@ -38,6 +49,8 @@ export default async function DashboardStatisticsPage() {
         initialSnapshot={initialSnapshot}
         dashboardDefinition={dashboardState.dashboard}
         dashboardVersion={dashboardState.version}
+        initialSelection={initialUrlState.initialSelection}
+        initialTimeZone={initialUrlState.initialTimeZone}
       />
     </div>
   );

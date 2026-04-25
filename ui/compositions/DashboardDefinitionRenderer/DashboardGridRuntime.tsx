@@ -18,6 +18,8 @@ interface DashboardGridRuntimeProps {
   layout: GridLayoutKind;
   children: ReactNode;
   isOwner: boolean;
+  viewedPanelId?: string | null;
+  onViewedPanelChange?: (panelId: string | null, navigationMode?: 'push' | 'replace') => void;
   settingsRegistry?: DashboardPanelSettingsRegistry;
   initialPanelSettings?: Record<string, unknown>;
   initialTimeSettings?: DashboardTimeSettingsKind;
@@ -35,6 +37,8 @@ export function DashboardGridRuntime({
   layout,
   children,
   isOwner,
+  viewedPanelId,
+  onViewedPanelChange,
   settingsRegistry: providedSettingsRegistry = EMPTY_SETTINGS_REGISTRY,
   initialPanelSettings,
   initialTimeSettings,
@@ -107,6 +111,8 @@ export function DashboardGridRuntime({
     <DashboardGrid
       layout={layout}
       isOwner={isOwner}
+      viewedPanelId={viewedPanelId}
+      onViewedPanelChange={onViewedPanelChange}
       settingsRegistry={settingsRegistry}
       initialPanelSettings={initialPanelSettings}
       initialTimeSettings={initialTimeSettings}

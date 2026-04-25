@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useNotifications } from '@ui/compositions/NotificationsProvider';
 
 interface DashboardNotificationOptions {
@@ -10,7 +11,7 @@ export function useDashboardNotifications({ dashboardUid }: DashboardNotificatio
   void dashboardUid;
   const { notifyError, notifySuccess } = useNotifications();
 
-  return {
+  return useMemo(() => ({
     notifyDashboardSaveRequiresAdmin() {
       notifyError('Admin sign in required', {
         message: 'Sign in with admin access before saving dashboard changes.',
@@ -24,5 +25,10 @@ export function useDashboardNotifications({ dashboardUid }: DashboardNotificatio
         message: message || 'Failed to save dashboard settings.',
       });
     },
-  };
+    notifyInvalidDashboardUrl(dashboardTitle: string) {
+      notifyError('Invalid URL parameter', {
+        message: `Redirected to ${dashboardTitle}`,
+      });
+    },
+  }), [notifyError, notifySuccess]);
 }

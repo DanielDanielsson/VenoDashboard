@@ -11,6 +11,11 @@
   --color-base-night: #11161f;
   --color-base-night-strong: #171d26;
   --color-base-panel-dark-bright: #1e2530;
+  --color-base-panel-dark-warm: color-mix(
+    in srgb,
+    var(--color-base-panel-dark-bright) 82%,
+    var(--color-base-paper) 18%
+  );
   --color-base-night-overlay: rgb(10 15 25 / 0.88);
   --color-base-night-elevated: rgb(8 12 20 / 0.96);
   --color-base-night-surface: rgb(15 23 40 / 0.5);
@@ -82,6 +87,10 @@
   --color-base-shadow-dark-sm: 0 1px 2px rgb(0 0 0 / 0.2);
   --color-base-shadow-dark-md: 0 4px 24px rgb(0 0 0 / 0.2), 0 1px 2px rgb(0 0 0 / 0.15);
   --color-base-shadow-dark-lg: 0 16px 64px rgb(0 0 0 / 0.3), 0 2px 8px rgb(0 0 0 / 0.2);
+  --color-base-shadow-key-light:
+    inset 0 1px 0 rgb(255 255 255 / 0.42), 1px 2px 0 rgb(70 50 30 / 0.18);
+  --color-base-shadow-key-dark:
+    inset 0 1px 0 rgb(255 255 255 / 0.08), 1px 2px 0 rgb(0 0 0 / 0.42);
 
   --color-base-grid-warm: rgb(70 50 30 / 0.04);
   --color-base-grid-cool: rgb(148 163 184 / 0.04);

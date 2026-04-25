@@ -12,6 +12,8 @@ interface DashboardDefinitionRendererProps<TContext> {
   panelRegistry: DashboardPanelRegistry<TContext>;
   context: TContext;
   isOwner?: boolean;
+  viewedPanelId?: string | null;
+  onViewedPanelChange?: (panelId: string | null, navigationMode?: 'push' | 'replace') => void;
   dashboardVersion?: number | null;
   settingsRegistry?: DashboardPanelSettingsRegistry;
   timeSettings?: DashboardTimeSettingsKind;
@@ -25,6 +27,8 @@ export function DashboardDefinitionRenderer<TContext>({
   panelRegistry,
   context,
   isOwner = false,
+  viewedPanelId,
+  onViewedPanelChange,
   dashboardVersion = null,
   settingsRegistry,
   timeSettings,
@@ -38,6 +42,8 @@ export function DashboardDefinitionRenderer<TContext>({
       dashboardVersion={dashboardVersion}
       layout={dashboard.spec.layout}
       isOwner={isOwner}
+      viewedPanelId={viewedPanelId}
+      onViewedPanelChange={onViewedPanelChange}
       settingsRegistry={settingsRegistry}
       initialPanelSettings={extractDashboardPanelSettings(dashboard)}
       initialTimeSettings={dashboard.spec.timeSettings}

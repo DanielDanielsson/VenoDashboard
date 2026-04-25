@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, type ReactElement, type ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ReactGridLayout, { useContainerWidth, type Layout } from 'react-grid-layout';
 import { cloneReactGridLayoutItems, toReactGridLayoutItems } from '@/lib/dashboard/grid-layout';
@@ -26,6 +26,8 @@ interface DashboardGridProps {
   layout: GridLayoutKind;
   children: ReactNode;
   isOwner?: boolean;
+  viewedPanelId?: string | null;
+  onViewedPanelChange?: (panelId: string | null, navigationMode?: 'push' | 'replace') => void;
   settingsRegistry?: DashboardPanelSettingsRegistry;
   initialPanelSettings?: Record<string, unknown>;
   initialTimeSettings?: DashboardTimeSettingsKind;
@@ -52,15 +54,21 @@ const DASHBOARD_EDIT_BUTTON_STYLES = 'ui_caption inline-flex h-[38px] items-cent
 interface DashboardGridActions {
   viewPanel: (panelId: string) => void;
   editPanel: (panel: { panelId: string; title: string }) => void;
+  setHoveredPanel: (panelId: string | null) => void;
+  hoveredPanelId: string | null;
   isEditMode: boolean;
   isLayoutEditingEnabled: boolean;
+  viewedPanelId: string | null;
 }
 
 const DashboardGridActionsContext = createContext<DashboardGridActions>({
   viewPanel: () => {},
   editPanel: () => {},
+  setHoveredPanel: () => {},
+  hoveredPanelId: null,
   isEditMode: false,
   isLayoutEditingEnabled: false,
+  viewedPanelId: null,
 });
 
 interface DashboardPanelSettingsContextValue {
@@ -181,6 +189,8 @@ export function DashboardGrid({
   layout,
   children,
   isOwner = false,
+  viewedPanelId: controlledViewedPanelId,
+  onViewedPanelChange,
   settingsRegistry = {},
   initialPanelSettings = EMPTY_PANEL_SETTINGS,
   initialTimeSettings,
@@ -193,7 +203,7 @@ export function DashboardGrid({
   const initialLayout = useMemo(() => toReactGridLayoutItems(layout.spec.items), [layout]);
   const [persistedLayout, setPersistedLayout] = useState<Layout>(() => cloneReactGridLayoutItems(initialLayout));
   const [runtimeLayout, setRuntimeLayout] = useState<Layout>(() => cloneReactGridLayoutItems(initialLayout));
-  const [viewedPanelId, setViewedPanelId] = useState<string | null>(null);
+  const [uncontrolledViewedPanelId, setUncontrolledViewedPanelId] = useState<string | null>(null);
   const [editedPanel, setEditedPanel] = useState<{ panelId: string; title: string } | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [persistedPanelSettings, setPersistedPanelSettings] = useState<Record<string, unknown>>(
@@ -207,14 +217,19 @@ export function DashboardGrid({
   const [dashboardSaveError, setDashboardSaveError] = useState<string | null>(null);
   const [moveAnimationsEnabled, setMoveAnimationsEnabled] = useState(false);
   const [editControlsPortalTarget, setEditControlsPortalTarget] = useState<HTMLElement | null>(null);
+  const [hoveredPanelId, setHoveredPanelId] = useState<string | null>(null);
+  const [soloPanelMaxRows, setSoloPanelMaxRows] = useState<number | null>(null);
+  const [gridViewportElement, setGridViewportElement] = useState<HTMLDivElement | null>(null);
   const [pendingDiscardAction, setPendingDiscardAction] = useState<
     | { type: 'exit-edit-mode' }
+    | { type: 'view-panel'; panelId: string; navigationMode: 'push' | 'replace' }
     | { type: 'navigate'; href: string }
     | null
   >(null);
   const { containerRef, mounted, width } = useContainerWidth({ measureBeforeMount: true });
   const isDraggable = mounted && width > 768;
   const isLayoutEditingEnabled = isEditMode && isDraggable;
+  const viewedPanelId = controlledViewedPanelId ?? uncontrolledViewedPanelId;
   const visibleChildren = useMemo(() => {
     const childItems = Array.isArray(children) ? children : [children];
 
@@ -234,8 +249,20 @@ export function DashboardGrid({
       return runtimeLayout;
     }
 
-    return [{ ...item, x: 0, y: 0, w: 12 }];
-  }, [runtimeLayout, viewedPanelId]);
+    const fullDashboardHeight = runtimeLayout.reduce(
+      (maxHeight, layoutItem) => Math.max(maxHeight, layoutItem.y + layoutItem.h),
+      item.h,
+    );
+    const cappedHeight = soloPanelMaxRows
+      ? Math.min(fullDashboardHeight, soloPanelMaxRows)
+      : fullDashboardHeight;
+
+    return [{ ...item, x: 0, y: 0, w: 12, h: cappedHeight }];
+  }, [runtimeLayout, soloPanelMaxRows, viewedPanelId]);
+
+  const handleGridViewportRef = useCallback((node: HTMLDivElement | null) => {
+    setGridViewportElement(node);
+  }, []);
 
   useEffect(() => {
     const nextLayout = cloneReactGridLayoutItems(initialLayout);
@@ -354,14 +381,46 @@ export function DashboardGrid({
     }
   }
 
-  function resetRuntimeDashboardState() {
+  const resetRuntimeDashboardState = useCallback(() => {
     setRuntimeLayout(cloneReactGridLayoutItems(persistedLayout));
     setRuntimePanelSettings({});
     if (persistedTimeSettings) {
       onDiscardTimeSettings?.(cloneTimeSettings(persistedTimeSettings));
     }
     setDashboardSaveError(null);
-  }
+  }, [onDiscardTimeSettings, persistedLayout, persistedTimeSettings]);
+
+  const commitViewedPanelChange = useCallback((panelId: string | null, navigationMode: 'push' | 'replace' = 'replace') => {
+    if (controlledViewedPanelId === undefined) {
+      setUncontrolledViewedPanelId(panelId);
+    }
+
+    onViewedPanelChange?.(panelId, navigationMode);
+  }, [controlledViewedPanelId, onViewedPanelChange]);
+
+  const handleViewedPanelChange = useCallback((panelId: string | null, navigationMode: 'push' | 'replace' = 'replace') => {
+    if (panelId) {
+      if (isEditMode && shouldGuardUnsavedDashboardChanges) {
+        setPendingDiscardAction({ type: 'view-panel', panelId, navigationMode });
+        return;
+      }
+
+      if (isEditMode && hasUnsavedDashboardChanges) {
+        resetRuntimeDashboardState();
+      }
+
+      setEditedPanel(null);
+      setIsEditMode(false);
+    }
+
+    commitViewedPanelChange(panelId, navigationMode);
+  }, [
+    commitViewedPanelChange,
+    hasUnsavedDashboardChanges,
+    isEditMode,
+    resetRuntimeDashboardState,
+    shouldGuardUnsavedDashboardChanges,
+  ]);
 
   function handleExitEditMode() {
     if (shouldGuardUnsavedDashboardChanges) {
@@ -391,6 +450,13 @@ export function DashboardGrid({
       return;
     }
 
+    if (nextAction.type === 'view-panel') {
+      setEditedPanel(null);
+      setIsEditMode(false);
+      commitViewedPanelChange(nextAction.panelId, nextAction.navigationMode);
+      return;
+    }
+
     window.location.assign(nextAction.href);
   }
 
@@ -412,6 +478,81 @@ export function DashboardGrid({
 
     return () => window.clearTimeout(timer);
   }, [isDraggable, mounted]);
+
+  useEffect(() => {
+    function isEditableTarget(target: EventTarget | null): boolean {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+
+      if (target.isContentEditable) {
+        return true;
+      }
+
+      const editable = target.closest('input, textarea, select, [contenteditable="true"]');
+      return editable instanceof HTMLElement;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented || isEditableTarget(event.target)) {
+        return;
+      }
+
+      if (event.key.toLowerCase() !== 'v') {
+        return;
+      }
+
+      const activePanelId = hoveredPanelId ?? viewedPanelId;
+      if (!activePanelId) {
+        return;
+      }
+
+      if (viewedPanelId === activePanelId) {
+        handleViewedPanelChange(null, 'replace');
+        return;
+      }
+
+      handleViewedPanelChange(activePanelId, 'push');
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleViewedPanelChange, hoveredPanelId, viewedPanelId]);
+
+  useEffect(() => {
+    if (!viewedPanelId || !mounted) {
+      setSoloPanelMaxRows(null);
+      return;
+    }
+
+    function updateSoloPanelMaxRows() {
+      const top = gridViewportElement?.getBoundingClientRect().top;
+
+      if (typeof top !== 'number' || !Number.isFinite(top)) {
+        setSoloPanelMaxRows(null);
+        return;
+      }
+
+      const shell = gridViewportElement?.closest('main');
+      const shellPaddingBottom = shell ? Number.parseFloat(window.getComputedStyle(shell).paddingBottom) || 0 : 0;
+      const availableHeight = Math.max(
+        gridConfig.rowHeight,
+        window.innerHeight - Math.max(0, Math.ceil(top)) - Math.ceil(shellPaddingBottom),
+      );
+      const verticalMargin = gridConfig.margin[1];
+      const rowHeightWithMargin = gridConfig.rowHeight + verticalMargin;
+      const maxRows = Math.max(1, Math.floor((availableHeight + verticalMargin) / rowHeightWithMargin));
+
+      setSoloPanelMaxRows(maxRows);
+    }
+
+    updateSoloPanelMaxRows();
+    window.addEventListener('resize', updateSoloPanelMaxRows);
+
+    return () => {
+      window.removeEventListener('resize', updateSoloPanelMaxRows);
+    };
+  }, [gridViewportElement, mounted, viewedPanelId, width]);
 
   useEffect(() => {
     if (!shouldGuardUnsavedDashboardChanges) {
@@ -482,6 +623,16 @@ export function DashboardGrid({
 
   const dashboardEditControls = (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      {viewedPanelId ? (
+        <Button
+          aria-label="to dashboard"
+          twStyles={DASHBOARD_EDIT_BUTTON_STYLES}
+          onClick={() => handleViewedPanelChange(null, 'replace')}
+        >
+          <Icon icon="chevron-left" size="h-3.5 w-3.5" />
+          <span>to dashboard</span>
+        </Button>
+      ) : null}
       {isEditMode ? (
         <>
           <div className="flex items-center gap-2">
@@ -525,64 +676,61 @@ export function DashboardGrid({
       )}
     </div>
   );
-  const shouldRenderInternalControls = Boolean(viewedPanelId || !editControlsPortalId);
+  const shouldRenderInternalControls = !editControlsPortalId;
 
   return (
     <DashboardGridActionsContext.Provider
       value={{
-        viewPanel: setViewedPanelId,
-        editPanel: setEditedPanel,
+        viewPanel: (panelId) => handleViewedPanelChange(panelId, 'push'),
+        editPanel: (panel) => {
+          setEditedPanel(panel);
+          setIsEditMode(true);
+        },
+        setHoveredPanel: setHoveredPanelId,
+        hoveredPanelId,
         isEditMode,
         isLayoutEditingEnabled,
+        viewedPanelId,
       }}
     >
       <DashboardPanelSettingsContext.Provider value={settingsContextValue}>
         <div ref={containerRef} className="w-full">
           {editControlsPortalTarget ? createPortal(dashboardEditControls, editControlsPortalTarget) : null}
           {shouldRenderInternalControls ? (
-            <div className="mb-4 flex items-start justify-between gap-4">
-              <div>
-                {viewedPanelId ? (
-                  <button
-                    type="button"
-                    className="ui_caption rounded-[4px] border border-border px-3 py-2 text-text-soft"
-                    onClick={() => setViewedPanelId(null)}
-                  >
-                    Show all dashboard panels
-                  </button>
-                ) : null}
-              </div>
-              {!editControlsPortalId ? dashboardEditControls : null}
+            <div className="mb-4 flex items-start justify-end gap-4">
+              {dashboardEditControls}
             </div>
           ) : null}
-          {mounted ? (
-            <ReactGridLayout
-              autoSize
-              className={[
-                'dashboard-grid',
-                isEditMode ? 'dashboard-grid--editing' : '',
-                moveAnimationsEnabled ? 'react-grid-layout--enable-move-animations' : '',
-              ].filter(Boolean).join(' ')}
-              dragConfig={{
-                enabled: isLayoutEditingEnabled,
-                handle: '.dashboard-panel-drag-handle',
-                cancel: '.grid-drag-cancel,button,input,select,textarea,a',
-              }}
-              gridConfig={gridConfig}
-              layout={visibleLayout}
-              resizeConfig={{ enabled: isLayoutEditingEnabled }}
-              width={width}
-              onLayoutChange={(nextLayout) => {
-                if (!isEditMode) {
-                  return;
-                }
+          <div ref={handleGridViewportRef}>
+            {mounted ? (
+              <ReactGridLayout
+                autoSize
+                className={[
+                  'dashboard-grid',
+                  isEditMode ? 'dashboard-grid--editing' : '',
+                  moveAnimationsEnabled && isEditMode && !viewedPanelId ? 'react-grid-layout--enable-move-animations' : '',
+                ].filter(Boolean).join(' ')}
+                dragConfig={{
+                  enabled: isLayoutEditingEnabled,
+                  handle: '.dashboard-panel-drag-handle',
+                  cancel: '.grid-drag-cancel,button,input,select,textarea,a',
+                }}
+                gridConfig={gridConfig}
+                layout={visibleLayout}
+                resizeConfig={{ enabled: isLayoutEditingEnabled }}
+                width={width}
+                onLayoutChange={(nextLayout) => {
+                  if (!isEditMode) {
+                    return;
+                  }
 
-                setRuntimeLayout(cloneReactGridLayoutItems(nextLayout));
-              }}
-            >
-              {visibleChildren}
-            </ReactGridLayout>
-          ) : null}
+                  setRuntimeLayout(cloneReactGridLayoutItems(nextLayout));
+                }}
+              >
+                {visibleChildren}
+              </ReactGridLayout>
+            ) : null}
+          </div>
           {editedPanel ? (
             <aside
               aria-label={`Panel settings for ${editedPanel.title}`}

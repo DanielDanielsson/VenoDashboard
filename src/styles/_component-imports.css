@@ -3,9 +3,14 @@
 
 @import "../../ui/components/DashboardPanel/dashboardPanel.css";
 @import "../../ui/components/DashboardTimeRangePicker/dashboardTimeRangePicker.css";
+@import "../../ui/components/HistogramChart/histogramChart.css";
+@import "../../ui/components/KeyboardKey/keyboardKey.css";
+@import "../../ui/components/LineChart/lineChart.css";
 @import "../../ui/components/NavigationLink/navigationLink.css";
 @import "../../ui/components/NumberInput/numberInput.css";
+@import "../../ui/components/PieChart/pieChart.css";
 @import "../../ui/components/SecondaryButton/secondaryButton.css";
 @import "../../ui/compositions/AppShell/appShell.css";
 @import "../../ui/compositions/ConnectionsMapPanel/connectionsMapPanel.css";
+@import "../../ui/compositions/DashboardGrid/dashboardGridPanel.css";
 @import "../../ui/compositions/LiveGlucosePanel/liveGlucosePanel.css";

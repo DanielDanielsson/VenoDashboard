@@ -1,0 +1,28 @@
+@layer theme {
+  :root {
+    --color-dashboard-panel-menu-bg: var(--color-base-paper-strong);
+    --color-dashboard-panel-menu-border: var(--color-base-border-warm-input);
+    --color-dashboard-panel-menu-text: var(--color-base-ink);
+    --color-dashboard-panel-menu-text-muted: var(--color-base-ink-muted);
+    --color-dashboard-panel-menu-hover-bg: var(--color-base-surface-panel-light-muted);
+    --shadow-dashboard-panel-menu: var(--color-base-shadow-warm-lg);
+  }
+
+  .theme-dark {
+    --color-dashboard-panel-menu-bg: var(--color-base-night-strong);
+    --color-dashboard-panel-menu-border: var(--color-base-border-cool-input);
+    --color-dashboard-panel-menu-text: var(--color-base-white-soft);
+    --color-dashboard-panel-menu-text-muted: var(--color-base-white-muted);
+    --color-dashboard-panel-menu-hover-bg: var(--color-base-panel-dark-bright);
+    --shadow-dashboard-panel-menu: var(--color-base-shadow-dark-lg);
+  }
+}
+
+@theme inline {
+  --color-dashboard-panel-menu-bg: var(--color-dashboard-panel-menu-bg);
+  --color-dashboard-panel-menu-border: var(--color-dashboard-panel-menu-border);
+  --color-dashboard-panel-menu-text: var(--color-dashboard-panel-menu-text);
+  --color-dashboard-panel-menu-text-muted: var(--color-dashboard-panel-menu-text-muted);
+  --color-dashboard-panel-menu-hover-bg: var(--color-dashboard-panel-menu-hover-bg);
+  --shadow-dashboard-panel-menu: var(--shadow-dashboard-panel-menu);
+}

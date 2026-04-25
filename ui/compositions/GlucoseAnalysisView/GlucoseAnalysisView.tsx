@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactElement, type ReactNode } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import useSWR, { useSWRConfig } from 'swr';
 import { GlucoseChart } from '@ui/components/GlucoseChart/GlucoseChart';
 import { GlucoseAgpChart } from '@ui/components/GlucoseAgpChart/GlucoseAgpChart';
@@ -9,7 +10,9 @@ import { DashboardRefreshPicker } from '@ui/components/DashboardRefreshPicker';
 import { DashboardPanel } from '@ui/components/DashboardPanel';
 import { DialogPanel } from '@ui/components/DialogPanel';
 import { FloatingPanel } from '@ui/components/FloatingPanel';
+import { DashboardViewPanelUrlStateBridge } from '@ui/compositions/DashboardViewPanelUrlStateBridge/DashboardViewPanelUrlStateBridge';
 import { TimeInRangePanel, createTimeInRangePanelSettingsRegistration } from '@ui/compositions/TimeInRangePanel';
+import { WorkoutTypePanel } from '@ui/compositions/WorkoutTypePanel';
 import {
   useDashboardPanelSettings,
   type DashboardPanelSettingsRegistry,
@@ -20,6 +23,13 @@ import { SegmentedControl } from '@ui/components/SegmentedControl';
 import { createPanelRegistry } from '@/lib/dashboard/panel-registry';
 import { getDashboardDefinition } from '@/lib/dashboard/registry';
 import type { DashboardDefinition } from '@/lib/dashboard/schema';
+import {
+  getDefaultStatisticsSelection,
+  parseClientStatisticsDashboardUrlState,
+  serializeStatisticsDashboardUrlState,
+  type StatisticsDashboardTimeZoneMode,
+} from '@/lib/dashboard/url-state';
+import { getDashboardViewPanelAliases } from '@/lib/dashboard/view-panel';
 import { GLUCOSE_COLOR_MODES, type GlucoseColorMode } from '@/lib/glucose/tints';
 import { computeGlucoseStats } from '@/lib/glucose/metrics';
 import { getTimelineNoteBandHeight } from '@/lib/glucose/timeline-note-layout';
@@ -71,6 +81,7 @@ import type {
   WorkoutChartPoint
 } from '@/lib/glucose/types';
 import type { ConsumerProfileResponse } from '@/lib/pulse-api/types';
+import { useDashboardNotifications } from '@ui/compositions/DashboardDefinitionRenderer/useDashboardNotifications';
 
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
@@ -95,6 +106,7 @@ type GlucoseTimelinePanelSettings = {
 interface StatisticsDashboardContext {
   renderAverageGlucosePanel: () => ReactNode;
   renderTimeInRangePanel: () => ReactNode;
+  renderWorkoutTypesPanel: () => ReactNode;
   renderGlucoseTimelinePanel: () => ReactNode;
   renderAgpPanel: () => ReactNode;
 }
@@ -112,6 +124,10 @@ const statisticsPanelRegistry = createPanelRegistry<StatisticsDashboardContext>(
   {
     group: 'veno.time-in-range',
     render: ({ context }) => context.renderTimeInRangePanel(),
+  },
+  {
+    group: 'veno.workout-types',
+    render: ({ context }) => context.renderWorkoutTypesPanel(),
   },
   {
     group: 'veno.glucose-timeline',
@@ -281,21 +297,38 @@ function getChartHeight(
   return totalHeight;
 }
 
+function getSelectionSignature(selection: HistorySelection): string {
+  return JSON.stringify(selection);
+}
+
 export function GlucoseAnalysisView({
   isOwner = false,
   initialSnapshot,
   dashboardDefinition = getDashboardDefinition('statistics'),
   dashboardVersion = null,
+  initialSelection,
+  initialTimeZone,
 }: {
   isOwner?: boolean;
   initialSnapshot?: GlucoseApiResponse;
   dashboardDefinition?: DashboardDefinition;
   dashboardVersion?: number | null;
+  initialSelection?: HistorySelection;
+  initialTimeZone?: string;
 }) {
-  const [selection, setSelection] = useState<HistorySelection>({
-    kind: 'preset',
-    range: '3d'
-  });
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const [selection, setSelection] = useState<HistorySelection>(
+    initialSelection ?? {
+      kind: 'preset',
+      range: '3d'
+    },
+  );
+  const [timeZoneMode, setTimeZoneMode] = useState<StatisticsDashboardTimeZoneMode | null>(
+    initialTimeZone === 'UTC' ? 'utc' : null,
+  );
   const [autoRefresh, setAutoRefresh] = useState(dashboardDefinition.spec.timeSettings.autoRefresh);
   const [isDark, setIsDark] = useState(true);
 
@@ -335,8 +368,10 @@ export function GlucoseAnalysisView({
   const [deletedNoteIds, setDeletedNoteIds] = useState<string[]>([]);
 
   const isApplyingUpdatesRef = useRef(false);
+  const lastInvalidSearchRef = useRef<string | null>(null);
   const noteValidationPreviewRef = useRef<TimelineNote | null>(null);
   const noteTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  const { notifyInvalidDashboardUrl } = useDashboardNotifications({ dashboardUid: dashboardDefinition.spec.uid });
   const { cache } = useSWRConfig();
   const loadedSourceKey = pickBestLoadedSourceKey(cache, selection);
   const requestKey =
@@ -406,7 +441,14 @@ export function GlucoseAnalysisView({
 
   const isTransitioning = isValidating || isLoading;
   const isFirstLoad = !data && isLoading;
-  const ownerTimeZone = profileResponse?.profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const ownerTimeZone =
+    timeZoneMode === 'utc'
+      ? 'UTC'
+      : timeZoneMode === 'browser'
+      ? browserTimeZone
+      : initialTimeZone ||
+        profileResponse?.profile?.timezone ||
+        browserTimeZone;
 
   const displayedTimelineRevision = selection.kind === 'preset'
     ? displayData?.meta.timelineRevision ?? displayData?.latest?.timestamp ?? null
@@ -457,13 +499,89 @@ export function GlucoseAnalysisView({
     setAutoRefresh(dashboardDefinition.spec.timeSettings.autoRefresh);
   }, [dashboardDefinition.spec.timeSettings.autoRefresh]);
 
+  useEffect(() => {
+    const parsed = parseClientStatisticsDashboardUrlState(searchParams, browserTimeZone);
+    const currentSearch = searchParams.toString();
+
+    if (!parsed.hasTimeParams) {
+      const fallbackSelection = getDefaultStatisticsSelection();
+
+      lastInvalidSearchRef.current = null;
+      setSelection((current) => (
+        getSelectionSignature(current) === getSelectionSignature(fallbackSelection)
+          ? current
+          : fallbackSelection
+      ));
+      setTimeZoneMode((current) => (current === null ? current : null));
+      return;
+    }
+
+    if (parsed.invalid) {
+      const fallbackSelection = getDefaultStatisticsSelection();
+      const fallbackSearch = serializeStatisticsDashboardUrlState({
+        selection: fallbackSelection,
+        timeZoneMode: 'browser',
+      }).toString();
+
+      setSelection((current) => (
+        getSelectionSignature(current) === getSelectionSignature(fallbackSelection)
+          ? current
+          : fallbackSelection
+      ));
+      setTimeZoneMode((current) => (current === 'browser' ? current : 'browser'));
+
+      if (currentSearch !== fallbackSearch) {
+        router.replace(`${pathname}?${fallbackSearch}`);
+      }
+
+      if (lastInvalidSearchRef.current !== currentSearch) {
+        notifyInvalidDashboardUrl(dashboardDefinition.spec.title);
+        lastInvalidSearchRef.current = currentSearch;
+      }
+
+      return;
+    }
+
+    lastInvalidSearchRef.current = null;
+    setSelection((current) => (
+      getSelectionSignature(current) === getSelectionSignature(parsed.selection)
+        ? current
+        : parsed.selection
+    ));
+    setTimeZoneMode((current) => (current === parsed.timeZoneMode ? current : parsed.timeZoneMode));
+  }, [
+    browserTimeZone,
+    dashboardDefinition.spec.title,
+    notifyInvalidDashboardUrl,
+    pathname,
+    router,
+    searchParams,
+  ]);
+
   function applyHistorySelection(nextSelection: HistorySelection) {
     if (!confirmDiscardNoteDraft()) {
       return;
     }
 
     closeNoteEditor();
-    setSelection(nextSelection);
+    const nextTimeZoneMode = timeZoneMode ?? 'browser';
+    const nextTimeParams = serializeStatisticsDashboardUrlState({
+      selection: nextSelection,
+      timeZoneMode: nextTimeZoneMode,
+    });
+    const nextParams = new URLSearchParams(searchParams.toString());
+
+    nextParams.set('from', nextTimeParams.get('from') ?? '');
+    nextParams.set('to', nextTimeParams.get('to') ?? '');
+    nextParams.set('timezone', nextTimeParams.get('timezone') ?? nextTimeZoneMode);
+
+    const nextSearch = nextParams.toString();
+
+    if (searchParams.toString() === nextSearch) {
+      return;
+    }
+
+    window.history.replaceState(null, '', `${pathname}?${nextSearch}`);
   }
 
   useEffect(() => {
@@ -1124,11 +1242,20 @@ export function GlucoseAnalysisView({
         onChange={applyHistorySelection}
       />
 
+      <DashboardViewPanelUrlStateBridge
+        dashboardTitle={dashboardDefinition.spec.title}
+        dashboardUid={dashboardDefinition.spec.uid}
+        allowedPanelIds={Object.keys(dashboardDefinition.spec.elements)}
+        panelIdAliases={getDashboardViewPanelAliases(dashboardDefinition)}
+      >
+        {({ viewedPanelId, onViewedPanelChange }) => (
       <DashboardDefinitionRenderer
         dashboard={dashboardDefinition}
         dashboardVersion={dashboardVersion}
         panelRegistry={statisticsPanelRegistry}
         isOwner={isOwner}
+        viewedPanelId={viewedPanelId}
+        onViewedPanelChange={onViewedPanelChange}
         settingsRegistry={settingsRegistry}
         timeSettings={dashboardTimeSettings}
         onDiscardTimeSettings={(timeSettings) => setAutoRefresh(timeSettings.autoRefresh)}
@@ -1184,6 +1311,12 @@ export function GlucoseAnalysisView({
             stats={hasData ? stats : null}
             loading={isTransitioning}
             isDark={isDark}
+          />
+          ),
+          renderWorkoutTypesPanel: () => (
+          <WorkoutTypePanel
+            workouts={data?.workoutItems ?? []}
+            loading={isTransitioning}
           />
           ),
           renderGlucoseTimelinePanel: () => (
@@ -1742,6 +1875,8 @@ export function GlucoseAnalysisView({
           ),
         }}
       />
+        )}
+      </DashboardViewPanelUrlStateBridge>
     </div>
   );
 }

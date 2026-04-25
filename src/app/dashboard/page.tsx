@@ -1,5 +1,5 @@
 import { DashboardErrorState } from '@ui/components/DashboardErrorState/DashboardErrorState';
-import { DashboardDefinitionRenderer, overviewPanelRegistry } from '@ui/compositions/DashboardDefinitionRenderer';
+import { OverviewDashboardView } from '@ui/compositions/OverviewDashboardView/OverviewDashboardView';
 import { getOwnerSession } from '@/lib/auth';
 import type { PulseApiStatusReport } from '@/lib/pulse-api/types';
 import { loadDashboardDefinition } from '@/lib/dashboard/settings';
@@ -103,13 +103,9 @@ export default async function DashboardPage() {
         </p>
         </div>
       </header>
-
-      <DashboardDefinitionRenderer
+      <OverviewDashboardView
         dashboard={dashboardState.dashboard}
         dashboardVersion={dashboardState.version}
-        panelRegistry={overviewPanelRegistry}
-        isOwner={Boolean(session)}
-        timeInRangeDefaultLayout="overview"
         context={{
           isOwner: Boolean(session),
           latestReadingTimestamp: latestSource?.latestReading?.timestamp,

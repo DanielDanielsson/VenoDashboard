@@ -12,8 +12,9 @@ const fetchTandemBasalHistory = vi.fn();
 const fetchTandemEventHistory = vi.fn();
 const buildConnectionMapSnapshot = vi.fn();
 const loadDashboardDefinition = vi.fn();
-const DashboardDefinitionRenderer = vi.fn(({ dashboard }) =>
-  React.createElement('div', null, `Rendered dashboard ${dashboard.spec.uid}:${dashboard.spec.title}`),
+const OverviewDashboardView = vi.fn(
+  ({ dashboard }: { dashboard: { spec: { uid: string; title: string } } }) =>
+    React.createElement('div', null, `Rendered dashboard ${dashboard.spec.uid}:${dashboard.spec.title}`),
 );
 
 vi.mock('@/lib/auth', () => ({
@@ -50,11 +51,8 @@ vi.mock('@/lib/dashboard/settings', () => ({
   loadDashboardDefinition,
 }));
 
-vi.mock('@ui/compositions/DashboardDefinitionRenderer', () => ({
-  DashboardDefinitionRenderer,
-  overviewPanelRegistry: {
-    resolve: vi.fn(),
-  },
+vi.mock('@ui/compositions/OverviewDashboardView/OverviewDashboardView', () => ({
+  OverviewDashboardView,
 }));
 
 describe('dashboard overview page', () => {
@@ -69,7 +67,7 @@ describe('dashboard overview page', () => {
     fetchTandemEventHistory.mockReset();
     buildConnectionMapSnapshot.mockReset();
     loadDashboardDefinition.mockReset();
-    DashboardDefinitionRenderer.mockClear();
+    OverviewDashboardView.mockClear();
 
     getOwnerSession.mockResolvedValue(null);
     fetchApiStatus.mockResolvedValue({
@@ -141,7 +139,7 @@ describe('dashboard overview page', () => {
 
     expect(loadDashboardDefinition).toHaveBeenCalledWith('overview');
     expect(screen.getByText('Rendered dashboard overview:Saved Overview')).toBeInTheDocument();
-    expect(DashboardDefinitionRenderer).toHaveBeenCalledWith(
+    expect(OverviewDashboardView).toHaveBeenCalledWith(
       expect.objectContaining({
         dashboardVersion: 11,
         dashboard: expect.objectContaining({

@@ -15,6 +15,7 @@ export type IconName =
   | 'workout-hike'
   | 'info'
   | 'edit'
+  | 'chevron-left'
   | 'close'
   | 'settings'
   | 'key'

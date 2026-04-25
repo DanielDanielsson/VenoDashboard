@@ -42,11 +42,16 @@ function readLocalEnvValue(key: string): string | undefined {
 const ownerUsername = readLocalEnvValue('OWNER_LOGIN_USERNAME') || 'admin';
 const ownerPassword = readLocalEnvValue('OWNER_LOGIN_PASSWORD');
 
-async function openPanelMenu(page: Page, title: string) {
-  if (!(await page.getByRole('button', { name: `Open panel actions for ${title}` }).isVisible().catch(() => false))) {
-    await page.getByRole('button', { name: 'Edit dashboard' }).click();
-  }
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
+async function openPanelMenu(page: Page, title: string) {
+  const panel = page.locator('[data-dashboard-panel-id]').filter({
+    has: page.getByRole('heading', { name: new RegExp(`^${escapeRegExp(title)}$`, 'i') }),
+  }).first();
+
+  await panel.hover();
   await page.getByRole('button', { name: `Open panel actions for ${title}` }).click();
   await expect(page.getByRole('menu', { name: `Panel actions for ${title}` })).toBeVisible();
 }
@@ -79,23 +84,28 @@ test('statistics dashboard supports panel view, edit, and public local preview',
   await expect(page.getByRole('heading', { name: 'Statistics' })).toBeVisible();
   await expect(page.locator('h2').filter({ hasText: /^Time in Range$/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Glucose Timeline' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Open panel actions for Time in Range' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Edit dashboard' }).click();
-  await expect(page.getByRole('button', { name: 'Open panel actions for Time in Range' })).toBeVisible();
+  const timeInRangeActions = page.getByRole('button', { name: 'Open panel actions for Time in Range' });
+  await expect(timeInRangeActions).toHaveClass(/opacity-0/);
+  await page.locator('[data-dashboard-panel-id]').filter({
+    has: page.getByRole('heading', { name: /^Time in Range$/i }),
+  }).first().hover();
+  await expect(timeInRangeActions).toHaveClass(/opacity-100/);
   await expect(page.getByRole('button', { name: '24d' })).toHaveCount(0);
 
   await openPanelMenu(page, 'Time in Range');
   await page.getByRole('menuitem', { name: 'View' }).click();
 
-  await expect(page.getByRole('button', { name: 'Show all dashboard panels' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'to dashboard' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Time in Range' })).toBeVisible();
-  await page.getByRole('button', { name: 'Show all dashboard panels' }).click();
+  await page.getByRole('button', { name: 'to dashboard' }).click();
 
-  const drawer = await openPanelSettings(page, 'Time in Range');
-  await drawer.getByRole('button', { name: 'Overview' }).click();
+  const hadOverviewLayout = await page.locator('h2').filter({ hasText: /^Time In Range$/ }).count();
+  const targetLayout = hadOverviewLayout ? 'Statistics' : 'Overview';
+  const expectedHeading = targetLayout === 'Overview' ? /^Time In Range$/ : /^Time in Range$/;
+  const drawer = await setTimeInRangeLayout(page, targetLayout);
 
   await expect(page.getByRole('button', { name: '24d' })).toHaveCount(0);
-  await expect(page.locator('h2').filter({ hasText: /^Time In Range$/ })).toBeVisible();
+  await expect(page.locator('h2').filter({ hasText: expectedHeading })).toBeVisible();
   await expect(drawer.getByRole('button', { name: 'Save' })).toBeEnabled();
   await expect(drawer.getByText('Admin sign in is required to save dashboard settings.')).toBeVisible();
   await drawer.getByRole('button', { name: 'Save' }).click();

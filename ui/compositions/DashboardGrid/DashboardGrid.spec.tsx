@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { GridLayoutKind, GridLayoutItemKind } from '@/lib/dashboard/schema';
 import { DashboardGrid } from './DashboardGrid';
 import { DashboardGridPanel } from './DashboardGridPanel';
@@ -127,6 +127,10 @@ function createLayout(): GridLayoutKind {
 }
 
 describe('DashboardGrid', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   test('waits for a measured container width before rendering the grid', () => {
     gridLayoutMock.mounted = false;
 
@@ -143,7 +147,7 @@ describe('DashboardGrid', () => {
     gridLayoutMock.mounted = true;
   });
 
-  test('shows panel actions only while dashboard edit mode is active', () => {
+  test('reveals panel actions on hover and closes the menu on outside click', () => {
     render(
       <DashboardGrid layout={createLayout()}>
         <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
@@ -155,27 +159,35 @@ describe('DashboardGrid', () => {
       </DashboardGrid>,
     );
 
-    expect(screen.queryByRole('button', { name: 'Open panel actions for Current Glucose' })).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    const panel = document.querySelector('[data-dashboard-panel-id="panel-current-glucose"]') as Element;
     const actionsButton = screen.getByRole('button', { name: 'Open panel actions for Current Glucose' });
-    const panel = document.querySelector('[data-dashboard-panel-id="panel-current-glucose"]');
 
-    expect(actionsButton).toHaveClass('cursor-pointer');
-    expect(panel).toHaveClass('[&_.dashboard-panel-drag-handle]:cursor-move');
+    expect(actionsButton).toHaveClass('opacity-0', 'pointer-events-none');
+
+    fireEvent.mouseEnter(panel);
+
+    expect(actionsButton).toHaveClass('opacity-100');
+    expect(actionsButton).not.toHaveClass('pointer-events-none');
     expect(actionsButton.querySelectorAll('span span')).toHaveLength(3);
 
     fireEvent.click(actionsButton);
 
-    expect(screen.getByRole('menu', { name: 'Panel actions for Current Glucose' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'View' })).toBeInTheDocument();
+    const menu = screen.getByRole('menu', { name: 'Panel actions for Current Glucose' });
+    const viewMenuItem = screen.getByRole('menuitem', { name: 'View' });
+
+    expect(menu).toHaveClass(
+      'bg-dashboard-panel-menu-bg',
+      'border-dashboard-panel-menu-border',
+      'shadow-dashboard-panel-menu',
+    );
+    expect(viewMenuItem).toBeInTheDocument();
+    expect(within(viewMenuItem).getByText('V').tagName).toBe('KBD');
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Exit dashboard edit mode' }));
+    fireEvent.mouseDown(document.body);
 
     expect(screen.queryByRole('menu', { name: 'Panel actions for Current Glucose' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Open panel actions for Current Glucose' })).not.toBeInTheDocument();
-    expect(panel).not.toHaveClass('[&_.dashboard-panel-drag-handle]:cursor-move');
+    expect(actionsButton).toHaveClass('opacity-100');
   });
 
   test('focuses one panel in the dashboard area when View is selected', () => {
@@ -196,13 +208,176 @@ describe('DashboardGrid', () => {
 
     expect(screen.getByText('Current glucose panel')).toBeInTheDocument();
     expect(screen.queryByText('Connections panel')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Show all dashboard panels' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'to dashboard' })).toBeInTheDocument();
     expect(gridLayoutMock.layout).toEqual([
-      { i: 'panel-current-glucose', x: 0, y: 0, w: 12, h: 6 },
+      { i: 'panel-current-glucose', x: 0, y: 0, w: 12, h: 14 },
     ]);
   });
 
+  test('toggles solo view for the hovered panel when v is pressed', () => {
+    render(
+      <DashboardGrid layout={createLayout()}>
+        <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+          Current glucose panel
+        </DashboardGridPanel>
+        <DashboardGridPanel key="panel-connections" panelId="panel-connections" title="Connections">
+          Connections panel
+        </DashboardGridPanel>
+      </DashboardGrid>,
+    );
+
+    fireEvent.mouseEnter(document.querySelector('[data-dashboard-panel-id="panel-connections"]') as Element);
+    fireEvent.keyDown(window, { key: 'v' });
+
+    expect(screen.getByText('Connections panel')).toBeInTheDocument();
+    expect(screen.queryByText('Current glucose panel')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'to dashboard' })).toBeInTheDocument();
+  });
+
+  test('exits solo view when v is pressed again for the hovered panel', () => {
+    render(
+      <DashboardGrid layout={createLayout()}>
+        <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+          Current glucose panel
+        </DashboardGridPanel>
+        <DashboardGridPanel key="panel-connections" panelId="panel-connections" title="Connections">
+          Connections panel
+        </DashboardGridPanel>
+      </DashboardGrid>,
+    );
+
+    const connectionsPanel = document.querySelector('[data-dashboard-panel-id="panel-connections"]') as Element;
+
+    fireEvent.mouseEnter(connectionsPanel);
+    fireEvent.keyDown(window, { key: 'v' });
+
+    expect(screen.queryByText('Current glucose panel')).not.toBeInTheDocument();
+
+    fireEvent.mouseEnter(connectionsPanel);
+    fireEvent.keyDown(window, { key: 'v' });
+
+    expect(screen.getByText('Current glucose panel')).toBeInTheDocument();
+    expect(screen.getByText('Connections panel')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'to dashboard' })).not.toBeInTheDocument();
+  });
+
+  test('ignores the v shortcut inside editable fields', () => {
+    render(
+      <DashboardGrid layout={createLayout()}>
+        <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+          <div className="grid gap-2">
+            <input aria-label="Shortcut input" />
+            <textarea aria-label="Shortcut textarea" />
+            <select aria-label="Shortcut select" defaultValue="one">
+              <option value="one">One</option>
+            </select>
+          </div>
+        </DashboardGridPanel>
+        <DashboardGridPanel key="panel-connections" panelId="panel-connections" title="Connections">
+          <div contentEditable suppressContentEditableWarning>
+            Editable content
+          </div>
+        </DashboardGridPanel>
+      </DashboardGrid>,
+    );
+
+    fireEvent.mouseEnter(document.querySelector('[data-dashboard-panel-id="panel-current-glucose"]') as Element);
+
+    fireEvent.keyDown(screen.getByLabelText('Shortcut input'), { key: 'v' });
+    expect(screen.getByLabelText('Shortcut input')).toBeInTheDocument();
+    expect(screen.getByLabelText('Shortcut textarea')).toBeInTheDocument();
+    expect(screen.getByLabelText('Shortcut select')).toBeInTheDocument();
+    expect(screen.getByText('Editable content')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'to dashboard' })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByLabelText('Shortcut textarea'), { key: 'v' });
+    expect(screen.getByLabelText('Shortcut input')).toBeInTheDocument();
+    expect(screen.getByLabelText('Shortcut textarea')).toBeInTheDocument();
+    expect(screen.getByLabelText('Shortcut select')).toBeInTheDocument();
+    expect(screen.getByText('Editable content')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'to dashboard' })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByLabelText('Shortcut select'), { key: 'v' });
+    expect(screen.getByLabelText('Shortcut input')).toBeInTheDocument();
+    expect(screen.getByLabelText('Shortcut textarea')).toBeInTheDocument();
+    expect(screen.getByLabelText('Shortcut select')).toBeInTheDocument();
+    expect(screen.getByText('Editable content')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'to dashboard' })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByText('Editable content'), { key: 'v' });
+    expect(screen.getByLabelText('Shortcut input')).toBeInTheDocument();
+    expect(screen.getByText('Editable content')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'to dashboard' })).not.toBeInTheDocument();
+  });
+
+  test('caps solo panel height to the remaining viewport height and makes the panel body scrollable', async () => {
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: 400,
+    });
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 112,
+      top: 112,
+      right: 960,
+      bottom: 212,
+      left: 0,
+      width: 960,
+      height: 100,
+      toJSON: () => ({}),
+    });
+
+    render(
+      <main style={{ paddingBottom: '32px' }}>
+        <DashboardGrid layout={createLayout()}>
+          <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+            Current glucose panel
+          </DashboardGridPanel>
+          <DashboardGridPanel key="panel-connections" panelId="panel-connections" title="Connections">
+            Connections panel
+          </DashboardGridPanel>
+        </DashboardGrid>
+      </main>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel actions for Current Glucose' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'View' }));
+
+    await waitFor(() => {
+      expect(gridLayoutMock.layout).toEqual([
+        { i: 'panel-current-glucose', x: 0, y: 0, w: 12, h: 7 },
+      ]);
+    });
+
+    expect(document.querySelector('[data-dashboard-panel-id="panel-current-glucose"]')).toHaveClass(
+      '[&>section>div:last-child]:overflow-y-auto',
+    );
+  });
+
   test('opens a panel settings drawer when Edit is selected', () => {
+    render(
+      <DashboardGrid layout={createLayout()}>
+        <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+          Current glucose panel
+        </DashboardGridPanel>
+        <DashboardGridPanel key="panel-connections" panelId="panel-connections" title="Connections">
+          Connections panel
+        </DashboardGridPanel>
+      </DashboardGrid>,
+    );
+
+    fireEvent.mouseEnter(document.querySelector('[data-dashboard-panel-id="panel-current-glucose"]') as Element);
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel actions for Current Glucose' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+
+    expect(screen.getByRole('complementary', { name: 'Panel settings for Current Glucose' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Exit dashboard edit mode' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Current Glucose settings' })).toBeInTheDocument();
+    expect(screen.getByText('No settings available yet.')).toBeInTheDocument();
+  });
+
+  test('exits edit mode and closes the settings drawer when entering solo panel view', () => {
     render(
       <DashboardGrid layout={createLayout()}>
         <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
@@ -219,8 +394,20 @@ describe('DashboardGrid', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
 
     expect(screen.getByRole('complementary', { name: 'Panel settings for Current Glucose' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Current Glucose settings' })).toBeInTheDocument();
-    expect(screen.getByText('No settings available yet.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Exit dashboard edit mode' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel actions for Connections' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'View' }));
+
+    expect(screen.getByText('Connections panel')).toBeInTheDocument();
+    expect(screen.queryByText('Current glucose panel')).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Panel settings for Current Glucose' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Exit dashboard edit mode' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open panel actions for Connections' })).toHaveClass(
+      'opacity-0',
+      'pointer-events-none',
+    );
+    expect(screen.getByRole('button', { name: 'Edit dashboard' })).toBeInTheDocument();
   });
 
   test('enables admin save only after panel settings differ from persisted settings', async () => {
@@ -441,7 +628,36 @@ describe('DashboardGrid', () => {
     expect(controls?.children[1]).toBe(publicSaveWarning);
   });
 
-  test('enables move animations after mount when dragging is available', async () => {
+  test('renders the solo view back action into the same portal toolbar row', async () => {
+    render(
+      <>
+        <div data-testid="dashboard-edit-controls-target" id="dashboard-edit-controls-target" />
+        <DashboardGrid
+          layout={createLayout()}
+          editControlsPortalId="dashboard-edit-controls-target"
+          viewedPanelId="panel-current-glucose"
+        >
+          <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+            Current glucose panel
+          </DashboardGridPanel>
+        </DashboardGrid>
+      </>,
+    );
+
+    const target = screen.getByTestId('dashboard-edit-controls-target');
+
+    await waitFor(() => {
+      expect(within(target).getByRole('button', { name: 'to dashboard' })).toBeInTheDocument();
+    });
+
+    expect(within(target).getByRole('button', { name: 'Edit dashboard' })).toBeInTheDocument();
+    expect(document.querySelector('#dashboard-edit-controls-target use')).toHaveAttribute(
+      'href',
+      '/static_assets/iconSprite.svg#chevron-left',
+    );
+  });
+
+  test('enables move animations only while editing the dashboard layout', async () => {
     gridLayoutMock.mounted = true;
     gridLayoutMock.width = 960;
 
@@ -455,9 +671,68 @@ describe('DashboardGrid', () => {
 
     expect(gridLayoutMock.className).toBe('dashboard-grid');
 
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+
     await waitFor(() => {
-      expect(gridLayoutMock.className).toBe('dashboard-grid react-grid-layout--enable-move-animations');
+      expect(gridLayoutMock.className).toBe(
+        'dashboard-grid dashboard-grid--editing react-grid-layout--enable-move-animations',
+      );
     });
+  });
+
+  test('disables move animations while a panel is in solo view', async () => {
+    gridLayoutMock.mounted = true;
+    gridLayoutMock.width = 960;
+
+    render(
+      <DashboardGrid layout={createLayout()}>
+        <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+          Current glucose panel
+        </DashboardGridPanel>
+        <DashboardGridPanel key="panel-connections" panelId="panel-connections" title="Connections">
+          Connections panel
+        </DashboardGridPanel>
+      </DashboardGrid>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+
+    await waitFor(() => {
+      expect(gridLayoutMock.className).toBe(
+        'dashboard-grid dashboard-grid--editing react-grid-layout--enable-move-animations',
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel actions for Current Glucose' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'View' }));
+
+    expect(gridLayoutMock.className).toBe('dashboard-grid');
+  });
+
+  test('keeps move animations disabled after exiting solo view', async () => {
+    gridLayoutMock.mounted = true;
+    gridLayoutMock.width = 960;
+
+    render(
+      <DashboardGrid layout={createLayout()}>
+        <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+          Current glucose panel
+        </DashboardGridPanel>
+        <DashboardGridPanel key="panel-connections" panelId="panel-connections" title="Connections">
+          Connections panel
+        </DashboardGridPanel>
+      </DashboardGrid>,
+    );
+
+    fireEvent.mouseEnter(document.querySelector('[data-dashboard-panel-id="panel-connections"]') as Element);
+    fireEvent.keyDown(window, { key: 'v' });
+
+    expect(gridLayoutMock.className).toBe('dashboard-grid');
+
+    fireEvent.mouseEnter(document.querySelector('[data-dashboard-panel-id="panel-connections"]') as Element);
+    fireEvent.keyDown(window, { key: 'v' });
+
+    expect(gridLayoutMock.className).toBe('dashboard-grid');
   });
 
   test('renders grid children by their dashboard layout keys', () => {

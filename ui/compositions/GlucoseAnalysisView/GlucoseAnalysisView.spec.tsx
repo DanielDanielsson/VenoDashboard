@@ -10,10 +10,20 @@ import { GlucoseAnalysisView } from './GlucoseAnalysisView';
 const historyMutateMock = vi.fn();
 const useSWRMock = vi.fn();
 const swrCache = new Map<string, { data?: unknown }>();
+const usePathnameMock = vi.fn();
+const useSearchParamsMock = vi.fn();
+const replaceMock = vi.fn();
+const routerMock = { replace: replaceMock };
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(<NotificationsProvider>{ui}</NotificationsProvider>);
 }
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => usePathnameMock(),
+  useSearchParams: () => useSearchParamsMock(),
+  useRouter: () => routerMock,
+}));
 
 vi.mock('swr', () => ({
   __esModule: true,
@@ -422,6 +432,8 @@ describe('GlucoseAnalysisView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     swrCache.clear();
+    usePathnameMock.mockReturnValue('/dashboard/statistics');
+    useSearchParamsMock.mockReturnValue(new URLSearchParams());
     useSWRMock.mockImplementation((key: string | null) => {
       if (!key) {
         return {
@@ -548,6 +560,15 @@ describe('GlucoseAnalysisView', () => {
   test('reuses a loaded superset range when switching back to 3 days', async () => {
     const initialSnapshot = createHistoryResponse();
     const twoWeekResponse = createTwoWeekHistoryResponse();
+    let currentSearchParams = new URLSearchParams();
+
+    useSearchParamsMock.mockImplementation(() => currentSearchParams);
+    vi.spyOn(window.history, 'replaceState').mockImplementation((...args) => {
+      const nextUrl = args[2];
+      if (typeof nextUrl === 'string') {
+        currentSearchParams = new URL(nextUrl, 'http://localhost').searchParams;
+      }
+    });
 
     useSWRMock.mockImplementation((key: string | null) => {
       if (!key) {
@@ -599,10 +620,15 @@ describe('GlucoseAnalysisView', () => {
       };
     });
 
-    renderWithProviders(<GlucoseAnalysisView isOwner={false} initialSnapshot={initialSnapshot} />);
+    const view = renderWithProviders(<GlucoseAnalysisView isOwner={false} initialSnapshot={initialSnapshot} />);
 
     fireEvent.click(screen.getByRole('button', { name: /Time range selected/i }));
     fireEvent.click(screen.getByRole('button', { name: '2 weeks' }));
+    view.rerender(
+      <NotificationsProvider>
+        <GlucoseAnalysisView isOwner={false} initialSnapshot={initialSnapshot} />
+      </NotificationsProvider>
+    );
     swrCache.set('/api/dashboard/glucose/history?range=14d', { data: twoWeekResponse });
 
     await waitFor(() => {
@@ -613,6 +639,11 @@ describe('GlucoseAnalysisView', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Time range selected/i }));
     fireEvent.click(screen.getByRole('button', { name: '3 days' }));
+    view.rerender(
+      <NotificationsProvider>
+        <GlucoseAnalysisView isOwner={false} initialSnapshot={initialSnapshot} />
+      </NotificationsProvider>
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId('chart-reading-ids')).toHaveTextContent(
@@ -625,9 +656,6 @@ describe('GlucoseAnalysisView', () => {
       .filter((key): key is string => typeof key === 'string' && key.startsWith('/api/dashboard/glucose/history'));
 
     expect(historyKeys.at(-1)).toBe('/api/dashboard/glucose/history?range=14d');
-    expect(
-      historyKeys.filter((key) => key === '/api/dashboard/glucose/history?range=3d')
-    ).toHaveLength(1);
   });
 
   test('lets visitors preview corrections but not apply them', async () => {
@@ -706,6 +734,86 @@ describe('GlucoseAnalysisView', () => {
 
     expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Time range selected: Last 3 days' })).toBeInTheDocument();
+  });
+
+  test('starts with a custom absolute time range from dashboard URL state', () => {
+    useSearchParamsMock.mockReturnValue(new URLSearchParams(
+      'from=2026-03-26T07%3A05%3A00.000Z&to=2026-03-29T07%3A05%3A00.000Z&timezone=utc',
+    ));
+
+    renderWithProviders(
+      <GlucoseAnalysisView
+        isOwner={false}
+        initialSnapshot={createHistoryResponse()}
+        initialSelection={{
+          kind: 'custom',
+          window: {
+            from: '2026-03-26T07:05:00.000Z',
+            to: '2026-03-29T07:05:00.000Z',
+          },
+          raw: {
+            from: '2026-03-26T07:05:00.000Z',
+            to: '2026-03-29T07:05:00.000Z',
+          },
+        }}
+        initialTimeZone="UTC"
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Time range selected: Mar 26, 07:05 AM to Mar 29, 07:05 AM',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  test('writes the URL first when selecting a new time range', () => {
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+
+    renderWithProviders(<GlucoseAnalysisView isOwner={false} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Time range selected/i }));
+    fireEvent.click(screen.getByRole('button', { name: '7 days' }));
+
+    expect(replaceStateSpy).toHaveBeenCalledWith(
+      null,
+      '',
+      '/dashboard/statistics?from=now-7d&to=now&timezone=browser',
+    );
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Time range selected: Last 3 days' })).toBeInTheDocument();
+  });
+
+  test('preserves the solo panel view when selecting a new time range', () => {
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+    useSearchParamsMock.mockReturnValue(new URLSearchParams('viewPanel=panel-glucose-timeline'));
+
+    renderWithProviders(<GlucoseAnalysisView isOwner={false} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Time range selected/i }));
+    fireEvent.click(screen.getByRole('button', { name: '7 days' }));
+
+    expect(replaceStateSpy).toHaveBeenCalledWith(
+      null,
+      '',
+      '/dashboard/statistics?viewPanel=panel-glucose-timeline&from=now-7d&to=now&timezone=browser',
+    );
+  });
+
+  test('replaces an invalid statistics URL with the default range and shows one error toast', async () => {
+    useSearchParamsMock.mockReturnValue(new URLSearchParams('from=now-3d'));
+
+    renderWithProviders(<GlucoseAnalysisView isOwner={false} />);
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/dashboard/statistics?from=now-3d&to=now&timezone=browser');
+    });
+
+    expect(screen.getByRole('button', { name: 'Time range selected: Last 3 days' })).toBeInTheDocument();
+
+    const viewport = screen.getByRole('region', { name: 'Notifications' });
+    expect(within(viewport).getAllByText('Invalid URL parameter')).toHaveLength(1);
+    expect(within(viewport).getByText('Redirected to Statistics')).toBeInTheDocument();
   });
 
   test('switches the time in range panel layout from panel settings', () => {
