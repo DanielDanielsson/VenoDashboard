@@ -41,6 +41,18 @@
           }
         }
       },
+      "panel-workout-types": {
+        "kind": "Panel",
+        "spec": {
+          "id": 106,
+          "title": "Workout Types",
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "veno.workout-types",
+            "version": "v1"
+          }
+        }
+      },
       "panel-glucose-timeline": {
         "kind": "Panel",
         "spec": {
@@ -93,6 +105,19 @@
               "element": {
                 "kind": "ElementReference",
                 "name": "panel-time-in-range"
+              }
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "x": 8,
+              "y": 0,
+              "width": 4,
+              "height": 6,
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-workout-types"
               }
             }
           },

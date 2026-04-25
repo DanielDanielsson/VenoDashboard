@@ -25,13 +25,17 @@ const WORKOUT_TYPE_ICONS: Record<string, IconName> = {
   other: 'activity'
 };
 
+export function getWorkoutTypeLabel(workoutType: string): string {
+  return WORKOUT_TYPE_LABELS[workoutType] ?? 'Workout';
+}
+
 export function getWorkoutDisplayLabel(workout: Pick<WorkoutChartPoint, 'displayName' | 'workoutType'>): string {
   const customLabel = workout.displayName?.trim();
   if (customLabel) {
     return customLabel;
   }
 
-  return WORKOUT_TYPE_LABELS[workout.workoutType] ?? 'Workout';
+  return getWorkoutTypeLabel(workout.workoutType);
 }
 
 export function getWorkoutIconName(workoutType: string): IconName {

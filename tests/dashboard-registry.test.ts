@@ -24,12 +24,14 @@ describe('dashboard registry', () => {
     expect(Object.keys(dashboard.spec.elements)).toEqual([
       'panel-average-glucose',
       'panel-time-in-range',
+      'panel-workout-types',
       'panel-glucose-timeline',
       'panel-agp',
     ]);
     expect(dashboard.spec.layout.spec.items.map((item) => item.spec.element.name)).toEqual([
       'panel-average-glucose',
       'panel-time-in-range',
+      'panel-workout-types',
       'panel-glucose-timeline',
       'panel-agp',
     ]);

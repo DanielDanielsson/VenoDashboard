@@ -1,0 +1,1 @@
+export { WorkoutTypePanel } from './WorkoutTypePanel';
