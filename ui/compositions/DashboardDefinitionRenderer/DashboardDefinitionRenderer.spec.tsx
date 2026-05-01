@@ -1,10 +1,16 @@
 // @vitest-environment jsdom
 import { render as rtlRender, screen } from '@testing-library/react';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { createPanelRegistry } from '@/lib/dashboard/panel-registry';
 import { NotificationsProvider } from '@ui/compositions/NotificationsProvider';
 import { getDashboardDefinition } from '@/lib/dashboard/registry';
 import { DashboardDefinitionRenderer } from './DashboardDefinitionRenderer';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+}));
 
 function render(ui: React.ReactElement) {
   return rtlRender(<NotificationsProvider>{ui}</NotificationsProvider>);
@@ -22,10 +28,6 @@ describe('DashboardDefinitionRenderer', () => {
         render: ({ context }) => <div>{context.prefix} timers</div>,
       },
       {
-        group: 'veno.time-in-range',
-        render: ({ context }) => <div>{context.prefix} time in range</div>,
-      },
-      {
         group: 'veno.connections-map',
         render: ({ context }) => <div>{context.prefix} connections</div>,
       },
@@ -41,7 +43,6 @@ describe('DashboardDefinitionRenderer', () => {
 
     expect(screen.getByText('Overview current glucose')).toBeInTheDocument();
     expect(screen.getByText('Overview timers')).toBeInTheDocument();
-    expect(screen.getByText('Overview time in range')).toBeInTheDocument();
     expect(screen.getByText('Overview connections')).toBeInTheDocument();
   });
 });

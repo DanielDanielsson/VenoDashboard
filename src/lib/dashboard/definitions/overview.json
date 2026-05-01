@@ -62,33 +62,6 @@
           }
         }
       },
-      "panel-time-in-range": {
-        "kind": "Panel",
-        "spec": {
-          "id": 3,
-          "title": "Time In Range",
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "veno.time-in-range",
-            "version": "v1",
-            "spec": {
-              "options": {},
-              "fieldConfig": {
-                "defaults": {},
-                "overrides": []
-              }
-            }
-          }
-        }
-      },
       "panel-connections": {
         "kind": "Panel",
         "spec": {
@@ -144,19 +117,6 @@
               "element": {
                 "kind": "ElementReference",
                 "name": "panel-timers"
-              }
-            }
-          },
-          {
-            "kind": "GridLayoutItem",
-            "spec": {
-              "x": 8,
-              "y": 0,
-              "width": 4,
-              "height": 8,
-              "element": {
-                "kind": "ElementReference",
-                "name": "panel-time-in-range"
               }
             }
           },

@@ -11,18 +11,57 @@ const DASHBOARD_LINKS: ReadonlyArray<{
   icon: IconName;
   ownerOnly?: boolean;
 }> = [
-  { href: '/dashboard', label: 'Overview', icon: 'home' },
-  { href: '/dashboard/statistics', label: 'Statistics', icon: 'activity' },
   { href: '/dashboard/settings', label: 'Settings', icon: 'settings', ownerOnly: true },
   { href: '/dashboard/api-keys', label: 'API Keys', icon: 'key', ownerOnly: true },
 ];
 
-export const SideBarNavigation = ({ isOwner = false }: { isOwner?: boolean }) => {
+export interface PinnedDashboardNavigationItem {
+  uid: string;
+  title: string;
+}
+
+export const SideBarNavigation = ({
+  isOwner = false,
+  pinnedDashboards = [],
+}: {
+  isOwner?: boolean;
+  pinnedDashboards?: PinnedDashboardNavigationItem[];
+}) => {
   return (
     <nav className="fixed left-0 top-0 hidden h-screen w-[230px] flex-col border-r border-nav-link-text/50 p-4 md:flex">
       <Icon icon="veno-logo" title="Veno" twStyles="mx-auto h-[100px] w-32 text-text" />
 
       <ul className="mt-6 flex flex-col gap-2">
+        <li>
+          <details
+            open
+            role="group"
+            aria-label="Dashboards"
+            className="rounded-lg rounded-tr-none bg-nav-link-bg text-nav-link-text"
+          >
+            <summary className="ui_nav_text flex cursor-pointer list-none items-center gap-3 rounded-lg px-3 py-2.5">
+              <Icon icon="home" twStyles="h-5 w-5" />
+              <span>Dashboards</span>
+            </summary>
+            <ul className="grid gap-0.5 px-3 pb-2">
+              <li>
+                <Link href="/dashboards" className="body_text flex rounded px-2 py-1.5 text-text-soft transition-colors hover:text-text">
+                  All dashboards
+                </Link>
+              </li>
+              {pinnedDashboards.map((dashboard) => (
+                <li key={dashboard.uid}>
+                  <Link
+                    href={`/dashboards/${dashboard.uid}`}
+                    className="body_text flex rounded px-2 py-1.5 text-text-soft transition-colors hover:text-text"
+                  >
+                    {dashboard.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </li>
         {DASHBOARD_LINKS.map((link) => {
           if (!link.ownerOnly || isOwner) {
             return (

@@ -432,7 +432,7 @@ describe('GlucoseAnalysisView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     swrCache.clear();
-    usePathnameMock.mockReturnValue('/dashboard/statistics');
+    usePathnameMock.mockReturnValue('/dashboards/statistics');
     useSearchParamsMock.mockReturnValue(new URLSearchParams());
     useSWRMock.mockImplementation((key: string | null) => {
       if (!key) {
@@ -736,6 +736,29 @@ describe('GlucoseAnalysisView', () => {
     expect(screen.getByRole('button', { name: 'Time range selected: Last 3 days' })).toBeInTheDocument();
   });
 
+  test('renders a second time range dashboard definition with compatible catalog panels', () => {
+    const dashboardDefinition = structuredClone(getDashboardDefinition('statistics'));
+    dashboardDefinition.spec.uid = 'training-review';
+    dashboardDefinition.spec.title = 'Training review';
+    dashboardDefinition.spec.elements = {
+      'panel-average-glucose': dashboardDefinition.spec.elements['panel-average-glucose'],
+    };
+    dashboardDefinition.spec.layout.spec.items = dashboardDefinition.spec.layout.spec.items.filter(
+      (item) => item.spec.element.name === 'panel-average-glucose',
+    );
+
+    renderWithProviders(
+      <GlucoseAnalysisView
+        isOwner={false}
+        initialSnapshot={createHistoryResponse()}
+        dashboardDefinition={dashboardDefinition}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Average Glucose' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Time in Range' })).not.toBeInTheDocument();
+  });
+
   test('starts with a custom absolute time range from dashboard URL state', () => {
     useSearchParamsMock.mockReturnValue(new URLSearchParams(
       'from=2026-03-26T07%3A05%3A00.000Z&to=2026-03-29T07%3A05%3A00.000Z&timezone=utc',
@@ -778,7 +801,7 @@ describe('GlucoseAnalysisView', () => {
     expect(replaceStateSpy).toHaveBeenCalledWith(
       null,
       '',
-      '/dashboard/statistics?from=now-7d&to=now&timezone=browser',
+      '/dashboards/statistics?from=now-7d&to=now&timezone=browser',
     );
     expect(replaceMock).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Time range selected: Last 3 days' })).toBeInTheDocument();
@@ -796,7 +819,7 @@ describe('GlucoseAnalysisView', () => {
     expect(replaceStateSpy).toHaveBeenCalledWith(
       null,
       '',
-      '/dashboard/statistics?viewPanel=panel-glucose-timeline&from=now-7d&to=now&timezone=browser',
+      '/dashboards/statistics?viewPanel=panel-glucose-timeline&from=now-7d&to=now&timezone=browser',
     );
   });
 
@@ -806,7 +829,7 @@ describe('GlucoseAnalysisView', () => {
     renderWithProviders(<GlucoseAnalysisView isOwner={false} />);
 
     await waitFor(() => {
-      expect(replaceMock).toHaveBeenCalledWith('/dashboard/statistics?from=now-3d&to=now&timezone=browser');
+      expect(replaceMock).toHaveBeenCalledWith('/dashboards/statistics?from=now-3d&to=now&timezone=browser');
     });
 
     expect(screen.getByRole('button', { name: 'Time range selected: Last 3 days' })).toBeInTheDocument();

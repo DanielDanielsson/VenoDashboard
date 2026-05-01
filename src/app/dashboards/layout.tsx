@@ -6,7 +6,7 @@ import { DynamicFavicon } from '@ui/components/DynamicFavicon/DynamicFavicon';
 import { getOwnerSession } from '@/lib/auth';
 import { loadDashboardLibrary } from '@/lib/dashboard/library';
 
-export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function DashboardsLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const [session, library] = await Promise.all([
     getOwnerSession(),
     loadDashboardLibrary(),

@@ -47,7 +47,7 @@ function DashboardGridPanelActions({
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const { editPanel, hoveredPanelId, viewPanel } = useDashboardGridActions();
+  const { editPanel, hoveredPanelId, isEditMode, isOwner, removePanel, viewPanel } = useDashboardGridActions();
   const isVisible = hoveredPanelId === panelId || isMenuOpen;
 
   useEffect(() => {
@@ -121,6 +121,20 @@ function DashboardGridPanelActions({
             <span>Edit</span>
             <span aria-hidden="true" className="h-5 min-w-5" />
           </Button>
+          {isOwner && isEditMode ? (
+            <Button
+              ariaLabel="Remove"
+              role="menuitem"
+              twStyles="ui_caption grid w-full grid-cols-[1fr_auto] items-center gap-4 rounded-[4px] px-2 py-1.5 text-left text-dashboard-panel-menu-text-muted transition-colors hover:bg-dashboard-panel-menu-hover-bg hover:text-dashboard-panel-menu-text"
+              onClick={() => {
+                setIsMenuOpen(false);
+                removePanel(panelId);
+              }}
+            >
+              <span>Remove</span>
+              <span aria-hidden="true" className="h-5 min-w-5" />
+            </Button>
+          ) : null}
         </div>
       ) : null}
     </>

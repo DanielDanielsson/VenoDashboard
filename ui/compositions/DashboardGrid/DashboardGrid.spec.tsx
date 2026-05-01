@@ -16,6 +16,7 @@ type MockLayoutItem = {
 
 const gridLayoutMock = vi.hoisted(() => ({
   layout: [] as MockLayoutItem[],
+  childKeys: [] as Array<string | null>,
   onLayoutChange: undefined as ((layout: MockLayoutItem[]) => void) | undefined,
   className: '',
   gridConfig: undefined as
@@ -73,7 +74,12 @@ vi.mock('react-grid-layout', () => ({
       enabled: boolean;
     };
   }) => {
+    const childList = Array.isArray(children) ? children : [children];
+
     gridLayoutMock.layout = layout;
+    gridLayoutMock.childKeys = childList.map((child) => (
+      child && typeof child === 'object' && 'key' in child ? String(child.key) : null
+    ));
     gridLayoutMock.onLayoutChange = onLayoutChange;
     gridLayoutMock.gridConfig = gridConfig;
     gridLayoutMock.dragConfig = dragConfig;
@@ -232,6 +238,40 @@ describe('DashboardGrid', () => {
     expect(screen.getByText('Connections panel')).toBeInTheDocument();
     expect(screen.queryByText('Current glucose panel')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'to dashboard' })).toBeInTheDocument();
+  });
+
+  test('toggles solo view when the panel is already hovered before React sees mouse movement', () => {
+    render(
+      <DashboardGrid layout={createLayout()}>
+        <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+          Current glucose panel
+        </DashboardGridPanel>
+        <DashboardGridPanel key="panel-connections" panelId="panel-connections" title="Connections">
+          Connections panel
+        </DashboardGridPanel>
+      </DashboardGrid>,
+    );
+
+    const originalQuerySelectorAll = HTMLElement.prototype.querySelectorAll;
+    const connectionsPanel = document.querySelector('[data-dashboard-panel-id="panel-connections"]') as HTMLElement;
+    const querySelectorAllSpy = vi.spyOn(HTMLElement.prototype, 'querySelectorAll').mockImplementation(function (
+      this: HTMLElement,
+      selector,
+    ) {
+      if (selector === '[data-dashboard-panel-id]:hover' && this.contains(connectionsPanel)) {
+        return [connectionsPanel] as unknown as NodeListOf<HTMLElement>;
+      }
+
+      return originalQuerySelectorAll.call(this, selector) as NodeListOf<HTMLElement>;
+    });
+
+    fireEvent.keyDown(window, { key: 'v' });
+
+    expect(screen.getByText('Connections panel')).toBeInTheDocument();
+    expect(screen.queryByText('Current glucose panel')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'to dashboard' })).toBeInTheDocument();
+
+    querySelectorAllSpy.mockRestore();
   });
 
   test('exits solo view when v is pressed again for the hovered panel', () => {
@@ -628,6 +668,22 @@ describe('DashboardGrid', () => {
     expect(controls?.children[1]).toBe(publicSaveWarning);
   });
 
+  test('left aligns internal dashboard edit controls when no toolbar portal is provided', () => {
+    render(
+      <DashboardGrid layout={createLayout()}>
+        <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+          Current glucose panel
+        </DashboardGridPanel>
+      </DashboardGrid>,
+    );
+
+    const editButton = screen.getByRole('button', { name: 'Edit dashboard' });
+    const controlsRow = editButton.closest('.mb-4');
+
+    expect(controlsRow).toHaveClass('justify-start');
+    expect(controlsRow).not.toHaveClass('justify-end');
+  });
+
   test('renders the solo view back action into the same portal toolbar row', async () => {
     render(
       <>
@@ -749,6 +805,10 @@ describe('DashboardGrid', () => {
     expect(gridLayoutMock.layout).toEqual([
       { i: 'panel-current-glucose', x: 0, y: 0, w: 4, h: 6 },
       { i: 'panel-connections', x: 0, y: 6, w: 12, h: 8 },
+    ]);
+    expect(gridLayoutMock.childKeys).toEqual([
+      'panel-current-glucose',
+      'panel-connections',
     ]);
     expect(gridLayoutMock.gridConfig?.margin).toEqual([4, 4]);
   });

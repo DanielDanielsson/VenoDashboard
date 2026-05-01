@@ -10,7 +10,6 @@ describe('dashboard registry', () => {
     expect(Object.keys(dashboard.spec.elements)).toEqual([
       'panel-current-glucose',
       'panel-timers',
-      'panel-time-in-range',
       'panel-connections',
     ]);
     expect(dashboard.spec.layout.spec.items.find((item) => item.spec.element.name === 'panel-connections')?.spec.y).toBe(8);

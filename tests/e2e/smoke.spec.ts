@@ -2,13 +2,13 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
 test('dashboard renders', async ({ page }) => {
-  await page.goto('/dashboard');
-  await expect(page.getByRole('link', { name: 'Overview' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Statistics' })).toBeVisible();
+  await page.goto('/dashboards');
+  await expect(page.getByRole('link', { name: 'Overview', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Statistics', exact: true })).toBeVisible();
 });
 
 test('statistics page renders', async ({ page }) => {
-  await page.goto('/dashboard/statistics');
+  await page.goto('/dashboards/statistics');
   await expect(page.getByRole('heading', { name: /Statistics/i })).toBeVisible();
   await expect(page.getByText(/Deep dive into your glucose data/i)).toBeVisible();
 });
@@ -52,7 +52,7 @@ test('statistics time range picker resolves theme colors after theme changes', a
     localStorage.setItem('pulse-theme', 'dark');
   });
 
-  await page.goto('/dashboard/statistics');
+  await page.goto('/dashboards/statistics');
 
   const darkPicker = await openTimeRangePicker(page);
   await expectResolvedThemeSurface(darkPicker.toolbar);

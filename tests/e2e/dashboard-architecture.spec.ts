@@ -65,11 +65,11 @@ async function openPanelSettings(page: Page, title: string) {
 }
 
 async function signInAsOwner(page: Page) {
-  await page.goto('/login?callbackUrl=/dashboard/statistics');
+  await page.goto('/login?callbackUrl=/dashboards/statistics');
   await page.getByLabel('Username').fill(ownerUsername);
   await page.getByLabel('Password').fill(ownerPassword ?? '');
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/dashboard\/statistics$/);
+  await expect(page).toHaveURL(/\/dashboards\/statistics$/);
 }
 
 async function setTimeInRangeLayout(page: Page, label: 'Overview' | 'Statistics') {
@@ -79,7 +79,7 @@ async function setTimeInRangeLayout(page: Page, label: 'Overview' | 'Statistics'
 }
 
 test('statistics dashboard supports panel view, edit, and public local preview', async ({ page }) => {
-  await page.goto('/dashboard/statistics');
+  await page.goto('/dashboards/statistics');
 
   await expect(page.getByRole('heading', { name: 'Statistics' })).toBeVisible();
   await expect(page.locator('h2').filter({ hasText: /^Time in Range$/ })).toBeVisible();

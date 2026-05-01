@@ -308,6 +308,7 @@ export function GlucoseAnalysisView({
   dashboardVersion = null,
   initialSelection,
   initialTimeZone,
+  allowDashboardDelete = false,
 }: {
   isOwner?: boolean;
   initialSnapshot?: GlucoseApiResponse;
@@ -315,6 +316,7 @@ export function GlucoseAnalysisView({
   dashboardVersion?: number | null;
   initialSelection?: HistorySelection;
   initialTimeZone?: string;
+  allowDashboardDelete?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -1249,9 +1251,10 @@ export function GlucoseAnalysisView({
         panelIdAliases={getDashboardViewPanelAliases(dashboardDefinition)}
       >
         {({ viewedPanelId, onViewedPanelChange }) => (
-      <DashboardDefinitionRenderer
-        dashboard={dashboardDefinition}
-        dashboardVersion={dashboardVersion}
+        <DashboardDefinitionRenderer
+          dashboard={dashboardDefinition}
+          dashboardType="timeRange"
+          dashboardVersion={dashboardVersion}
         panelRegistry={statisticsPanelRegistry}
         isOwner={isOwner}
         viewedPanelId={viewedPanelId}
@@ -1261,6 +1264,7 @@ export function GlucoseAnalysisView({
         onDiscardTimeSettings={(timeSettings) => setAutoRefresh(timeSettings.autoRefresh)}
         timeInRangeDefaultLayout="statistics"
         editControlsPortalId={STATISTICS_DASHBOARD_EDIT_CONTROLS_ID}
+        allowDashboardDelete={allowDashboardDelete}
         context={{
           renderAverageGlucosePanel: () => (
           <DashboardPanel

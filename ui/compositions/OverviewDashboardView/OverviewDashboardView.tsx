@@ -10,12 +10,14 @@ interface OverviewDashboardViewProps {
   context: OverviewDashboardContext;
   dashboard: DashboardDefinition;
   dashboardVersion: number | null;
+  allowDashboardDelete?: boolean;
 }
 
 export function OverviewDashboardView({
   context,
   dashboard,
   dashboardVersion,
+  allowDashboardDelete = false,
 }: OverviewDashboardViewProps) {
   return (
     <>
@@ -29,6 +31,7 @@ export function OverviewDashboardView({
         {({ viewedPanelId, onViewedPanelChange }) => (
           <DashboardDefinitionRenderer
             dashboard={dashboard}
+            dashboardType="live"
             dashboardVersion={dashboardVersion}
             panelRegistry={overviewPanelRegistry}
             isOwner={context.isOwner}
@@ -36,6 +39,7 @@ export function OverviewDashboardView({
             onViewedPanelChange={onViewedPanelChange}
             timeInRangeDefaultLayout="overview"
             context={context}
+            allowDashboardDelete={allowDashboardDelete}
           />
         )}
       </DashboardViewPanelUrlStateBridge>

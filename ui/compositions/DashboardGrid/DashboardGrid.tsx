@@ -1,11 +1,12 @@
 'use client';
 
-import { createContext, useContext, type ReactElement, type ReactNode } from 'react';
+import { Children, cloneElement, createContext, isValidElement, useContext, type ReactElement, type ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ReactGridLayout, { useContainerWidth, type Layout } from 'react-grid-layout';
 import { cloneReactGridLayoutItems, toReactGridLayoutItems } from '@/lib/dashboard/grid-layout';
-import type { DashboardTimeSettingsKind, GridLayoutKind } from '@/lib/dashboard/schema';
+import type { DashboardTimeSettingsKind, DashboardType, GridLayoutKind, PanelKind } from '@/lib/dashboard/schema';
+import type { DashboardPanelCatalogEntry } from '@/lib/dashboard/panel-catalog';
 import { Button } from '@ui/base/Button';
 import { Icon } from '@ui/base/Icon';
 import { DialogPanel } from '@ui/components/DialogPanel';
@@ -25,10 +26,14 @@ export type DashboardPanelSettingsRegistry = Record<string, DashboardPanelSettin
 interface DashboardGridProps {
   layout: GridLayoutKind;
   children: ReactNode;
+  dashboardType?: DashboardType;
   isOwner?: boolean;
   viewedPanelId?: string | null;
   onViewedPanelChange?: (panelId: string | null, navigationMode?: 'push' | 'replace') => void;
   settingsRegistry?: DashboardPanelSettingsRegistry;
+  initialElements?: Record<string, PanelKind>;
+  renderPanel?: (panelId: string, panel: PanelKind) => ReactNode;
+  panelCatalogEntries?: DashboardPanelCatalogEntry[];
   initialPanelSettings?: Record<string, unknown>;
   initialTimeSettings?: DashboardTimeSettingsKind;
   currentTimeSettings?: DashboardTimeSettingsKind;
@@ -38,8 +43,10 @@ interface DashboardGridProps {
   onSaveDashboard?: (input: {
     panelSettings: Record<string, unknown>;
     layout: Layout;
+    elements?: Record<string, PanelKind>;
     timeSettings?: DashboardTimeSettingsKind;
   }) => Promise<void>;
+  onDeleteDashboard?: () => Promise<void>;
 }
 
 const gridConfig = {
@@ -49,13 +56,17 @@ const gridConfig = {
   containerPadding: [0, 0] as const,
 };
 const EMPTY_PANEL_SETTINGS: Record<string, unknown> = {};
+const EMPTY_PANEL_ELEMENTS: Record<string, PanelKind> = {};
 const DASHBOARD_EDIT_BUTTON_STYLES = 'ui_caption inline-flex h-[38px] items-center gap-2 rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-bg px-3 text-dashboard-time-picker-text transition-colors hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text';
+const DASHBOARD_PANEL_SELECTOR = '[data-dashboard-panel-id]';
 
 interface DashboardGridActions {
   viewPanel: (panelId: string) => void;
   editPanel: (panel: { panelId: string; title: string }) => void;
+  removePanel: (panelId: string) => void;
   setHoveredPanel: (panelId: string | null) => void;
   hoveredPanelId: string | null;
+  isOwner: boolean;
   isEditMode: boolean;
   isLayoutEditingEnabled: boolean;
   viewedPanelId: string | null;
@@ -64,8 +75,10 @@ interface DashboardGridActions {
 const DashboardGridActionsContext = createContext<DashboardGridActions>({
   viewPanel: () => {},
   editPanel: () => {},
+  removePanel: () => {},
   setHoveredPanel: () => {},
   hoveredPanelId: null,
+  isOwner: false,
   isEditMode: false,
   isLayoutEditingEnabled: false,
   viewedPanelId: null,
@@ -110,11 +123,43 @@ function getChildPanelId(child: ReactNode): string | null {
   }
 
   const props = child.props as { panelId?: unknown };
-  return typeof props.panelId === 'string' ? props.panelId : null;
+  if (typeof props.panelId === 'string') {
+    return props.panelId;
+  }
+
+  const key = (child as { key?: unknown }).key;
+  if (typeof key !== 'string') {
+    return null;
+  }
+
+  return key.replace(/^\.\$/, '');
+}
+
+function getHoveredDashboardPanelId(root: ParentNode | null): string | null {
+  if (!root) {
+    return null;
+  }
+
+  const hoveredPanels = Array.from(root.querySelectorAll<HTMLElement>(`${DASHBOARD_PANEL_SELECTOR}:hover`));
+  const hoveredPanel = hoveredPanels[hoveredPanels.length - 1];
+
+  return hoveredPanel?.dataset.dashboardPanelId ?? null;
+}
+
+function normalizeGridChildKey(child: ReactNode, panelId: string): ReactNode {
+  if (!isValidElement(child)) {
+    return child;
+  }
+
+  return cloneElement(child, { key: panelId });
 }
 
 function clonePanelSettings(settings: Record<string, unknown>): Record<string, unknown> {
   return structuredClone(settings);
+}
+
+function clonePanelElements(elements: Record<string, PanelKind>): Record<string, PanelKind> {
+  return structuredClone(elements);
 }
 
 function sortSerializable(value: unknown): unknown {
@@ -169,6 +214,10 @@ function serializeLayout(layout: Layout): string {
   );
 }
 
+function serializeElements(elements: Record<string, PanelKind>): string {
+  return JSON.stringify(sortSerializable(elements));
+}
+
 function buildEffectivePanelSettings(
   settingsRegistry: DashboardPanelSettingsRegistry,
   persistedPanelSettings: Record<string, unknown>,
@@ -188,10 +237,14 @@ function buildEffectivePanelSettings(
 export function DashboardGrid({
   layout,
   children,
+  dashboardType,
   isOwner = false,
   viewedPanelId: controlledViewedPanelId,
   onViewedPanelChange,
   settingsRegistry = {},
+  initialElements = EMPTY_PANEL_ELEMENTS,
+  renderPanel,
+  panelCatalogEntries = [],
   initialPanelSettings = EMPTY_PANEL_SETTINGS,
   initialTimeSettings,
   currentTimeSettings = initialTimeSettings,
@@ -199,22 +252,30 @@ export function DashboardGrid({
   editControlsPortalId,
   onUnauthorizedSaveDashboard,
   onSaveDashboard,
+  onDeleteDashboard,
 }: DashboardGridProps): ReactElement {
   const initialLayout = useMemo(() => toReactGridLayoutItems(layout.spec.items), [layout]);
   const [persistedLayout, setPersistedLayout] = useState<Layout>(() => cloneReactGridLayoutItems(initialLayout));
   const [runtimeLayout, setRuntimeLayout] = useState<Layout>(() => cloneReactGridLayoutItems(initialLayout));
   const [uncontrolledViewedPanelId, setUncontrolledViewedPanelId] = useState<string | null>(null);
   const [editedPanel, setEditedPanel] = useState<{ panelId: string; title: string } | null>(null);
+  const [isAddPanelDrawerOpen, setIsAddPanelDrawerOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [persistedPanelSettings, setPersistedPanelSettings] = useState<Record<string, unknown>>(
     () => clonePanelSettings(initialPanelSettings),
+  );
+  const [persistedElements, setPersistedElements] = useState<Record<string, PanelKind>>(
+    () => clonePanelElements(initialElements),
+  );
+  const [runtimeElements, setRuntimeElements] = useState<Record<string, PanelKind>>(
+    () => clonePanelElements(initialElements),
   );
   const [persistedTimeSettings, setPersistedTimeSettings] = useState<DashboardTimeSettingsKind | undefined>(
     () => initialTimeSettings ? cloneTimeSettings(initialTimeSettings) : undefined,
   );
   const [runtimePanelSettings, setRuntimePanelSettings] = useState<Record<string, unknown>>({});
   const [isSavingDashboard, setIsSavingDashboard] = useState(false);
-  const [dashboardSaveError, setDashboardSaveError] = useState<string | null>(null);
+  const [isDeletingDashboard, setIsDeletingDashboard] = useState(false);
   const [moveAnimationsEnabled, setMoveAnimationsEnabled] = useState(false);
   const [editControlsPortalTarget, setEditControlsPortalTarget] = useState<HTMLElement | null>(null);
   const [hoveredPanelId, setHoveredPanelId] = useState<string | null>(null);
@@ -230,15 +291,46 @@ export function DashboardGrid({
   const isDraggable = mounted && width > 768;
   const isLayoutEditingEnabled = isEditMode && isDraggable;
   const viewedPanelId = controlledViewedPanelId ?? uncontrolledViewedPanelId;
-  const visibleChildren = useMemo(() => {
-    const childItems = Array.isArray(children) ? children : [children];
-
-    if (!viewedPanelId) {
-      return childItems;
+  const availablePanelCatalogEntries = useMemo(() => {
+    if (!dashboardType || !isOwner) {
+      return [];
     }
 
-    return childItems.filter((child) => getChildPanelId(child) === viewedPanelId);
-  }, [children, viewedPanelId]);
+    const currentGroups = new Set(
+      Object.values(runtimeElements).map((element) => element.spec.vizConfig.group),
+    );
+
+    return panelCatalogEntries.filter((entry) => (
+      entry.compatibleDashboardType === dashboardType &&
+      (entry.allowMultiple || !currentGroups.has(entry.group))
+    ));
+  }, [dashboardType, isOwner, panelCatalogEntries, runtimeElements]);
+  const visibleChildren = useMemo(() => {
+    const childItems = Children.toArray(children);
+    const childrenByPanelId = new Map<string, ReactNode>();
+    for (const child of childItems) {
+      const panelId = getChildPanelId(child);
+      if (panelId) {
+        childrenByPanelId.set(panelId, child);
+      }
+    }
+    const visiblePanelIds = viewedPanelId
+      ? [viewedPanelId]
+      : runtimeLayout.map((item) => item.i);
+
+    return visiblePanelIds
+      .map((panelId) => {
+        const existingChild = childrenByPanelId.get(panelId);
+        if (existingChild) {
+          return normalizeGridChildKey(existingChild, panelId);
+        }
+
+        const panel = runtimeElements[panelId];
+        const renderedPanel = panel && renderPanel ? renderPanel(panelId, panel) : null;
+        return renderedPanel ? normalizeGridChildKey(renderedPanel, panelId) : null;
+      })
+      .filter((child): child is ReactNode => Boolean(child));
+  }, [children, renderPanel, runtimeElements, runtimeLayout, viewedPanelId]);
   const visibleLayout = useMemo(() => {
     if (!viewedPanelId) {
       return runtimeLayout;
@@ -268,14 +360,16 @@ export function DashboardGrid({
     const nextLayout = cloneReactGridLayoutItems(initialLayout);
     setPersistedLayout(nextLayout);
     setRuntimeLayout(cloneReactGridLayoutItems(nextLayout));
+    setPersistedElements(clonePanelElements(initialElements));
+    setRuntimeElements(clonePanelElements(initialElements));
     setIsEditMode(false);
+    setIsAddPanelDrawerOpen(false);
     setPendingDiscardAction(null);
-  }, [initialLayout]);
+  }, [initialElements, initialLayout]);
 
   useEffect(() => {
     setPersistedPanelSettings(clonePanelSettings(initialPanelSettings));
     setRuntimePanelSettings({});
-    setDashboardSaveError(null);
   }, [initialPanelSettings]);
 
   useEffect(() => {
@@ -298,7 +392,6 @@ export function DashboardGrid({
           ...current,
           [panelId]: updater(mergeDefaultSettings(defaultSettings, current[panelId] ?? persistedPanelSettings[panelId])),
         }));
-        setDashboardSaveError(null);
       },
     }),
     [persistedPanelSettings, runtimePanelSettings],
@@ -324,6 +417,10 @@ export function DashboardGrid({
     () => serializeLayout(runtimeLayout) !== serializeLayout(persistedLayout),
     [persistedLayout, runtimeLayout],
   );
+  const hasUnsavedElements = useMemo(
+    () => serializeElements(runtimeElements) !== serializeElements(persistedElements),
+    [persistedElements, runtimeElements],
+  );
   const hasUnsavedTimeSettings = useMemo(
     () => Boolean(
       persistedTimeSettings &&
@@ -332,8 +429,8 @@ export function DashboardGrid({
     ),
     [currentTimeSettings, persistedTimeSettings],
   );
-  const hasSaveableDashboardChanges = hasUnsavedLayout || hasUnsavedSettings || hasUnsavedTimeSettings;
-  const hasUnsavedDashboardChanges = hasUnsavedLayout || hasUnsavedSettings || (isEditMode && hasUnsavedTimeSettings);
+  const hasSaveableDashboardChanges = hasUnsavedLayout || hasUnsavedSettings || hasUnsavedElements || hasUnsavedTimeSettings;
+  const hasUnsavedDashboardChanges = hasUnsavedLayout || hasUnsavedSettings || hasUnsavedElements || (isEditMode && hasUnsavedTimeSettings);
   const shouldGuardUnsavedDashboardChanges = isOwner && hasUnsavedDashboardChanges;
   const canAttemptSaveDashboard = Boolean(onSaveDashboard && isEditMode && hasSaveableDashboardChanges && !isSavingDashboard);
 
@@ -348,19 +445,24 @@ export function DashboardGrid({
     }
 
     setIsSavingDashboard(true);
-    setDashboardSaveError(null);
 
     try {
       const nextPersistedSettings = clonePanelSettings(effectivePanelSettings);
       const nextPersistedLayout = cloneReactGridLayoutItems(runtimeLayout);
+      const nextPersistedElements = clonePanelElements(runtimeElements);
       const saveInput: {
         panelSettings: Record<string, unknown>;
         layout: Layout;
+        elements?: Record<string, PanelKind>;
         timeSettings?: DashboardTimeSettingsKind;
       } = {
         panelSettings: nextPersistedSettings,
         layout: nextPersistedLayout,
       };
+
+      if (Object.keys(nextPersistedElements).length > 0) {
+        saveInput.elements = nextPersistedElements;
+      }
 
       if (currentTimeSettings) {
         saveInput.timeSettings = cloneTimeSettings(currentTimeSettings);
@@ -368,27 +470,88 @@ export function DashboardGrid({
 
       await onSaveDashboard(saveInput);
       setPersistedLayout(nextPersistedLayout);
+      setPersistedElements(nextPersistedElements);
       setPersistedPanelSettings(nextPersistedSettings);
       if (currentTimeSettings) {
         setPersistedTimeSettings(cloneTimeSettings(currentTimeSettings));
       }
       setRuntimePanelSettings({});
       setPendingDiscardAction(null);
-    } catch (error) {
-      setDashboardSaveError(error instanceof Error ? error.message : 'Failed to save dashboard settings.');
+    } catch {
+      return;
     } finally {
       setIsSavingDashboard(false);
     }
   }
 
+  async function handleDeleteDashboard() {
+    if (!isOwner || !onDeleteDashboard || isDeletingDashboard) {
+      return;
+    }
+
+    setIsDeletingDashboard(true);
+    try {
+      await onDeleteDashboard();
+    } catch {
+      return;
+    } finally {
+      setIsDeletingDashboard(false);
+    }
+  }
+
   const resetRuntimeDashboardState = useCallback(() => {
     setRuntimeLayout(cloneReactGridLayoutItems(persistedLayout));
+    setRuntimeElements(clonePanelElements(persistedElements));
     setRuntimePanelSettings({});
     if (persistedTimeSettings) {
       onDiscardTimeSettings?.(cloneTimeSettings(persistedTimeSettings));
     }
-    setDashboardSaveError(null);
-  }, [onDiscardTimeSettings, persistedLayout, persistedTimeSettings]);
+  }, [onDiscardTimeSettings, persistedElements, persistedLayout, persistedTimeSettings]);
+
+  function handleAddPanel(entry: DashboardPanelCatalogEntry) {
+    const nextPanelId = entry.elementName;
+    const nextY = runtimeLayout.reduce(
+      (maxY, item) => Math.max(maxY, item.y + item.h),
+      0,
+    );
+    const nextWidth = Math.min(gridConfig.cols, entry.defaultLayout.width);
+
+    setRuntimeElements((current) => ({
+      ...current,
+      [nextPanelId]: structuredClone(entry.defaultDefinition),
+    }));
+    setRuntimeLayout((current) => [
+      ...current,
+      {
+        i: nextPanelId,
+        x: 0,
+        y: nextY,
+        w: nextWidth,
+        h: entry.defaultLayout.height,
+      },
+    ]);
+    setIsAddPanelDrawerOpen(false);
+  }
+
+  function handleRemovePanel(panelId: string) {
+    setRuntimeElements((current) => {
+      const next = { ...current };
+      delete next[panelId];
+      return next;
+    });
+    setRuntimeLayout((current) => current.filter((item) => item.i !== panelId));
+    setRuntimePanelSettings((current) => {
+      const next = { ...current };
+      delete next[panelId];
+      return next;
+    });
+    if (editedPanel?.panelId === panelId) {
+      setEditedPanel(null);
+    }
+    if (viewedPanelId === panelId) {
+      commitViewedPanelChange(null, 'replace');
+    }
+  }
 
   const commitViewedPanelChange = useCallback((panelId: string | null, navigationMode: 'push' | 'replace' = 'replace') => {
     if (controlledViewedPanelId === undefined) {
@@ -433,6 +596,7 @@ export function DashboardGrid({
     }
 
     setIsEditMode(false);
+    setIsAddPanelDrawerOpen(false);
   }
 
   function handleDiscardChanges() {
@@ -480,6 +644,21 @@ export function DashboardGrid({
   }, [isDraggable, mounted]);
 
   useEffect(() => {
+    if (!mounted || !gridViewportElement || hoveredPanelId) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      const nextHoveredPanelId = getHoveredDashboardPanelId(gridViewportElement);
+      if (nextHoveredPanelId) {
+        setHoveredPanelId(nextHoveredPanelId);
+      }
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [gridViewportElement, hoveredPanelId, mounted, visibleLayout]);
+
+  useEffect(() => {
     function isEditableTarget(target: EventTarget | null): boolean {
       if (!(target instanceof HTMLElement)) {
         return false;
@@ -502,7 +681,7 @@ export function DashboardGrid({
         return;
       }
 
-      const activePanelId = hoveredPanelId ?? viewedPanelId;
+      const activePanelId = hoveredPanelId ?? getHoveredDashboardPanelId(gridViewportElement) ?? viewedPanelId;
       if (!activePanelId) {
         return;
       }
@@ -517,7 +696,7 @@ export function DashboardGrid({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleViewedPanelChange, hoveredPanelId, viewedPanelId]);
+  }, [gridViewportElement, handleViewedPanelChange, hoveredPanelId, viewedPanelId]);
 
   useEffect(() => {
     if (!viewedPanelId || !mounted) {
@@ -636,6 +815,15 @@ export function DashboardGrid({
       {isEditMode ? (
         <>
           <div className="flex items-center gap-2">
+            {isOwner ? (
+              <Button
+                aria-label="Add panel"
+                twStyles={DASHBOARD_EDIT_BUTTON_STYLES}
+                onClick={() => setIsAddPanelDrawerOpen(true)}
+              >
+                <span>Add panel</span>
+              </Button>
+            ) : null}
             <Button
               aria-label="Save dashboard"
               twStyles={DASHBOARD_EDIT_BUTTON_STYLES}
@@ -644,6 +832,16 @@ export function DashboardGrid({
             >
               {isSavingDashboard ? 'Saving' : 'Save'}
             </Button>
+            {isOwner && onDeleteDashboard ? (
+              <Button
+                aria-label="Delete dashboard"
+                twStyles={DASHBOARD_EDIT_BUTTON_STYLES}
+                disabled={isDeletingDashboard}
+                onClick={handleDeleteDashboard}
+              >
+                {isDeletingDashboard ? 'Deleting' : 'Delete dashboard'}
+              </Button>
+            ) : null}
             <Button
               aria-label="Exit dashboard edit mode"
               twStyles={DASHBOARD_EDIT_BUTTON_STYLES}
@@ -657,16 +855,12 @@ export function DashboardGrid({
               Admin sign in is required to save dashboard settings.
             </p>
           ) : null}
-          {dashboardSaveError ? (
-            <p className="body_text text-left text-text-soft">{dashboardSaveError}</p>
-          ) : null}
         </>
       ) : (
         <Button
           aria-label="Edit dashboard"
           twStyles={DASHBOARD_EDIT_BUTTON_STYLES}
           onClick={() => {
-            setDashboardSaveError(null);
             setIsEditMode(true);
           }}
         >
@@ -686,8 +880,10 @@ export function DashboardGrid({
           setEditedPanel(panel);
           setIsEditMode(true);
         },
+        removePanel: handleRemovePanel,
         setHoveredPanel: setHoveredPanelId,
         hoveredPanelId,
+        isOwner,
         isEditMode,
         isLayoutEditingEnabled,
         viewedPanelId,
@@ -697,7 +893,7 @@ export function DashboardGrid({
         <div ref={containerRef} className="w-full">
           {editControlsPortalTarget ? createPortal(dashboardEditControls, editControlsPortalTarget) : null}
           {shouldRenderInternalControls ? (
-            <div className="mb-4 flex items-start justify-end gap-4">
+            <div className="mb-4 flex items-start justify-start gap-4">
               {dashboardEditControls}
             </div>
           ) : null}
@@ -779,10 +975,41 @@ export function DashboardGrid({
                       Admin sign in is required to save dashboard settings.
                     </p>
                   ) : null}
-                  {dashboardSaveError ? (
-                    <p className="body_text mt-3 text-text-soft">{dashboardSaveError}</p>
-                  ) : null}
                 </div>
+              </div>
+            </aside>
+          ) : null}
+          {isAddPanelDrawerOpen ? (
+            <aside
+              aria-label="Add panel"
+              role="complementary"
+              className="fixed right-0 top-0 z-50 flex h-screen w-[min(24rem,calc(100vw-2rem))] flex-col border-l border-border bg-bg p-6 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <h2 className="panel_title text-text">Add panel</h2>
+                <button
+                  type="button"
+                  className="ui_caption rounded-[4px] border border-border px-2 py-1 text-text-soft"
+                  onClick={() => setIsAddPanelDrawerOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+              <div className="mt-6 grid gap-2">
+                {availablePanelCatalogEntries.length > 0 ? (
+                  availablePanelCatalogEntries.map((entry) => (
+                    <button
+                      key={entry.group}
+                      type="button"
+                      className="ui_caption rounded-[4px] border border-border px-3 py-2 text-left text-text-soft transition-colors hover:bg-surface-muted hover:text-text"
+                      onClick={() => handleAddPanel(entry)}
+                    >
+                      {entry.title}
+                    </button>
+                  ))
+                ) : (
+                  <p className="body_text text-text-soft">No compatible panels available.</p>
+                )}
               </div>
             </aside>
           ) : null}

@@ -39,8 +39,9 @@ function isProtectedPath(pathname: string): boolean {
   return pathname !== '/dashboard' && pathname !== '/dashboard/statistics' && pathname !== '/dashboard/about';
 }
 
-function isAllowedPath(pathname: string): boolean {
+export function isAllowedPath(pathname: string): boolean {
   const allowedPrefixes = [
+    '/dashboards',
     '/dashboard',
     '/login',
     '/api/auth',

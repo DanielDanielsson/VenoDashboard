@@ -20,9 +20,17 @@ export function useDashboardNotifications({ dashboardUid }: DashboardNotificatio
     notifyDashboardSaved() {
       notifySuccess('Dashboard changes saved');
     },
+    notifyDashboardDeleted() {
+      notifySuccess('Dashboard deleted');
+    },
     notifyDashboardSaveFailed(message?: string) {
       notifyError('Dashboard changes could not be saved', {
         message: message || 'Failed to save dashboard settings.',
+      });
+    },
+    notifyDashboardDeleteFailed(message?: string) {
+      notifyError('Dashboard could not be deleted', {
+        message: message || 'Failed to delete dashboard.',
       });
     },
     notifyInvalidDashboardUrl(dashboardTitle: string) {

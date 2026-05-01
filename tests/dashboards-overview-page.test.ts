@@ -11,7 +11,7 @@ const listApiKeys = vi.fn();
 const fetchTandemBasalHistory = vi.fn();
 const fetchTandemEventHistory = vi.fn();
 const buildConnectionMapSnapshot = vi.fn();
-const loadDashboardDefinition = vi.fn();
+const loadDashboardResource = vi.fn();
 const OverviewDashboardView = vi.fn(
   ({ dashboard }: { dashboard: { spec: { uid: string; title: string } } }) =>
     React.createElement('div', null, `Rendered dashboard ${dashboard.spec.uid}:${dashboard.spec.title}`),
@@ -47,15 +47,15 @@ vi.mock('@/lib/dashboard/connection-map', () => ({
   getLatestTandemActivityAt: () => null,
 }));
 
-vi.mock('@/lib/dashboard/settings', () => ({
-  loadDashboardDefinition,
+vi.mock('@/lib/dashboard/resources', () => ({
+  loadDashboardResource,
 }));
 
 vi.mock('@ui/compositions/OverviewDashboardView/OverviewDashboardView', () => ({
   OverviewDashboardView,
 }));
 
-describe('dashboard overview page', () => {
+describe('dashboards overview page', () => {
   beforeEach(() => {
     vi.resetModules();
     getOwnerSession.mockReset();
@@ -66,7 +66,7 @@ describe('dashboard overview page', () => {
     fetchTandemBasalHistory.mockReset();
     fetchTandemEventHistory.mockReset();
     buildConnectionMapSnapshot.mockReset();
-    loadDashboardDefinition.mockReset();
+    loadDashboardResource.mockReset();
     OverviewDashboardView.mockClear();
 
     getOwnerSession.mockResolvedValue(null);
@@ -114,12 +114,16 @@ describe('dashboard overview page', () => {
       nodes: [],
       edges: [],
     });
-    loadDashboardDefinition.mockResolvedValue({
+    loadDashboardResource.mockResolvedValue({
       dashboard: {
         kind: 'Dashboard',
         spec: {
           uid: 'overview',
-          title: 'Saved Overview',
+          title: 'API Overview',
+          timeSettings: {
+            autoRefresh: '',
+            autoRefreshIntervals: ['5s'],
+          },
           elements: {},
           layout: {
             kind: 'GridLayout',
@@ -129,23 +133,25 @@ describe('dashboard overview page', () => {
           },
         },
       },
-      version: 11,
+      type: 'live',
+      version: 4,
+      source: 'api',
     });
   });
 
-  test('renders the overview dashboard through the persisted dashboard definition', async () => {
-    const { default: DashboardPage } = await import('@/app/dashboard/page');
-    render(await DashboardPage());
+  test('renders the overview dashboard from the public dashboard resource', async () => {
+    const { default: DashboardOverviewPage } = await import('@/app/dashboards/overview/page');
+    render(await DashboardOverviewPage());
 
-    expect(loadDashboardDefinition).toHaveBeenCalledWith('overview');
-    expect(screen.getByText('Rendered dashboard overview:Saved Overview')).toBeInTheDocument();
+    expect(loadDashboardResource).toHaveBeenCalledWith('overview');
+    expect(screen.getByText('Rendered dashboard overview:API Overview')).toBeInTheDocument();
     expect(OverviewDashboardView).toHaveBeenCalledWith(
       expect.objectContaining({
-        dashboardVersion: 11,
+        dashboardVersion: 4,
         dashboard: expect.objectContaining({
           spec: expect.objectContaining({
             uid: 'overview',
-            title: 'Saved Overview',
+            title: 'API Overview',
           }),
         }),
       }),
