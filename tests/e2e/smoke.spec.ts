@@ -3,8 +3,8 @@ import type { Locator, Page } from '@playwright/test';
 
 test('dashboard renders', async ({ page }) => {
   await page.goto('/dashboards');
-  await expect(page.getByRole('link', { name: 'Overview', exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Statistics', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open Overview dashboard' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open Statistics dashboard' })).toBeVisible();
 });
 
 test('statistics page renders', async ({ page }) => {
