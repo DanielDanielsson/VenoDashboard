@@ -13,6 +13,7 @@ import type {
   SharedTimerListResponse
 } from '@/lib/pulse-api/types';
 import type { DashboardSettingsResponse } from '@/lib/dashboard/settings';
+import type { DashboardDefinition, DashboardType } from '@/lib/dashboard/schema';
 import {
   getApiBaseUrl,
   getAdminApiToken,
@@ -199,6 +200,126 @@ export async function fetchDashboardSettings(dashboardUid: string): Promise<Dash
       method: 'GET',
     },
   );
+}
+
+export interface DashboardResourceRecord {
+  uid: string;
+  title: string;
+  type: DashboardType;
+  version: number;
+  dashboard: DashboardDefinition;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface DashboardResourceResponse {
+  dashboard: DashboardResourceRecord;
+}
+
+export interface DashboardCreatePayload {
+  title: string;
+  type: DashboardType;
+}
+
+export interface DashboardRenamePayload {
+  title: string;
+  expectedVersion: number;
+}
+
+export interface DashboardListResponse {
+  dashboards: DashboardResourceRecord[];
+}
+
+export interface DashboardPreferencesRecord {
+  homeDashboardUid: string;
+  pinnedDashboardUids: string[];
+}
+
+export interface DashboardPreferencesResponse {
+  preferences: DashboardPreferencesRecord;
+}
+
+export async function fetchDashboardResource(dashboardUid: string): Promise<DashboardResourceResponse> {
+  const response = await fetch(resolveUrl(`/api/v1/dashboards/${encodeURIComponent(dashboardUid)}`), {
+    method: 'GET',
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    await parseError(response);
+  }
+
+  return parseJson<DashboardResourceResponse>(response);
+}
+
+export async function fetchDashboardList(): Promise<DashboardListResponse> {
+  const response = await fetch(resolveUrl('/api/v1/dashboards'), {
+    method: 'GET',
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    await parseError(response);
+  }
+
+  return parseJson<DashboardListResponse>(response);
+}
+
+export async function createDashboard(payload: DashboardCreatePayload): Promise<DashboardResourceResponse> {
+  return adminJson<DashboardResourceResponse>('/api/admin/dashboards', {
+    method: 'POST',
+    body: JSON.stringify({ dashboard: payload }),
+  });
+}
+
+export async function renameDashboard(
+  dashboardUid: string,
+  payload: DashboardRenamePayload,
+): Promise<DashboardResourceResponse> {
+  return adminJson<DashboardResourceResponse>(
+    `/api/admin/dashboards/${encodeURIComponent(dashboardUid)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ dashboard: payload }),
+    },
+  );
+}
+
+export async function deleteDashboard(dashboardUid: string): Promise<{
+  dashboardUid: string;
+  preferences: DashboardPreferencesRecord;
+}> {
+  return adminJson<{
+    dashboardUid: string;
+    preferences: DashboardPreferencesRecord;
+  }>(
+    `/api/admin/dashboards/${encodeURIComponent(dashboardUid)}`,
+    {
+      method: 'DELETE',
+    },
+  );
+}
+
+export async function fetchDashboardPreferences(): Promise<DashboardPreferencesResponse> {
+  const response = await fetch(resolveUrl('/api/v1/dashboard-preferences'), {
+    method: 'GET',
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    await parseError(response);
+  }
+
+  return parseJson<DashboardPreferencesResponse>(response);
+}
+
+export async function saveDashboardPreferences(
+  preferences: DashboardPreferencesRecord,
+): Promise<DashboardPreferencesResponse> {
+  return adminJson<DashboardPreferencesResponse>('/api/admin/dashboard-preferences', {
+    method: 'PUT',
+    body: JSON.stringify({ preferences }),
+  });
 }
 
 export async function listApiKeys(): Promise<ApiKeyListResponse> {

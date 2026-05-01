@@ -1,4 +1,4 @@
-import type { DashboardTimeSettingsKind, GridLayoutItemKind } from './schema';
+import type { DashboardTimeSettingsKind, GridLayoutItemKind, PanelKind } from './schema';
 import { PulseApiClientError, fetchDashboardSettings } from '@/lib/pulse-api/client';
 import { getDashboardDefinition, type BuiltInDashboardUid } from './registry';
 import { parseDashboardDefinition, type DashboardDefinition } from './schema';
@@ -86,15 +86,24 @@ function toPersistedLayoutItems(layout: DashboardLayoutSaveInput): GridLayoutIte
 }
 
 export function buildDashboardSettingsDocument(
-  dashboardUid: BuiltInDashboardUid,
+  dashboardUid: string,
   input: {
+    dashboard?: DashboardDefinition;
     panelSettings?: DashboardPanelSettingsMap;
+    elements?: Record<string, PanelKind>;
     layout?: DashboardLayoutSaveInput;
     timeSettings?: DashboardTimeSettingsKind;
   } = {},
 ): PersistedDashboardDefinition {
-  const dashboard = structuredClone(getDashboardDefinition(dashboardUid)) as PersistedDashboardDefinition;
+  const baseDashboard = input.dashboard ?? getDashboardDefinition(dashboardUid as BuiltInDashboardUid);
+  const dashboard = structuredClone(baseDashboard) as PersistedDashboardDefinition;
   dashboard.schemaVersion = DASHBOARD_SETTINGS_SCHEMA_VERSION;
+
+  dashboard.spec.uid = dashboardUid;
+
+  if (input.elements) {
+    dashboard.spec.elements = structuredClone(input.elements);
+  }
 
   for (const [panelId, settings] of Object.entries(input.panelSettings ?? {})) {
     const panel = dashboard.spec.elements[panelId];

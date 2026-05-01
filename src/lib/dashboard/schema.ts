@@ -3,6 +3,8 @@ export interface DashboardDefinition {
   spec: DashboardSpec;
 }
 
+export type DashboardType = 'live' | 'timeRange';
+
 export interface DashboardSpec {
   uid: string;
   title: string;

@@ -2,13 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
 import { PulseApiClientError, fetchDashboardSettings, saveDashboardSettings } from '@/lib/pulse-api/client';
 import { buildDashboardSettingsDocument, type DashboardLayoutSaveInput } from '@/lib/dashboard/settings';
-import type { BuiltInDashboardUid } from '@/lib/dashboard/registry';
-import type { DashboardTimeSettingsKind } from '@/lib/dashboard/schema';
+import { loadDashboardResource } from '@/lib/dashboard/resources';
+import type { DashboardTimeSettingsKind, PanelKind } from '@/lib/dashboard/schema';
 
 interface RouteContext {
   params: Promise<{
     dashboardUid: string;
   }>;
+}
+
+function isNotFoundError(error: unknown): boolean {
+  return error instanceof PulseApiClientError
+    ? error.status === 404
+    : typeof error === 'object' && error !== null && 'status' in error && error.status === 404;
+}
+
+async function resolveExpectedSettingsVersion(dashboardUid: string): Promise<number | null> {
+  try {
+    const response = await fetchDashboardSettings(dashboardUid);
+    return response.dashboardSettings.version;
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
 }
 
 export async function PUT(request: NextRequest, context: RouteContext) {
@@ -20,22 +39,27 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   const { dashboardUid } = await context.params;
   const payload = (await request.json()) as {
     expectedVersion?: number | null;
+    elements?: Record<string, PanelKind>;
     panelSettings?: Record<string, Record<string, unknown>>;
     layout?: DashboardLayoutSaveInput;
     timeSettings?: DashboardTimeSettingsKind;
   };
 
   try {
+    const currentDashboard = await loadDashboardResource(dashboardUid);
+    const expectedSettingsVersion = await resolveExpectedSettingsVersion(dashboardUid);
     const dashboard = buildDashboardSettingsDocument(
-      dashboardUid as BuiltInDashboardUid,
+      dashboardUid,
       {
+        dashboard: currentDashboard.dashboard,
+        elements: payload.elements,
         panelSettings: payload.panelSettings ?? {},
         layout: payload.layout,
         timeSettings: payload.timeSettings,
       },
     );
     const response = await saveDashboardSettings(dashboardUid, {
-      expectedVersion: payload.expectedVersion ?? null,
+      expectedVersion: expectedSettingsVersion,
       dashboard,
     });
     return NextResponse.json(response, { status: 200 });
