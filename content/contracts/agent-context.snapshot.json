@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-04-20T16:52:49.556Z",
+  "generatedAt": "2026-05-01T04:19:40.072Z",
   "baseUrl": "https://api.veno.local",
   "scope": "mixed",
   "endpoints": [
@@ -420,6 +420,94 @@
       "source": "mixed",
       "tags": [
         "Dashboard Settings"
+      ]
+    },
+    {
+      "id": "public-dashboards-list",
+      "method": "GET",
+      "path": "/api/v1/dashboards",
+      "summary": "List dashboards",
+      "auth": "none",
+      "source": "mixed",
+      "tags": [
+        "Dashboards"
+      ]
+    },
+    {
+      "id": "public-dashboards-get",
+      "method": "GET",
+      "path": "/api/v1/dashboards/{dashboardUid}",
+      "summary": "Read dashboard",
+      "auth": "none",
+      "source": "mixed",
+      "tags": [
+        "Dashboards"
+      ]
+    },
+    {
+      "id": "public-dashboard-preferences-get",
+      "method": "GET",
+      "path": "/api/v1/dashboard-preferences",
+      "summary": "Read dashboard preferences",
+      "auth": "none",
+      "source": "mixed",
+      "tags": [
+        "Dashboards"
+      ]
+    },
+    {
+      "id": "admin-dashboards-create",
+      "method": "POST",
+      "path": "/api/admin/dashboards",
+      "summary": "Create dashboard",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Dashboards"
+      ]
+    },
+    {
+      "id": "admin-dashboards-rename",
+      "method": "PATCH",
+      "path": "/api/admin/dashboards/{dashboardUid}",
+      "summary": "Rename dashboard",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Dashboards"
+      ]
+    },
+    {
+      "id": "admin-dashboards-delete",
+      "method": "DELETE",
+      "path": "/api/admin/dashboards/{dashboardUid}",
+      "summary": "Delete dashboard",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Dashboards"
+      ]
+    },
+    {
+      "id": "admin-dashboard-preferences-get",
+      "method": "GET",
+      "path": "/api/admin/dashboard-preferences",
+      "summary": "Read dashboard preferences as admin",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Dashboards"
+      ]
+    },
+    {
+      "id": "admin-dashboard-preferences-put",
+      "method": "PUT",
+      "path": "/api/admin/dashboard-preferences",
+      "summary": "Save dashboard preferences",
+      "auth": "admin",
+      "source": "mixed",
+      "tags": [
+        "Dashboards"
       ]
     },
     {

@@ -70,10 +70,14 @@ Core files:
 3. `src/lib/dashboard/definitions/overview.json`
 4. `src/lib/dashboard/definitions/statistics.json`
 5. `src/lib/dashboard/panel-registry.ts`
-6. `ui/compositions/DashboardDefinitionRenderer/DashboardDefinitionRenderer.tsx`
-7. `ui/compositions/DashboardGrid/DashboardGrid.tsx`
-8. `ui/compositions/DashboardGrid/DashboardGridPanel.tsx`
-9. `src/lib/dashboard/settings.ts`
+6. `src/lib/dashboard/url-state.ts`
+7. `src/lib/dashboard/view-panel.ts`
+8. `ui/compositions/DashboardDefinitionRenderer/DashboardDefinitionRenderer.tsx`
+9. `ui/compositions/DashboardGrid/DashboardGrid.tsx`
+10. `ui/compositions/DashboardGrid/DashboardGridPanel.tsx`
+11. `ui/compositions/DashboardUrlStateBridge/DashboardUrlStateBridge.tsx`
+12. `ui/compositions/DashboardViewPanelUrlStateBridge/DashboardViewPanelUrlStateBridge.tsx`
+13. `src/lib/dashboard/settings.ts`
 
 Important structure rules:
 
@@ -91,6 +95,15 @@ Current dashboard split:
 
 1. overview uses `ui/compositions/DashboardDefinitionRenderer/overviewPanelRegistry.tsx`
 2. statistics builds its registry inside `ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView.tsx`
+3. overview page chrome is centralized in `ui/compositions/OverviewDashboardView/OverviewDashboardView.tsx`
+
+Current statistics panels include:
+
+1. average glucose
+2. time in range
+3. workout types
+4. glucose timeline
+5. AGP
 
 When adding a new panel:
 
@@ -116,6 +129,97 @@ Naming rules:
 1. use stable panel ids like `panel-time-in-range`
 2. use stable group names like `veno.time-in-range`
 3. avoid renaming ids or groups casually because saved dashboard settings depend on them
+
+Panel view and URL state rules:
+
+1. statistics time range URL parsing and serialization live in `src/lib/dashboard/url-state.ts`
+2. statistics supports `from`, `to`, and `timezone` URL parameters
+3. unsupported or invalid dashboard URL parameters should be normalized and reported through `useDashboardNotifications`
+4. overview rejects unsupported time range parameters through `DashboardUrlStateBridge`
+5. solo panel view is controlled by the `viewPanel` URL parameter through `DashboardViewPanelUrlStateBridge`
+6. `viewPanel` values should use stable panel keys like `panel-time-in-range`
+7. legacy numeric panel ids are aliases only and should normalize to stable panel keys
+8. changing time range must preserve any active `viewPanel` parameter
+9. selecting a new time range should update the URL first, then let URL driven state update the dashboard data
+10. do not add separate page level solo view state when `DashboardGrid` and `DashboardViewPanelUrlStateBridge` can own it
+
+Panel interaction rules:
+
+1. panel action buttons are always mounted but hidden until panel hover or menu open
+2. the three dot menu opens without requiring dashboard edit mode
+3. clicking outside an open panel menu should close it
+4. selecting `Edit` from a panel menu must enter dashboard edit mode and open the shared settings drawer
+5. selecting `View` from a panel menu must enter solo panel view and update `viewPanel`
+6. hovering a panel and pressing `V` toggles solo panel view
+7. keyboard shortcuts must be ignored inside inputs, textareas, selects, and editable content
+8. solo view should keep the selected panel when time range changes
+9. solo view should render the `to dashboard` back action in the same toolbar row as `Edit`
+10. solo view should avoid page scroll by sizing the grid panel to the remaining viewport height
+11. grid move animations should only run while editing layout, not while entering or leaving solo view
+12. panel menus should use the same visual language as `DashboardTimeRangePicker`
+13. keyboard shortcut hints should use `ui/components/KeyboardKey/KeyboardKey.tsx`
+
+## Multiple Dashboards
+
+The app now supports user created dashboards, pinned dashboards, and a configurable home dashboard.
+
+Canonical routes and files:
+
+1. `/dashboards` is the dashboard library page.
+2. `/dashboards/[dashboardUid]` is the canonical route for viewing a dashboard.
+3. `/dashboards/overview` is the built in live overview dashboard.
+4. `/dashboards/statistics` is the built in time range statistics dashboard.
+5. `/dashboard` and `/dashboard/statistics` are compatibility paths only. Do not add new dashboard behavior there.
+6. `src/app/dashboards/layout.tsx` and `src/app/dashboard/layout.tsx` both load `loadDashboardLibrary()` and pass pinned dashboards into `SideBarNavigation`.
+7. `ui/compositions/SideBarNavigation/SideBarNavigation.tsx` owns the left navigation dashboards accordion.
+8. `ui/compositions/DashboardLibrary/DashboardLibrary.tsx` owns dashboard create, pin, unpin, and library delete actions.
+9. `src/lib/dashboard/library.ts` merges the dashboard list with dashboard preferences.
+10. `src/lib/dashboard/preferences.ts` loads home and pinned dashboard preferences.
+11. `src/lib/dashboard/resources.ts` loads a dashboard resource and prefers persisted dashboard settings when they exist.
+12. `src/lib/dashboard/panel-catalog.ts` is the source of truth for add panel options, default panel definitions, default layout, and dashboard type compatibility.
+
+Dashboard type rules:
+
+1. dashboard type is immutable after creation
+2. supported types are `live` and `timeRange`
+3. live dashboards may only contain live panels
+4. time range dashboards may only contain time range panels
+5. compatibility checks belong in the panel catalog and API validation, not in ad hoc UI filters
+6. in V1, do not allow a mixed dashboard or cross type panel escape hatch
+
+Rendering rules:
+
+1. live dashboards must render through `OverviewDashboardView` and `DashboardDefinitionRenderer`, even when empty
+2. never special case an empty live dashboard with a standalone empty card, because that bypasses the shared edit toolbar and Add panel drawer
+3. time range dashboards render through `GlucoseAnalysisView`
+4. `DashboardGrid` owns dashboard edit mode, Add panel, Save, Close, layout editing, delete in edit mode, and the right side Add panel drawer
+5. dynamic dashboard pages should not duplicate page level Edit dashboard or Delete dashboard buttons through `DashboardTitleEditor`
+6. the live dashboard internal edit toolbar should align left, matching the time range toolbar placement
+7. time range dashboards use `editControlsPortalId` to place shared grid controls next to the time range selector
+8. delete dashboard should only appear from shared grid edit mode when deletion is allowed
+
+Pinned and home dashboard rules:
+
+1. public visitors can view dashboards and pinned navigation links
+2. only admins can create, delete, pin, unpin, or set home dashboards
+3. after a successful pin, unpin, or home preference save, call `router.refresh()` so server layouts reload the left navigation
+4. the home dashboard must not be deletable
+5. do not show inline explanatory text such as `Home dashboard cannot be deleted`; use disabled controls and notification feedback for mutation outcomes
+6. pinned dashboards should appear under the Dashboards accordion in the left navigation
+
+Mutation feedback rules:
+
+1. dashboard create, rename, delete, pin, unpin, save, and validation failures should use shared notifications
+2. do not render inline API error messages beside toolbar buttons or inside the library list when a notification already reports the event
+3. successful dashboard settings saves should update local persisted state before clearing runtime draft state
+4. dashboard settings saves should use the current persisted dashboard settings version when available, and `null` when the settings row does not exist yet
+
+Reusable UI rules learned from dashboard management:
+
+1. do not use native styled selects for reusable dashboard controls
+2. use `ui/components/DropdownMenu` for menu style selects that should match the time range picker visual language
+3. dashboard toolbar buttons should use the shared dashboard time picker token classes used by `DashboardGrid`
+4. add panel options should always open in the right side overlay owned by `DashboardGrid`
 
 ## Routing And Auth
 
@@ -171,7 +275,10 @@ Main chart files:
 
 1. `ui/components/GlucoseChart/GlucoseChart.tsx`
 2. `ui/components/GlucoseAgpChart/GlucoseAgpChart.tsx`
-3. `ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView.tsx`
+3. `ui/components/PieChart/PieChart.tsx`
+4. `ui/components/LineChart/LineChart.tsx`
+5. `ui/components/HistogramChart/HistogramChart.tsx`
+6. `ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView.tsx`
 
 Important chart rules:
 
@@ -180,6 +287,9 @@ Important chart rules:
 3. AGP height is intentionally fixed at `400px`
 4. glucose timeline height must be based on the bands that actually exist, not stale reserved space
 5. chart axis fonts should use utilities from `font-styles.css`, not inline font styles
+6. generic pie, line, and histogram visualizations belong in reusable `ui/components` chart components
+7. panel specific data shaping should stay beside the panel composition, such as `timeInRangeChart.ts` or `workoutTypeChart.ts`
+8. prefer reusing generic chart components before creating panel specific SVG implementations
 
 ## Styling Rules
 

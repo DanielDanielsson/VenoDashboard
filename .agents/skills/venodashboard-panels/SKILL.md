@@ -32,9 +32,13 @@ Before changing panel structure, read:
 2. `src/lib/dashboard/schema.ts`
 3. `src/lib/dashboard/registry.ts`
 4. `src/lib/dashboard/settings.ts`
-5. `ui/compositions/DashboardDefinitionRenderer/DashboardDefinitionRenderer.tsx`
-6. `ui/compositions/DashboardGrid/DashboardGrid.tsx`
-7. `ui/compositions/DashboardGrid/DashboardGridPanel.tsx`
+5. `src/lib/dashboard/url-state.ts`
+6. `src/lib/dashboard/view-panel.ts`
+7. `ui/compositions/DashboardDefinitionRenderer/DashboardDefinitionRenderer.tsx`
+8. `ui/compositions/DashboardGrid/DashboardGrid.tsx`
+9. `ui/compositions/DashboardGrid/DashboardGridPanel.tsx`
+10. `ui/compositions/DashboardUrlStateBridge/DashboardUrlStateBridge.tsx`
+11. `ui/compositions/DashboardViewPanelUrlStateBridge/DashboardViewPanelUrlStateBridge.tsx`
 
 Then read the concrete dashboard you are modifying:
 
@@ -45,6 +49,33 @@ Then read the relevant registry:
 
 1. `ui/compositions/DashboardDefinitionRenderer/overviewPanelRegistry.tsx`
 2. `ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView.tsx`
+
+## Current Panel Infrastructure
+
+Dashboard panel work now includes URL driven state and shared interactions.
+
+1. statistics time range URL state is parsed and serialized in `src/lib/dashboard/url-state.ts`
+2. statistics supports `from`, `to`, and `timezone`
+3. solo panel view uses the `viewPanel` URL parameter
+4. `DashboardViewPanelUrlStateBridge` owns validation, legacy id aliases, normalization, and URL updates for solo view
+5. `DashboardGrid` owns solo view rendering, hover tracking, `V` keyboard shortcut behavior, and edit drawer ownership
+6. panel action menus are always mounted but hidden until hover or menu open
+7. the `Edit` menu item enters dashboard edit mode and opens the shared settings drawer
+8. the `View` menu item enters solo view and updates `viewPanel`
+9. the `to dashboard` action clears solo view from the toolbar row
+10. panel action menu styling should match `DashboardTimeRangePicker`
+11. keyboard shortcut hints should use `ui/components/KeyboardKey/KeyboardKey.tsx`
+
+Current reusable chart components:
+
+1. `ui/components/PieChart`
+2. `ui/components/LineChart`
+3. `ui/components/HistogramChart`
+
+Keep panel specific data shaping close to the panel composition. Examples:
+
+1. `ui/compositions/TimeInRangePanel/timeInRangeChart.ts`
+2. `ui/compositions/WorkoutTypePanel/workoutTypeChart.ts`
 
 ## Golden Path For A New Panel
 
@@ -59,6 +90,8 @@ Follow this order.
 7. Register the new `vizConfig.group` in the correct panel registry.
 8. Render the panel through `DashboardDefinitionRenderer`, not page level grid markup.
 9. Add a focused component spec or integration spec.
+10. If the panel should be addressable in solo view, use a stable panel key and let `DashboardViewPanelUrlStateBridge` handle `viewPanel`.
+11. If the panel needs a chart, reuse `PieChart`, `LineChart`, or `HistogramChart` before writing a custom SVG.
 
 ## Golden Path For Panel Settings
 
@@ -108,6 +141,9 @@ At minimum, cover the behavior that matters:
 2. the dashboard definition still parses
 3. settings update through the shared drawer if the panel has settings
 4. saved or built in settings are reflected on initial render when relevant
+5. panel menu actions still work from hover without requiring edit mode first
+6. solo view preserves URL state and can return through `to dashboard`
+7. keyboard shortcuts are ignored in editable fields when the panel introduces inputs
 
 Use the existing dashboard tests as references:
 
@@ -116,6 +152,8 @@ Use the existing dashboard tests as references:
 3. `ui/compositions/DashboardGrid/DashboardGrid.spec.tsx`
 4. `ui/compositions/DashboardDefinitionRenderer/DashboardDefinitionRenderer.spec.tsx`
 5. `ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView.spec.tsx`
+6. `ui/compositions/DashboardViewPanelUrlStateBridge/DashboardViewPanelUrlStateBridge.spec.tsx`
+7. `tests/e2e/dashboard-architecture.spec.ts`
 
 ## When Helping
 
