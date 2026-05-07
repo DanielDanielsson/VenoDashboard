@@ -12,15 +12,15 @@ describe('SegmentedControl', () => {
         value="gradient"
         onChange={onChange}
         options={[
-          { label: '3 colors', value: 'threeColors' },
+          { label: 'Standard', value: 'standard' },
           { label: 'Gradient', value: 'gradient' },
         ]}
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '3 colors' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Standard' }));
 
     expect(screen.getByRole('button', { name: 'Gradient' })).toHaveClass('bg-secondary-button-active-bg');
-    expect(onChange).toHaveBeenCalledWith('threeColors');
+    expect(onChange).toHaveBeenCalledWith('standard');
   });
 });

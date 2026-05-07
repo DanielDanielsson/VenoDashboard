@@ -1,15 +1,17 @@
-export type GlucoseColorMode = 'threeColors' | 'gradient';
+import { convertGlucoseValue } from './units';
+
+export type GlucoseColorMode = 'standard' | 'gradient';
 
 export const GLUCOSE_COLOR_MODES: ReadonlyArray<{
   value: GlucoseColorMode;
   label: string;
 }> = [
-  { value: 'threeColors', label: '3 colors' },
+  { value: 'standard', label: 'Standard' },
   { value: 'gradient', label: 'Gradient' }
 ];
 
 const LOW_THRESHOLD_MMOL_L = 4.0;
-const TARGET_MMOL_L = 110 / 18;
+const TARGET_MMOL_L = convertGlucoseValue(110, 'mg/dL', 'mmol/L');
 const HIGH_THRESHOLD_MMOL_L = 10.0;
 
 const LOW_COLOR_DARK   = '#fb7185';
@@ -58,7 +60,7 @@ export function getGlucoseHue(valueMmolL: number): number {
 }
 
 export function getGlucoseColor(valueMmolL: number, mode: GlucoseColorMode, alpha = 1, isDark = true): string {
-  if (mode === 'threeColors') {
+  if (mode === 'standard') {
     const low    = isDark ? LOW_COLOR_DARK    : LOW_COLOR_LIGHT;
     const normal = isDark ? NORMAL_COLOR_DARK : NORMAL_COLOR_LIGHT;
     const high   = isDark ? HIGH_COLOR_DARK   : HIGH_COLOR_LIGHT;

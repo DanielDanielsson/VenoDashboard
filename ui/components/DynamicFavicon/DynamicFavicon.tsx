@@ -15,7 +15,7 @@ interface LatestReading {
 function getColorMode(): GlucoseColorMode {
   try {
     const stored = localStorage.getItem(COLOR_MODE_KEY);
-    return stored === 'gradient' || stored === 'threeColors' ? stored : 'gradient';
+    return stored === 'gradient' || stored === 'standard' ? stored : 'gradient';
   } catch {
     return 'gradient';
   }

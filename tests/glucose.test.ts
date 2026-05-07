@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { convertGlucoseValue } from '@/lib/glucose/units';
 import { mergeGlucoseReadings, pickLatestGlucoseReading } from '@/lib/pulse-api/glucose';
 import type { PulseApiReading } from '@/lib/pulse-api/types';
 
@@ -10,7 +11,7 @@ function reading(
   return {
     timestamp,
     valueMmolL,
-    valueMgDl: Math.round(valueMmolL * 18),
+    valueMgDl: Math.round(convertGlucoseValue(valueMmolL, 'mmol/L', 'mg/dL')),
     trend: source === 'official' ? 'flat' : 'up',
     source
   };
@@ -66,7 +67,7 @@ describe('glucose helpers', () => {
       expect.objectContaining({
         timestamp: '2026-03-07T10:05:10.000Z',
         valueMmolL: 5.8,
-        valueMgDl: 104,
+        valueMgDl: 105,
         originalValueMmolL: 6.4,
         originalValueMgDl: 115,
         isCorrected: true,

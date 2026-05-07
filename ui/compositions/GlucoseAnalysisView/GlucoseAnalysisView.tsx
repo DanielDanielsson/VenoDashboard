@@ -94,7 +94,7 @@ async function fetchJson<T>(url: string): Promise<T> {
   return json;
 }
 
-const DEFAULT_GLUCOSE_CHART_COLOR_MODE: GlucoseColorMode = 'threeColors';
+const DEFAULT_GLUCOSE_CHART_COLOR_MODE: GlucoseColorMode = 'standard';
 const GLUCOSE_TIMELINE_PANEL_ID = 'panel-glucose-timeline';
 const STATISTICS_DASHBOARD_EDIT_CONTROLS_ID = 'statistics-dashboard-edit-controls';
 

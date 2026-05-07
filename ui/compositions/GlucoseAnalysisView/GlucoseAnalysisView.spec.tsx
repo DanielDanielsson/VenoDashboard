@@ -104,7 +104,7 @@ vi.mock('@ui/components/SegmentedControl', () => ({
   }: {
     options: Array<{ value: string; label: string }>;
     value: string;
-    onChange: (value: 'threeColors' | 'gradient') => void;
+    onChange: (value: 'standard' | 'gradient') => void;
   }) => (
     <div>
       {options.map((option) => (
@@ -112,7 +112,7 @@ vi.mock('@ui/components/SegmentedControl', () => ({
           key={option.value}
           type="button"
           aria-pressed={value === option.value}
-          onClick={() => onChange(option.value as 'threeColors' | 'gradient')}
+          onClick={() => onChange(option.value as 'standard' | 'gradient')}
         >
           {option.label}
         </button>
@@ -675,7 +675,7 @@ describe('GlucoseAnalysisView', () => {
 
     renderWithProviders(<GlucoseAnalysisView isOwner={false} />);
 
-    expect(screen.getByTestId('chart-settings')).toHaveTextContent('threeColors:25');
+    expect(screen.getByTestId('chart-settings')).toHaveTextContent('standard:25');
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
     fireEvent.click(screen.getByRole('button', { name: 'Open panel actions for Glucose Timeline' }));
@@ -726,7 +726,7 @@ describe('GlucoseAnalysisView', () => {
     unmount();
     renderWithProviders(<GlucoseAnalysisView isOwner={false} />);
 
-    expect(screen.getByTestId('chart-settings')).toHaveTextContent('threeColors:25');
+    expect(screen.getByTestId('chart-settings')).toHaveTextContent('standard:25');
   });
 
   test('does not render the old standalone statistics settings panel', () => {
