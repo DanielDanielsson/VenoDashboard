@@ -13,14 +13,14 @@ vi.mock('swr', () => ({
   __esModule: true,
   default: function useSWR(...args: unknown[]) {
     return useSWRMock(...args);
-  }
+  },
 }));
 
 vi.mock('@ui/components/DashboardPanel', () => ({
   DashboardPanel: ({
     title,
     headerRight,
-    children
+    children,
   }: {
     title: string;
     headerRight?: ReactNode;
@@ -31,13 +31,13 @@ vi.mock('@ui/components/DashboardPanel', () => ({
       {headerRight}
       <div>{children}</div>
     </section>
-  )
+  ),
 }));
 
 vi.mock('@ui/components/SecondaryButton', () => ({
   SecondaryButton: ({
     children,
-    disabled
+    disabled,
   }: {
     children: ReactNode;
     disabled?: boolean;
@@ -45,7 +45,7 @@ vi.mock('@ui/components/SecondaryButton', () => ({
     <button type="button" disabled={disabled}>
       {children}
     </button>
-  )
+  ),
 }));
 
 describe('SharedTimersPanel', () => {
@@ -53,25 +53,33 @@ describe('SharedTimersPanel', () => {
     useSWRMock.mockReset();
     eventSourceSpy.mockReset();
     useSWRMock.mockImplementation(() => {
-      const [data, setData] = React.useState({ items: [], serverNow: new Date().toISOString() });
+      const [data, setData] = React.useState({
+        items: [],
+        serverNow: new Date().toISOString(),
+      });
 
       return {
         data,
         error: undefined,
         mutate: async (updater: unknown) => {
-          setData((current) => typeof updater === 'function'
-            ? (updater as (value: typeof current) => typeof current)(current)
-            : updater as typeof current);
-        }
+          setData((current) =>
+            typeof updater === 'function'
+              ? (updater as (value: typeof current) => typeof current)(current)
+              : (updater as typeof current),
+          );
+        },
       };
     });
-    vi.stubGlobal('EventSource', class {
-      constructor() {
-        eventSourceSpy();
-      }
-      addEventListener() {}
-      close() {}
-    } as unknown as typeof EventSource);
+    vi.stubGlobal(
+      'EventSource',
+      class {
+        constructor() {
+          eventSourceSpy();
+        }
+        addEventListener() {}
+        close() {}
+      } as unknown as typeof EventSource,
+    );
   });
 
   test('does not fetch timers when rendered in read only mode', () => {
@@ -80,31 +88,36 @@ describe('SharedTimersPanel', () => {
     expect(useSWRMock).toHaveBeenCalledWith(
       null,
       expect.any(Function),
-      expect.objectContaining({ revalidateOnFocus: false })
+      expect.objectContaining({ revalidateOnFocus: false }),
     );
-    expect(screen.getByRole('button', { name: 'Admin sign in to start timers' })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Admin sign in to start timers' }),
+    ).toBeDisabled();
+    expect(screen.queryByText(/total/i)).not.toBeInTheDocument();
   });
 
   test('updates the rendered timer list from shared timer bridge events without opening its own stream', () => {
     render(<SharedTimersPanel />);
 
     act(() => {
-      window.dispatchEvent(new CustomEvent(DASHBOARD_TIMER_STARTED_EVENT, {
-        detail: {
-          timer: {
-            id: 'timer-1',
-            durationSeconds: 600,
-            createdAt: '2026-04-21T05:00:00.000Z',
-            fireAt: '2099-04-21T05:10:00.000Z',
-            removedAt: null,
-            createdBy: {
-              apiKeyId: null,
-              apiKeyName: null,
+      window.dispatchEvent(
+        new CustomEvent(DASHBOARD_TIMER_STARTED_EVENT, {
+          detail: {
+            timer: {
+              id: 'timer-1',
+              durationSeconds: 600,
+              createdAt: '2026-04-21T05:00:00.000Z',
+              fireAt: '2099-04-21T05:10:00.000Z',
+              removedAt: null,
+              createdBy: {
+                apiKeyId: null,
+                apiKeyName: null,
+              },
             },
+            serverNow: '2026-04-21T05:00:00.000Z',
           },
-          serverNow: '2026-04-21T05:00:00.000Z',
-        },
-      }));
+        }),
+      );
     });
 
     expect(eventSourceSpy).not.toHaveBeenCalled();

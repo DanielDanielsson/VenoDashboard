@@ -41,7 +41,10 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 function formatCountdown(targetIso: string, nowMs: number): string {
-  const remaining = Math.max(0, Math.ceil((new Date(targetIso).getTime() - nowMs) / 1000));
+  const remaining = Math.max(
+    0,
+    Math.ceil((new Date(targetIso).getTime() - nowMs) / 1000),
+  );
   const hours = Math.floor(remaining / 3600);
   const minutes = Math.floor((remaining % 3600) / 60);
   const seconds = remaining % 60;
@@ -81,7 +84,9 @@ function parseDurationInput(value: string): number | null {
 
   if (trimmed.endsWith('h')) {
     const value = Number(trimmed.slice(0, -1));
-    return Number.isFinite(value) && value > 0 ? Math.round(value * 3600) : null;
+    return Number.isFinite(value) && value > 0
+      ? Math.round(value * 3600)
+      : null;
   }
   if (trimmed.endsWith('m')) {
     const value = Number(trimmed.slice(0, -1));
@@ -93,12 +98,20 @@ function parseDurationInput(value: string): number | null {
   }
 
   const minutes = Number(trimmed);
-  return Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes * 60) : null;
+  return Number.isFinite(minutes) && minutes > 0
+    ? Math.round(minutes * 60)
+    : null;
 }
 
-export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) {
+export function SharedTimersPanel({
+  readOnly = false,
+}: {
+  readOnly?: boolean;
+}) {
   const [showStartForm, setShowStartForm] = useState(false);
-  const [selectedMinutes, setSelectedMinutes] = useState<number>(TIMER_PRESETS[0]);
+  const [selectedMinutes, setSelectedMinutes] = useState<number>(
+    TIMER_PRESETS[0],
+  );
   const [customValue, setCustomValue] = useState('');
   const [customError, setCustomError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -107,9 +120,13 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
   const [serverOffsetMs, setServerOffsetMs] = useState(0);
 
   const timersKey = readOnly ? null : '/api/dashboard/timers';
-  const { data, error, mutate } = useSWR<SharedTimerListResponse>(timersKey, fetchJson, {
-    revalidateOnFocus: false
-  });
+  const { data, error, mutate } = useSWR<SharedTimerListResponse>(
+    timersKey,
+    fetchJson,
+    {
+      revalidateOnFocus: false,
+    },
+  );
 
   useEffect(() => {
     if (data?.serverNow) {
@@ -138,7 +155,13 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
 
       setServerOffsetMs(getServerOffsetMs(payload.serverNow));
       setNowMs(Date.now() + getServerOffsetMs(payload.serverNow));
-      void mutate({ items: sortTimers(payload.items || []), serverNow: payload.serverNow }, false);
+      void mutate(
+        {
+          items: sortTimers(payload.items || []),
+          serverNow: payload.serverNow,
+        },
+        false,
+      );
     };
 
     const handleStarted = (event: Event) => {
@@ -153,9 +176,10 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
       void mutate(
         (current) => ({
           items: upsertTimer(current?.items || [], payload.timer),
-          serverNow: payload.serverNow || current?.serverNow || new Date().toISOString()
+          serverNow:
+            payload.serverNow || current?.serverNow || new Date().toISOString(),
         }),
-        false
+        false,
       );
     };
 
@@ -170,21 +194,42 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
       setNowMs(Date.now() + getServerOffsetMs(payload.serverNow));
       void mutate(
         (current) => ({
-          items: (current?.items || []).filter((item) => item.id !== payload.timerId),
-          serverNow: payload.serverNow || current?.serverNow || new Date().toISOString()
+          items: (current?.items || []).filter(
+            (item) => item.id !== payload.timerId,
+          ),
+          serverNow:
+            payload.serverNow || current?.serverNow || new Date().toISOString(),
         }),
-        false
+        false,
       );
     };
 
-    window.addEventListener(DASHBOARD_TIMERS_CONNECTED_EVENT, handleConnected as EventListener);
-    window.addEventListener(DASHBOARD_TIMER_STARTED_EVENT, handleStarted as EventListener);
-    window.addEventListener(DASHBOARD_TIMER_REMOVED_EVENT, handleRemoved as EventListener);
+    window.addEventListener(
+      DASHBOARD_TIMERS_CONNECTED_EVENT,
+      handleConnected as EventListener,
+    );
+    window.addEventListener(
+      DASHBOARD_TIMER_STARTED_EVENT,
+      handleStarted as EventListener,
+    );
+    window.addEventListener(
+      DASHBOARD_TIMER_REMOVED_EVENT,
+      handleRemoved as EventListener,
+    );
 
     return () => {
-      window.removeEventListener(DASHBOARD_TIMERS_CONNECTED_EVENT, handleConnected as EventListener);
-      window.removeEventListener(DASHBOARD_TIMER_STARTED_EVENT, handleStarted as EventListener);
-      window.removeEventListener(DASHBOARD_TIMER_REMOVED_EVENT, handleRemoved as EventListener);
+      window.removeEventListener(
+        DASHBOARD_TIMERS_CONNECTED_EVENT,
+        handleConnected as EventListener,
+      );
+      window.removeEventListener(
+        DASHBOARD_TIMER_STARTED_EVENT,
+        handleStarted as EventListener,
+      );
+      window.removeEventListener(
+        DASHBOARD_TIMER_REMOVED_EVENT,
+        handleRemoved as EventListener,
+      );
     };
   }, [mutate, readOnly]);
 
@@ -202,11 +247,12 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
       const response = await fetch('/api/dashboard/timers', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ durationSeconds })
+        body: JSON.stringify({ durationSeconds }),
       });
-      const payload = (await response.json()) as SharedTimerMutationResponse & FetchErrorPayload;
+      const payload = (await response.json()) as SharedTimerMutationResponse &
+        FetchErrorPayload;
       if (!response.ok) {
         throw new Error(payload.error?.message || 'Failed to start timer');
       }
@@ -216,15 +262,17 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
       await mutate(
         (current) => ({
           items: upsertTimer(current?.items || [], payload.timer),
-          serverNow: payload.serverNow
+          serverNow: payload.serverNow,
         }),
-        false
+        false,
       );
       setCustomValue('');
       setCustomError(null);
       setShowStartForm(false);
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Failed to start timer');
+      setActionError(
+        error instanceof Error ? error.message : 'Failed to start timer',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -238,9 +286,10 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
     setActionError(null);
 
     const response = await fetch(`/api/dashboard/timers/${timerId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     });
-    const payload = (await response.json()) as SharedTimerMutationResponse & FetchErrorPayload;
+    const payload = (await response.json()) as SharedTimerMutationResponse &
+      FetchErrorPayload;
     if (!response.ok) {
       setActionError(payload.error?.message || 'Failed to remove timer');
       return;
@@ -251,9 +300,9 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
     await mutate(
       (current) => ({
         items: (current?.items || []).filter((item) => item.id !== timerId),
-        serverNow: payload.serverNow
+        serverNow: payload.serverNow,
       }),
-      false
+      false,
     );
   }
 
@@ -271,26 +320,35 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
   const errorMessage = error instanceof Error ? error.message : actionError;
 
   return (
-    <DashboardPanel
-      title="Timers"
-      headerRight={
-        <span className="ui_caption text-text-dim">{timers.length} total</span>
-      }
-    >
+    <DashboardPanel title="Timers">
       <div className="flex flex-1 flex-col">
         {timers.length === 0 && !showStartForm ? (
           <p className="body_text text-text-dim">No active timers</p>
         ) : (
           <div className="flex flex-col gap-2">
             {timers.map((timer) => {
-              const remaining = Math.max(0, new Date(timer.fireAt).getTime() - nowMs);
+              const remaining = Math.max(
+                0,
+                new Date(timer.fireAt).getTime() - nowMs,
+              );
               const isDone = remaining <= 0;
 
-                return (
-                  <div key={timer.id} className="flex items-center justify-between gap-3 rounded-[4px] border border-border bg-surface-muted px-3 py-2.5">
-                    <div className="min-w-0">
-                    <p className="ui_caption text-text-dim">{formatDurationLabel(timer.durationSeconds)}</p>
-                    <p className={isDone ? 'ui_mono_text_strong tabular-nums text-amber-200' : 'ui_mono_text_strong tabular-nums text-text'}>
+              return (
+                <div
+                  key={timer.id}
+                  className="flex items-center justify-between gap-3 rounded-[4px] border border-border bg-surface-muted px-3 py-2.5"
+                >
+                  <div className="min-w-0">
+                    <p className="ui_caption text-text-dim">
+                      {formatDurationLabel(timer.durationSeconds)}
+                    </p>
+                    <p
+                      className={
+                        isDone
+                          ? 'ui_mono_text_strong tabular-nums text-amber-200'
+                          : 'ui_mono_text_strong tabular-nums text-text'
+                      }
+                    >
                       {isDone ? 'Done' : formatCountdown(timer.fireAt, nowMs)}
                     </p>
                   </div>
@@ -325,19 +383,33 @@ export function SharedTimersPanel({ readOnly = false }: { readOnly?: boolean }) 
               placeholder="Custom (5, mm:ss, 90s)"
               className="ui_input_text w-full rounded-lg border border-border bg-surface-muted px-3 py-2 text-text outline-none placeholder:text-text-dim focus:border-border"
             />
-            {customError && <p className="ui_caption text-rose-300">{customError}</p>}
-            {errorMessage && <p className="ui_caption text-rose-300">{errorMessage}</p>}
+            {customError && (
+              <p className="ui_caption text-rose-300">{customError}</p>
+            )}
+            {errorMessage && (
+              <p className="ui_caption text-rose-300">{errorMessage}</p>
+            )}
             <div className="flex gap-2">
               <SecondaryButton
                 twStyles="flex-1 justify-center py-2.5"
                 isActive
                 disabled={isSubmitting}
-                onClick={() => customValue ? applyCustomStart() : void startTimer(selectedMinutes * 60)}
+                onClick={() =>
+                  customValue
+                    ? applyCustomStart()
+                    : void startTimer(selectedMinutes * 60)
+                }
               >
-                {isSubmitting ? 'Starting…' : `Start ${customValue ? 'custom' : `${selectedMinutes}m`}`}
+                {isSubmitting
+                  ? 'Starting…'
+                  : `Start ${customValue ? 'custom' : `${selectedMinutes}m`}`}
               </SecondaryButton>
               <SecondaryButton
-                onClick={() => { setShowStartForm(false); setCustomValue(''); setCustomError(null); }}
+                onClick={() => {
+                  setShowStartForm(false);
+                  setCustomValue('');
+                  setCustomError(null);
+                }}
               >
                 Cancel
               </SecondaryButton>
