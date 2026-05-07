@@ -1,175 +1,281 @@
 ---
 name: venodashboard-panels
-description: Create or refactor VenoDashboard dashboard panels using the JSON dashboard schema, panel registries, shared grid chrome, and settings drawer structure
+description: Create or refactor VenoDashboard dashboard panels using the JSON dashboard schema, panel catalog, panel registries, shared grid chrome, URL state, and settings drawer structure
 ---
 
 # VenoDashboard Panels
 
-Use this when adding, refactoring, or wiring dashboard panels in `VenoDashboard`.
+Use this when adding, refactoring, wiring, debugging, or reviewing dashboard panels in `VenoDashboard`.
 
-This skill exists to keep panel work aligned with the data driven dashboard architecture.
-
-## Overview
-
-In this repo, a dashboard panel is not just a React component.
-
-It is the combination of:
-
-1. a dashboard JSON element
-2. a dashboard JSON layout item
-3. a `vizConfig.group`
-4. a panel registry entry
-5. an optional settings registration
-6. a rendered composition or component
-
-If one of those parts is skipped, the panel structure starts to drift.
+This skill keeps panel work aligned with the data driven dashboard architecture. A panel is never just JSX. It is dashboard data, catalog metadata, registry wiring, shared grid behavior, optional settings, and the rendered composition.
 
 ## Read First
 
-Before changing panel structure, read:
+Before changing panel structure, read only the files relevant to the dashboard being changed.
 
-1. `AGENTS.md`
-2. `src/lib/dashboard/schema.ts`
-3. `src/lib/dashboard/registry.ts`
+Core model:
+
+1. `src/lib/dashboard/schema.ts`
+2. `src/lib/dashboard/panel-catalog.ts`
+3. `src/lib/dashboard/panel-registry.ts`
 4. `src/lib/dashboard/settings.ts`
-5. `src/lib/dashboard/url-state.ts`
-6. `src/lib/dashboard/view-panel.ts`
-7. `ui/compositions/DashboardDefinitionRenderer/DashboardDefinitionRenderer.tsx`
-8. `ui/compositions/DashboardGrid/DashboardGrid.tsx`
-9. `ui/compositions/DashboardGrid/DashboardGridPanel.tsx`
-10. `ui/compositions/DashboardUrlStateBridge/DashboardUrlStateBridge.tsx`
-11. `ui/compositions/DashboardViewPanelUrlStateBridge/DashboardViewPanelUrlStateBridge.tsx`
+5. `src/lib/dashboard/resources.ts`
 
-Then read the concrete dashboard you are modifying:
+Built in dashboard definitions:
 
 1. `src/lib/dashboard/definitions/overview.json`
 2. `src/lib/dashboard/definitions/statistics.json`
+3. `src/lib/dashboard/registry.ts`
 
-Then read the relevant registry:
+Rendering and interactions:
+
+1. `ui/compositions/DashboardDefinitionRenderer/DashboardDefinitionRenderer.tsx`
+2. `ui/compositions/DashboardDefinitionRenderer/DashboardGridRuntime.tsx`
+3. `ui/compositions/DashboardGrid/DashboardGrid.tsx`
+4. `ui/compositions/DashboardGrid/DashboardGridPanel.tsx`
+5. `ui/compositions/DashboardViewPanelUrlStateBridge/DashboardViewPanelUrlStateBridge.tsx`
+
+Panel registries:
 
 1. `ui/compositions/DashboardDefinitionRenderer/overviewPanelRegistry.tsx`
 2. `ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView.tsx`
 
-## Current Panel Infrastructure
+## Current Panels
 
-Dashboard panel work now includes URL driven state and shared interactions.
+Live dashboard panels:
 
-1. statistics time range URL state is parsed and serialized in `src/lib/dashboard/url-state.ts`
-2. statistics supports `from`, `to`, and `timezone`
-3. solo panel view uses the `viewPanel` URL parameter
-4. `DashboardViewPanelUrlStateBridge` owns validation, legacy id aliases, normalization, and URL updates for solo view
-5. `DashboardGrid` owns solo view rendering, hover tracking, `V` keyboard shortcut behavior, and edit drawer ownership
-6. panel action menus are always mounted but hidden until hover or menu open
-7. the `Edit` menu item enters dashboard edit mode and opens the shared settings drawer
-8. the `View` menu item enters solo view and updates `viewPanel`
-9. the `to dashboard` action clears solo view from the toolbar row
-10. panel action menu styling should match `DashboardTimeRangePicker`
-11. keyboard shortcut hints should use `ui/components/KeyboardKey/KeyboardKey.tsx`
+1. `panel-current-glucose`, group `veno.live-glucose`, component `LiveGlucosePanel`
+2. `panel-timers`, group `veno.shared-timers`, component `SharedTimersPanel`
+3. `panel-connections`, group `veno.connections-map`, component `ConnectionsMapPanel`
 
-Current reusable chart components:
+Time range dashboard panels:
+
+1. `panel-average-glucose`, group `veno.average-glucose`, rendered inside `GlucoseAnalysisView`
+2. `panel-time-in-range`, group `veno.time-in-range`, component `TimeInRangePanel`
+3. `panel-workout-types`, group `veno.workout-types`, component `WorkoutTypePanel`
+4. `panel-glucose-timeline`, group `veno.glucose-timeline`, rendered inside `GlucoseAnalysisView`
+5. `panel-agp`, group `veno.glucose-agp`, rendered inside `GlucoseAnalysisView`
+
+Reusable chart components:
 
 1. `ui/components/PieChart`
 2. `ui/components/LineChart`
 3. `ui/components/HistogramChart`
+4. `ui/components/GlucoseChart`
+5. `ui/components/GlucoseAgpChart`
 
-Keep panel specific data shaping close to the panel composition. Examples:
+Panel specific data shaping should live beside the panel when possible. Current examples are `ui/compositions/TimeInRangePanel/timeInRangeChart.ts` and `ui/compositions/WorkoutTypePanel/workoutTypeChart.ts`.
 
-1. `ui/compositions/TimeInRangePanel/timeInRangeChart.ts`
-2. `ui/compositions/WorkoutTypePanel/workoutTypeChart.ts`
+## Panel Anatomy
+
+Every persisted panel has these parts:
+
+1. an entry in `dashboard.spec.elements`
+2. a matching item in `dashboard.spec.layout.spec.items`
+3. a stable element key such as `panel-time-in-range`
+4. a stable `panel.spec.vizConfig.group` such as `veno.time-in-range`
+5. a `DASHBOARD_PANEL_CATALOG` entry when the panel can be added to user dashboards
+6. a registry entry that maps the group to rendered React content
+7. optional settings stored in `panel.spec.vizConfig.spec.options`
+8. optional settings editor registration for the shared right side settings drawer
+
+`parseDashboardDefinition` fills missing `data`, `options`, and `fieldConfig` defaults. Do not rely on that as an excuse to create incomplete hand written definitions when adding new built in panels.
+
+## Dashboard Types
+
+The app supports two dashboard types:
+
+1. `live`
+2. `timeRange`
+
+Rules:
+
+1. live dashboards render through `OverviewDashboardView` and `DashboardDefinitionRenderer`
+2. time range dashboards render through `GlucoseAnalysisView`
+3. a panel belongs to exactly one dashboard type in `DASHBOARD_PANEL_CATALOG`
+4. `validateDashboardPanelCompatibility` rejects unknown groups and cross type panels
+5. user created dashboards use the same catalog, renderer, grid, add panel drawer, settings save path, and compatibility checks as built in dashboards
+6. do not add a mixed dashboard escape hatch in V1
 
 ## Golden Path For A New Panel
 
 Follow this order.
 
-1. Decide which dashboard owns the panel.
-2. Create the rendering composition under `ui/compositions/<PanelName>/`.
-3. Reuse `ui/components/DashboardPanel/DashboardPanel.tsx` for the panel shell unless there is a real reason not to.
-4. Add a stable `vizConfig.group` string.
-5. Add a new panel element in the dashboard JSON `spec.elements`.
-6. Add the matching layout item in the dashboard JSON `spec.layout.spec.items`.
-7. Register the new `vizConfig.group` in the correct panel registry.
-8. Render the panel through `DashboardDefinitionRenderer`, not page level grid markup.
-9. Add a focused component spec or integration spec.
-10. If the panel should be addressable in solo view, use a stable panel key and let `DashboardViewPanelUrlStateBridge` handle `viewPanel`.
-11. If the panel needs a chart, reuse `PieChart`, `LineChart`, or `HistogramChart` before writing a custom SVG.
+1. Decide whether the panel is `live` or `timeRange`.
+2. Check if an existing panel or reusable chart component can be reused.
+3. Create the rendering composition under `ui/compositions/<PanelName>/` when the panel has its own reusable surface.
+4. Keep large data shaping helpers beside the composition.
+5. Add or update the built in dashboard JSON only if the panel should ship on a built in dashboard.
+6. Add the panel element under `spec.elements`.
+7. Add the layout item under `spec.layout.spec.items`.
+8. Add a `DASHBOARD_PANEL_CATALOG` entry with `id`, `elementName`, `title`, `group`, `compatibleDashboardType`, `allowMultiple`, `defaultLayout`, and `defaultDefinition`.
+9. Register the group in the correct panel registry.
+10. Render through `DashboardDefinitionRenderer`.
+11. Add focused tests for schema, catalog, registry, rendering, and settings behavior as applicable.
 
-## Golden Path For Panel Settings
+Do not hardcode dashboard grid JSX in page components.
 
-If the panel needs editable settings:
+Catalog layout rules:
 
-1. Define a typed settings shape close to the panel composition.
-2. Put the persisted values in `panel.spec.vizConfig.spec.options`.
-3. Add a `DashboardPanelSettingsRegistration` entry to the settings registry for that dashboard.
-4. Keep the settings editor UI in the shared settings drawer flow.
-5. Use `useDashboardPanelSettings(panelId, defaultSettings)` inside the panel rendering path.
-6. Make defaults safe when persisted settings are missing or partial.
-7. Keep public edits local.
-8. Keep admin saves routed through `/api/dashboard/settings/dashboards/[dashboardUid]`.
+1. `defaultLayout.width` and `defaultLayout.height` are grid units, not pixels
+2. dashboard columns are fixed count grid units and dashboard rows are pixel based height units
+3. when adding a panel to the catalog, include `defaultLayout.aspectRatio` when the panel has a preferred visual shape
+4. `DashboardGrid` uses `defaultLayout.aspectRatio` to calculate a sensible starting height when a user adds a panel
+5. keep `defaultLayout.height` as a fallback for old callers, invalid aspect ratios, and non measured grid states
+6. choose aspect ratios based on the rendered panel content, not on the current built in dashboard placement alone
 
-Do not build one off settings UIs inside panel headers or page sidebars for dashboard panels.
+## Settings Path
 
-## Structural Rules
+Use settings only when the panel has user adjustable behavior.
 
-1. `DashboardGridPanel` is only for dashboard grid panels
-2. dialogs, popovers, hover cards, and floating shells must stay separate from dashboard grid structure
-3. panel identity is stable data, not inferred from render order
-4. `panelId` and `vizConfig.group` are persistence sensitive, so do not rename them casually
-5. layout changes belong in dashboard JSON, not in ad hoc page JSX
-6. renderer selection belongs in `createPanelRegistry(...)`
+Rules:
 
-## File Placement
+1. persisted settings live in `panel.spec.vizConfig.spec.options`
+2. default settings live near the panel composition
+3. the panel reads settings through `useDashboardPanelSettings(panelId, defaultSettings)`
+4. settings UI belongs in a `DashboardPanelSettingsRegistration`
+5. the settings editor renders in the shared right side drawer owned by `DashboardGrid`
+6. public visitors may preview changes locally
+7. admin users persist changes through `/api/dashboard/settings/dashboards/[dashboardUid]`
+8. merge defaults with persisted settings so partial saved state does not break rendering
+9. never build a panel specific settings drawer, popover, or toolbar beside the panel header
+10. settings that change the desired panel shape should call the shared layout helper from the settings registration, not mutate dashboard JSON directly
+11. prefer `resizeLayoutToAspectRatio` for shape changes instead of swapping grid `width` and `height`
+12. use explicit min and max width and height bounds when a setting can resize a panel
 
-Typical files touched by a new panel:
+Known settings:
 
-1. `ui/compositions/<PanelName>/<PanelName>.tsx`
-2. `ui/compositions/<PanelName>/<PanelName>.spec.tsx`
-3. `ui/compositions/<PanelName>/index.ts`
-4. `src/lib/dashboard/definitions/<dashboard>.json`
-5. the relevant panel registry file
+1. `panel-time-in-range` stores `layout`
+2. `panel-glucose-timeline` stores `colorMode` and `yAxisMax`
+3. AGP currently reuses the glucose timeline `yAxisMax` setting
+4. `panel-current-glucose` stores `contentAlignment`, `colorMode`, unit, and information label visibility
 
-Potential files touched when settings are involved:
+## URL And Interaction Rules
 
-1. `ui/compositions/DashboardGrid/DashboardGrid.tsx`
-2. `ui/compositions/DashboardDefinitionRenderer/DashboardGridRuntime.tsx`
-3. `src/lib/dashboard/settings.ts`
+Solo panel view:
+
+1. `viewPanel` is the URL parameter
+2. values should use stable panel keys like `panel-time-in-range`
+3. legacy numeric ids are aliases only
+4. `DashboardViewPanelUrlStateBridge` owns validation, aliases, normalization, and URL updates
+5. changing the time range must preserve any active `viewPanel`
+
+Panel menu rules:
+
+1. action buttons are mounted by `DashboardGridPanel`
+2. actions are hidden until panel hover or menu open
+3. the three dot menu works outside edit mode
+4. `Edit` enters dashboard edit mode and opens the shared settings drawer
+5. `View` enters solo panel view and updates `viewPanel`
+6. hovering a panel and pressing `V` toggles solo view
+7. keyboard shortcuts are ignored inside inputs, textareas, selects, and editable content
+8. solo view renders the `to dashboard` action in the same toolbar row as `Edit`
+
+## Layout Rules
+
+1. dashboard membership lives in `spec.elements`
+2. dashboard layout lives in `spec.layout.spec.items`
+3. each layout item references an element by name
+4. `DashboardGridPanel` is only for dashboard grid panels
+5. dialogs, popovers, hover cards, and other floating layers stay outside dashboard grid structure
+6. grid move animations should only run while editing layout
+7. solo view should size the selected panel to the remaining viewport height and avoid page scroll
+8. do not assume grid width and grid height use the same unit
+9. do not swap grid width and grid height to rotate a panel shape
+10. use pixel aware aspect ratio resizing for setting driven shape changes
+
+Aspect ratio rules:
+
+1. `DashboardGrid` owns the conversion between grid units and pixels
+2. columns are based on available container width
+3. rows are based on configured row height and row margin
+4. aspect ratio resizing should preserve roughly the current panel pixel area
+5. aspect ratio resizing should then convert the target pixel size back into grid width and height
+6. clamp resized panels with panel specific minimum and maximum grid dimensions
+7. avoid saving setting driven layout changes from narrow non draggable layouts
+8. use CSS responsiveness inside the panel for mobile and compact layouts
+9. if a panel has several content modes, define a target aspect ratio for each mode near the panel settings registration
+10. if a panel is addable, define a default catalog aspect ratio so newly added panels start with a sensible size
+
+## Panel Content Sizing
+
+Panel content must be designed to use the full available panel width and height.
+
+Rules:
+
+1. panel content should fill the grid panel body instead of sizing itself as a fixed static block
+2. chart, table, metric, and control layouts must scale when users resize dashboard panels
+3. prefer flexible containers, responsive chart dimensions, and bounded overflow behavior
+4. avoid fixed pixel dimensions inside panel content unless they are a deliberate minimum or maximum
+5. empty, loading, and error states must also fill and align within the available panel area
+6. compact panel sizes should preserve readable content instead of clipping labels or overlapping controls
+7. large panel sizes should use the added space meaningfully instead of leaving the visualization stranded in one corner
+8. test resize behavior when a panel introduces new layout, charts, controls, or dense text
+9. test setting driven aspect ratio changes across at least one compact and one wide viewport when practical
+10. panel content should adapt when the grid layout changes aspect ratio, not rely on fixed pixel positions
+
+## Naming Rules
+
+1. use stable element keys like `panel-time-in-range`
+2. use stable group names like `veno.time-in-range`
+3. avoid renaming element keys, numeric ids, or group names because saved dashboard settings depend on them
+4. use catalog `id` values that describe the add panel option, such as `time-in-range`
+5. keep titles user facing and concise
+
+## Data And Ownership Rules
+
+1. browser components should use local `/api/dashboard/*` routes for privileged reads
+2. panel code should not talk directly to `VenoAPI`
+3. live dashboard context belongs in live dashboard loading code, not inside every panel
+4. time range panel data should follow the `GlucoseAnalysisView` selection and URL state path when it depends on the selected range
+5. timer stream ownership stays in `DashboardTimersBridge`
+6. `SharedTimersPanel` reacts to shared browser timer events instead of opening its own `EventSource`
 
 ## Testing Expectations
 
-At minimum, cover the behavior that matters:
+At minimum, cover the behavior changed by the panel.
 
-1. the panel renders through the registry
-2. the dashboard definition still parses
-3. settings update through the shared drawer if the panel has settings
-4. saved or built in settings are reflected on initial render when relevant
-5. panel menu actions still work from hover without requiring edit mode first
-6. solo view preserves URL state and can return through `to dashboard`
-7. keyboard shortcuts are ignored in editable fields when the panel introduces inputs
-
-Use the existing dashboard tests as references:
+Useful tests:
 
 1. `tests/dashboard-schema.test.ts`
 2. `tests/dashboard-registry.test.ts`
-3. `ui/compositions/DashboardGrid/DashboardGrid.spec.tsx`
-4. `ui/compositions/DashboardDefinitionRenderer/DashboardDefinitionRenderer.spec.tsx`
-5. `ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView.spec.tsx`
-6. `ui/compositions/DashboardViewPanelUrlStateBridge/DashboardViewPanelUrlStateBridge.spec.tsx`
-7. `tests/e2e/dashboard-architecture.spec.ts`
+3. `tests/dashboard-panel-catalog.test.ts`
+4. `tests/dashboard-panel-registry.test.ts`
+5. `ui/compositions/DashboardDefinitionRenderer/DashboardDefinitionRenderer.spec.tsx`
+6. `ui/compositions/DashboardDefinitionRenderer/DashboardGridRuntime.spec.tsx`
+7. `ui/compositions/DashboardGrid/DashboardGrid.spec.tsx`
+8. `ui/compositions/DashboardViewPanelUrlStateBridge/DashboardViewPanelUrlStateBridge.spec.tsx`
+9. the colocated panel spec
+10. `tests/e2e/dashboard-architecture.spec.ts` when the visible dashboard flow changes
 
-## When Helping
+Test these cases when relevant:
 
-When a user asks for a new dashboard panel:
+1. dashboard definition still parses
+2. catalog exposes the panel only for the compatible dashboard type
+3. registry resolves the group
+4. add panel drawer can add the default definition
+5. settings read defaults and persisted values
+6. settings save through shared grid state
+7. solo view URL state still works
+8. menu and keyboard interactions still work
+9. panel content fills the panel body and scales across edited panel sizes
+10. catalog aspect ratios produce sensible added panel dimensions
+11. setting driven aspect ratio updates save through the same dashboard layout save path
+12. aspect ratio resizing does not run on narrow non draggable layouts
 
-1. identify the target dashboard
-2. inspect the existing dashboard JSON and registry first
-3. add the panel through the data model
-4. only then add the composition code
-5. if settings are needed, route them through the shared settings system
-6. avoid page specific shortcuts that bypass the renderer
+## Red Flags
 
-## Critical Rules
+Stop and rethink if the change does any of these:
 
-1. dashboard membership and layout live in dashboard JSON
-2. panel rendering is resolved by `vizConfig.group`
-3. dashboard grid chrome is shared and should not be reimplemented panel by panel
-4. panel settings belong in the shared settings drawer architecture
-5. public preview and admin persistence are both part of the panel settings contract
+1. adds panel markup directly to a page route
+2. bypasses `DashboardDefinitionRenderer`
+3. creates a panel without a catalog entry when it should be addable
+4. creates a catalog entry without a registry entry
+5. stores persisted settings somewhere other than `vizConfig.spec.options`
+6. duplicates shared grid chrome
+7. adds native styled selects for dashboard controls
+8. adds feature specific toast containers
+9. renames stable panel ids or groups without a migration
+10. lets live and time range panels mix without catalog validation
+11. swaps grid width and height as if they were the same unit
+12. changes panel layout from settings without using the shared grid layout path
