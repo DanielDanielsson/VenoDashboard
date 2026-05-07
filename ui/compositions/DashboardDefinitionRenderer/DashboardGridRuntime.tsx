@@ -36,6 +36,29 @@ interface DashboardGridRuntimeProps {
 }
 
 const EMPTY_SETTINGS_REGISTRY: DashboardPanelSettingsRegistry = {};
+const DASHBOARD_SETTINGS_SAVE_TIMEOUT_MS = 15_000;
+
+async function fetchDashboardSettingsSave(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    controller.abort();
+  }, DASHBOARD_SETTINGS_SAVE_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Saving dashboard settings timed out. Try again.');
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 export function DashboardGridRuntime({
   dashboardUid,
@@ -88,7 +111,7 @@ export function DashboardGridRuntime({
     timeSettings?: DashboardTimeSettingsKind;
   }) => {
     try {
-      const response = await fetch(`/api/dashboard/settings/dashboards/${encodeURIComponent(dashboardUid)}`, {
+      const response = await fetchDashboardSettingsSave(`/api/dashboard/settings/dashboards/${encodeURIComponent(dashboardUid)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

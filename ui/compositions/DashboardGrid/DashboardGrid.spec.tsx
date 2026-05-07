@@ -2,8 +2,13 @@
 import type { ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import type { GridLayoutKind, GridLayoutItemKind } from '@/lib/dashboard/schema';
-import { DashboardGrid } from './DashboardGrid';
+import type { DashboardPanelCatalogEntry } from '@/lib/dashboard/panel-catalog';
+import type { GridLayoutKind, GridLayoutItemKind, PanelKind } from '@/lib/dashboard/schema';
+import {
+  DashboardGrid,
+  useDashboardPanelSettings,
+  type DashboardPanelSettingsRegistry,
+} from './DashboardGrid';
 import { DashboardGridPanel } from './DashboardGridPanel';
 
 type MockLayoutItem = {
@@ -130,6 +135,54 @@ function createLayout(): GridLayoutKind {
       ],
     },
   };
+}
+
+function createEmptyLayout(): GridLayoutKind {
+  return {
+    kind: 'GridLayout',
+    spec: {
+      items: [],
+    },
+  };
+}
+
+function createPanel(group: string, title: string): PanelKind {
+  return {
+    kind: 'Panel',
+    spec: {
+      id: 1,
+      title,
+      data: {
+        kind: 'QueryGroup',
+        spec: {
+          queries: [],
+          transformations: [],
+          queryOptions: {},
+        },
+      },
+      vizConfig: {
+        kind: 'VizConfig',
+        group,
+        version: 'v1',
+        spec: {
+          options: {},
+          fieldConfig: {
+            defaults: {},
+            overrides: [],
+          },
+        },
+      },
+    },
+  };
+}
+
+function CurrentGlucoseUnitReadout() {
+  const [settings] = useDashboardPanelSettings(
+    'panel-current-glucose',
+    { unit: 'mmol/L' },
+  );
+
+  return <span>Unit: {settings.unit}</span>;
 }
 
 describe('DashboardGrid', () => {
@@ -458,11 +511,11 @@ describe('DashboardGrid', () => {
         layout={createLayout()}
         isOwner
         initialPanelSettings={{
-          'panel-current-glucose': { colorMode: 'threeColors' },
+          'panel-current-glucose': { colorMode: 'standard' },
         }}
         settingsRegistry={{
           'panel-current-glucose': {
-            defaultSettings: { colorMode: 'threeColors' },
+            defaultSettings: { colorMode: 'standard' },
             render: ({ updateSettings }) => (
               <button
                 type="button"
@@ -492,8 +545,12 @@ describe('DashboardGrid', () => {
 
     const drawer = screen.getByRole('complementary', { name: 'Panel settings for Current Glucose' });
     const saveButton = within(drawer).getByRole('button', { name: 'Save' });
+    const closeButton = within(drawer).getByRole('button', { name: 'Close' });
+    const header = drawer.firstElementChild;
 
     expect(saveButton).toBeDisabled();
+    expect(header).toContainElement(saveButton);
+    expect(header).toContainElement(closeButton);
 
     fireEvent.click(within(drawer).getByRole('button', { name: 'Gradient' }));
 
@@ -518,6 +575,157 @@ describe('DashboardGrid', () => {
     });
   });
 
+  test('lets panel settings resize the edited panel to a visual aspect ratio', async () => {
+    const onSaveDashboard = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <DashboardGrid
+        layout={createLayout()}
+        isOwner
+        initialPanelSettings={{
+          'panel-current-glucose': { contentAlignment: 'vertical' },
+        }}
+        settingsRegistry={{
+          'panel-current-glucose': {
+            defaultSettings: { contentAlignment: 'vertical' },
+            render: ({ updateSettings, resizeLayoutToAspectRatio }) => (
+              <button
+                type="button"
+                onClick={() => {
+                  updateSettings((current) => ({
+                    ...(current as { contentAlignment: string }),
+                    contentAlignment: 'horizontal',
+                  }));
+                  resizeLayoutToAspectRatio?.({
+                    aspectRatio: 2.1,
+                    minWidth: 5,
+                    maxWidth: 8,
+                    minHeight: 5,
+                    maxHeight: 10,
+                  });
+                }}
+              >
+                Horizontal
+              </button>
+            ),
+          },
+        }}
+        onSaveDashboard={onSaveDashboard}
+      >
+        <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+          Current glucose panel
+        </DashboardGridPanel>
+        <DashboardGridPanel key="panel-connections" panelId="panel-connections" title="Connections">
+          Connections panel
+        </DashboardGridPanel>
+      </DashboardGrid>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel actions for Current Glucose' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+
+    const drawer = screen.getByRole('complementary', { name: 'Panel settings for Current Glucose' });
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Horizontal' }));
+
+    expect(gridLayoutMock.layout).toEqual([
+      { i: 'panel-current-glucose', x: 0, y: 0, w: 5, h: 5 },
+      { i: 'panel-connections', x: 0, y: 6, w: 12, h: 8 },
+    ]);
+
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(onSaveDashboard).toHaveBeenCalledWith({
+        panelSettings: {
+          'panel-current-glucose': { contentAlignment: 'horizontal' },
+        },
+        layout: [
+          { i: 'panel-current-glucose', x: 0, y: 0, w: 5, h: 5 },
+          { i: 'panel-connections', x: 0, y: 6, w: 12, h: 8 },
+        ],
+      });
+    });
+  });
+
+  test('keeps saved panel settings through parent rerenders with stale initial settings', async () => {
+    const onSaveDashboard = vi.fn().mockResolvedValue(undefined);
+    const initialPanelSettings = {
+      'panel-current-glucose': { unit: 'mmol/L' },
+    };
+    const settingsRegistry: DashboardPanelSettingsRegistry = {
+      'panel-current-glucose': {
+        defaultSettings: { unit: 'mmol/L' },
+        render: ({ updateSettings }) => (
+          <button
+            type="button"
+            onClick={() => {
+              updateSettings((current) => ({
+                ...(current as { unit: string }),
+                unit: 'mg/dL',
+              }));
+            }}
+          >
+            mg/dl
+          </button>
+        ),
+      },
+    };
+
+    const { rerender } = render(
+      <DashboardGrid
+        layout={createLayout()}
+        isOwner
+        initialPanelSettings={initialPanelSettings}
+        settingsRegistry={settingsRegistry}
+        onSaveDashboard={onSaveDashboard}
+      >
+        <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+          <CurrentGlucoseUnitReadout />
+        </DashboardGridPanel>
+      </DashboardGrid>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel actions for Current Glucose' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+
+    const drawer = screen.getByRole('complementary', { name: 'Panel settings for Current Glucose' });
+    fireEvent.click(within(drawer).getByRole('button', { name: 'mg/dl' }));
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(onSaveDashboard).toHaveBeenCalledWith({
+        panelSettings: {
+          'panel-current-glucose': { unit: 'mg/dL' },
+        },
+        layout: [
+          { i: 'panel-current-glucose', x: 0, y: 0, w: 4, h: 6 },
+          { i: 'panel-connections', x: 0, y: 6, w: 12, h: 8 },
+        ],
+      });
+    });
+    expect(screen.getByText('Unit: mg/dL')).toBeInTheDocument();
+
+    rerender(
+      <DashboardGrid
+        layout={createLayout()}
+        isOwner
+        initialPanelSettings={{
+          'panel-current-glucose': { unit: 'mmol/L' },
+        }}
+        settingsRegistry={settingsRegistry}
+        onSaveDashboard={onSaveDashboard}
+      >
+        <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+          <CurrentGlucoseUnitReadout />
+        </DashboardGridPanel>
+      </DashboardGrid>,
+    );
+
+    expect(screen.getByText('Unit: mg/dL')).toBeInTheDocument();
+  });
+
   test('shows a save-attempt callback for non-admin users without calling the save handler', async () => {
     const onSaveDashboard = vi.fn().mockResolvedValue(undefined);
     const onUnauthorizedSaveDashboard = vi.fn();
@@ -528,11 +736,11 @@ describe('DashboardGrid', () => {
         onSaveDashboard={onSaveDashboard}
         onUnauthorizedSaveDashboard={onUnauthorizedSaveDashboard}
         initialPanelSettings={{
-          'panel-current-glucose': { colorMode: 'threeColors' },
+          'panel-current-glucose': { colorMode: 'standard' },
         }}
         settingsRegistry={{
           'panel-current-glucose': {
-            defaultSettings: { colorMode: 'threeColors' },
+            defaultSettings: { colorMode: 'standard' },
             render: ({ updateSettings }) => (
               <button
                 type="button"
@@ -810,7 +1018,46 @@ describe('DashboardGrid', () => {
       'panel-current-glucose',
       'panel-connections',
     ]);
+    expect(gridLayoutMock.gridConfig?.cols).toBe(12);
     expect(gridLayoutMock.gridConfig?.margin).toEqual([4, 4]);
+  });
+
+  test('sizes added panels from their default visual aspect ratio', () => {
+    const panelCatalogEntries = [
+      {
+        id: 'current-glucose',
+        elementName: 'panel-current-glucose',
+        title: 'Current Glucose',
+        group: 'veno.live-glucose',
+        compatibleDashboardType: 'live',
+        allowMultiple: false,
+        defaultLayout: { width: 4, height: 9, aspectRatio: 2 },
+        defaultDefinition: createPanel('veno.live-glucose', 'Current Glucose'),
+      },
+    ] satisfies DashboardPanelCatalogEntry[];
+
+    render(
+      <DashboardGrid
+        layout={createEmptyLayout()}
+        dashboardType="live"
+        isOwner
+        panelCatalogEntries={panelCatalogEntries}
+        renderPanel={(panelId, panel) => (
+          <div key={panelId}>{panel.spec.title} panel</div>
+        )}
+      >
+        {null}
+      </DashboardGrid>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add panel' }));
+    fireEvent.click(within(screen.getByRole('complementary', { name: 'Add panel' })).getByRole('button', { name: 'Current Glucose' }));
+
+    expect(screen.getByText('Current Glucose panel')).toBeInTheDocument();
+    expect(gridLayoutMock.layout).toEqual([
+      { i: 'panel-current-glucose', x: 0, y: 0, w: 4, h: 5 },
+    ]);
   });
 
   test('keeps drag and resize changes in local runtime state', () => {
@@ -932,7 +1179,7 @@ describe('DashboardGrid', () => {
         layout={createLayout()}
         settingsRegistry={{
           'panel-current-glucose': {
-            defaultSettings: { colorMode: 'threeColors', yAxisMax: 25 },
+            defaultSettings: { colorMode: 'standard', yAxisMax: 25 },
             render: () => <p>Settings</p>,
           },
         }}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Children, cloneElement, createContext, isValidElement, useContext, type ReactElement, type ReactNode } from 'react';
+import { Children, cloneElement, createContext, isValidElement, useContext, useRef, type ReactElement, type ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ReactGridLayout, { useContainerWidth, type Layout } from 'react-grid-layout';
@@ -17,11 +17,28 @@ export interface DashboardPanelSettingsRegistration<TSettings = unknown> {
   render: (input: {
     settings: TSettings;
     updateSettings: (updater: (current: TSettings) => TSettings) => void;
+    updateLayout?: (updater: (current: DashboardPanelLayoutState) => DashboardPanelLayoutState) => void;
+    resizeLayoutToAspectRatio?: (options: DashboardPanelAspectRatioLayoutOptions) => void;
     isOwner: boolean;
   }) => ReactNode;
 }
 
 export type DashboardPanelSettingsRegistry = Record<string, DashboardPanelSettingsRegistration>;
+
+export interface DashboardPanelLayoutState {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface DashboardPanelAspectRatioLayoutOptions {
+  aspectRatio: number;
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  maxHeight?: number;
+}
 
 interface DashboardGridProps {
   layout: GridLayoutKind;
@@ -55,6 +72,7 @@ const gridConfig = {
   margin: [4, 4] as const,
   containerPadding: [0, 0] as const,
 };
+const DEFAULT_ADDED_PANEL_ASPECT_RATIO = 1.35;
 const EMPTY_PANEL_SETTINGS: Record<string, unknown> = {};
 const EMPTY_PANEL_ELEMENTS: Record<string, PanelKind> = {};
 const DASHBOARD_EDIT_BUTTON_STYLES = 'ui_caption inline-flex h-[38px] items-center gap-2 rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-bg px-3 text-dashboard-time-picker-text transition-colors hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text';
@@ -200,6 +218,109 @@ function cloneTimeSettings(timeSettings: DashboardTimeSettingsKind): DashboardTi
   };
 }
 
+function normalizeLayoutNumber(value: number, fallback: number): number {
+  return Number.isFinite(value) ? Math.round(value) : fallback;
+}
+
+function clampLayoutNumber(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function normalizeDashboardPanelLayoutState(layout: DashboardPanelLayoutState): DashboardPanelLayoutState {
+  const width = Math.min(
+    gridConfig.cols,
+    Math.max(1, normalizeLayoutNumber(layout.width, 1)),
+  );
+  const height = Math.max(1, normalizeLayoutNumber(layout.height, 1));
+  const maxX = Math.max(0, gridConfig.cols - width);
+
+  return {
+    x: Math.min(maxX, Math.max(0, normalizeLayoutNumber(layout.x, 0))),
+    y: Math.max(0, normalizeLayoutNumber(layout.y, 0)),
+    width,
+    height,
+  };
+}
+
+function getGridColumnWidth(containerWidth: number): number {
+  return (
+    containerWidth -
+    gridConfig.margin[0] * (gridConfig.cols - 1) -
+    gridConfig.containerPadding[0] * 2
+  ) / gridConfig.cols;
+}
+
+function gridWidthToPixels(gridWidth: number, columnWidth: number): number {
+  return columnWidth * gridWidth + Math.max(0, gridWidth - 1) * gridConfig.margin[0];
+}
+
+function gridHeightToPixels(gridHeight: number): number {
+  return gridConfig.rowHeight * gridHeight + Math.max(0, gridHeight - 1) * gridConfig.margin[1];
+}
+
+function pixelsToGridWidth(pixelWidth: number, columnWidth: number): number {
+  return Math.round((pixelWidth + gridConfig.margin[0]) / (columnWidth + gridConfig.margin[0]));
+}
+
+function pixelsToGridHeight(pixelHeight: number): number {
+  return Math.round((pixelHeight + gridConfig.margin[1]) / (gridConfig.rowHeight + gridConfig.margin[1]));
+}
+
+function getAspectRatioLayoutState(
+  current: DashboardPanelLayoutState,
+  options: DashboardPanelAspectRatioLayoutOptions,
+  containerWidth: number,
+): DashboardPanelLayoutState {
+  const normalizedCurrent = normalizeDashboardPanelLayoutState(current);
+  const columnWidth = getGridColumnWidth(containerWidth);
+
+  if (!Number.isFinite(columnWidth) || columnWidth <= 0 || !Number.isFinite(options.aspectRatio) || options.aspectRatio <= 0) {
+    return normalizedCurrent;
+  }
+
+  const minWidth = clampLayoutNumber(options.minWidth ?? 1, 1, gridConfig.cols);
+  const maxWidth = clampLayoutNumber(options.maxWidth ?? gridConfig.cols, minWidth, gridConfig.cols);
+  const minHeight = Math.max(1, normalizeLayoutNumber(options.minHeight ?? 1, 1));
+  const maxHeight = Math.max(minHeight, normalizeLayoutNumber(options.maxHeight ?? Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
+  const currentPixelWidth = gridWidthToPixels(normalizedCurrent.width, columnWidth);
+  const currentPixelHeight = gridHeightToPixels(normalizedCurrent.height);
+  const targetArea = currentPixelWidth * currentPixelHeight;
+  const targetPixelWidth = Math.sqrt(targetArea * options.aspectRatio);
+  const targetPixelHeight = targetPixelWidth / options.aspectRatio;
+  const nextWidth = clampLayoutNumber(
+    pixelsToGridWidth(targetPixelWidth, columnWidth),
+    minWidth,
+    maxWidth,
+  );
+  const nextHeight = clampLayoutNumber(
+    pixelsToGridHeight(targetPixelHeight),
+    minHeight,
+    maxHeight,
+  );
+
+  return normalizeDashboardPanelLayoutState({
+    ...normalizedCurrent,
+    width: nextWidth,
+    height: nextHeight,
+  });
+}
+
+function getGridHeightForAspectRatio(
+  gridWidth: number,
+  aspectRatio: number,
+  containerWidth: number,
+  fallbackHeight: number,
+): number {
+  const columnWidth = getGridColumnWidth(containerWidth);
+
+  if (!Number.isFinite(columnWidth) || columnWidth <= 0 || !Number.isFinite(aspectRatio) || aspectRatio <= 0) {
+    return fallbackHeight;
+  }
+
+  const pixelWidth = gridWidthToPixels(gridWidth, columnWidth);
+  return Math.max(1, pixelsToGridHeight(pixelWidth / aspectRatio));
+}
+
 function serializeLayout(layout: Layout): string {
   return JSON.stringify(
     layout
@@ -281,6 +402,7 @@ export function DashboardGrid({
   const [hoveredPanelId, setHoveredPanelId] = useState<string | null>(null);
   const [soloPanelMaxRows, setSoloPanelMaxRows] = useState<number | null>(null);
   const [gridViewportElement, setGridViewportElement] = useState<HTMLDivElement | null>(null);
+  const initialPanelSettingsSnapshotRef = useRef<string | null>(null);
   const [pendingDiscardAction, setPendingDiscardAction] = useState<
     | { type: 'exit-edit-mode' }
     | { type: 'view-panel'; panelId: string; navigationMode: 'push' | 'replace' }
@@ -349,7 +471,7 @@ export function DashboardGrid({
       ? Math.min(fullDashboardHeight, soloPanelMaxRows)
       : fullDashboardHeight;
 
-    return [{ ...item, x: 0, y: 0, w: 12, h: cappedHeight }];
+    return [{ ...item, x: 0, y: 0, w: gridConfig.cols, h: cappedHeight }];
   }, [runtimeLayout, soloPanelMaxRows, viewedPanelId]);
 
   const handleGridViewportRef = useCallback((node: HTMLDivElement | null) => {
@@ -368,6 +490,12 @@ export function DashboardGrid({
   }, [initialElements, initialLayout]);
 
   useEffect(() => {
+    const nextSnapshot = serializeSettings(initialPanelSettings);
+    if (initialPanelSettingsSnapshotRef.current === nextSnapshot) {
+      return;
+    }
+
+    initialPanelSettingsSnapshotRef.current = nextSnapshot;
     setPersistedPanelSettings(clonePanelSettings(initialPanelSettings));
     setRuntimePanelSettings({});
   }, [initialPanelSettings]);
@@ -508,6 +636,49 @@ export function DashboardGrid({
     }
   }, [onDiscardTimeSettings, persistedElements, persistedLayout, persistedTimeSettings]);
 
+  const updatePanelLayout = useCallback((
+    panelId: string,
+    updater: (current: DashboardPanelLayoutState) => DashboardPanelLayoutState,
+  ) => {
+    setRuntimeLayout((current) => {
+      let didUpdate = false;
+      const nextLayout = current.map((item) => {
+        if (item.i !== panelId) {
+          return item;
+        }
+
+        didUpdate = true;
+        const nextItem = normalizeDashboardPanelLayoutState(updater({
+          x: item.x,
+          y: item.y,
+          width: item.w,
+          height: item.h,
+        }));
+
+        return {
+          ...item,
+          x: nextItem.x,
+          y: nextItem.y,
+          w: nextItem.width,
+          h: nextItem.height,
+        };
+      });
+
+      return didUpdate ? nextLayout : current;
+    });
+  }, []);
+
+  const resizePanelLayoutToAspectRatio = useCallback((
+    panelId: string,
+    options: DashboardPanelAspectRatioLayoutOptions,
+  ) => {
+    if (!isDraggable) {
+      return;
+    }
+
+    updatePanelLayout(panelId, (current) => getAspectRatioLayoutState(current, options, width));
+  }, [isDraggable, updatePanelLayout, width]);
+
   function handleAddPanel(entry: DashboardPanelCatalogEntry) {
     const nextPanelId = entry.elementName;
     const nextY = runtimeLayout.reduce(
@@ -515,6 +686,12 @@ export function DashboardGrid({
       0,
     );
     const nextWidth = Math.min(gridConfig.cols, entry.defaultLayout.width);
+    const nextHeight = getGridHeightForAspectRatio(
+      nextWidth,
+      entry.defaultLayout.aspectRatio ?? DEFAULT_ADDED_PANEL_ASPECT_RATIO,
+      width,
+      entry.defaultLayout.height,
+    );
 
     setRuntimeElements((current) => ({
       ...current,
@@ -527,7 +704,7 @@ export function DashboardGrid({
         x: 0,
         y: nextY,
         w: nextWidth,
-        h: entry.defaultLayout.height,
+        h: nextHeight,
       },
     ]);
     setIsAddPanelDrawerOpen(false);
@@ -935,13 +1112,23 @@ export function DashboardGrid({
             >
               <div className="flex items-start justify-between gap-4">
                 <h2 className="panel_title text-text">{editedPanel.title} settings</h2>
-                <button
-                  type="button"
-                  className="ui_caption rounded-[4px] border border-border px-2 py-1 text-text-soft"
-                  onClick={() => setEditedPanel(null)}
-                >
-                  Close
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="ui_caption rounded-[4px] border border-border px-3 py-1 text-text-soft disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!canAttemptSaveDashboard}
+                    onClick={handleSaveDashboard}
+                  >
+                    {isSavingDashboard ? 'Saving' : 'Save'}
+                  </button>
+                  <button
+                    type="button"
+                    className="ui_caption rounded-[4px] border border-border px-2 py-1 text-text-soft"
+                    onClick={() => setEditedPanel(null)}
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
               <div className="flex flex-1 flex-col">
                 <div className="mt-6 flex-1">
@@ -955,27 +1142,23 @@ export function DashboardGrid({
                           updater,
                         );
                       },
+                      updateLayout: (updater) => {
+                        updatePanelLayout(editedPanel.panelId, updater);
+                      },
+                      resizeLayoutToAspectRatio: (options) => {
+                        resizePanelLayoutToAspectRatio(editedPanel.panelId, options);
+                      },
                       isOwner,
                     })
                   ) : (
                     <p className="body_text text-text-soft">No settings available yet.</p>
                   )}
                 </div>
-                <div className="mt-6 border-t border-border pt-4">
-                  <button
-                    type="button"
-                    className="ui_caption rounded-[4px] border border-border px-3 py-2 text-text-soft disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={!canAttemptSaveDashboard}
-                    onClick={handleSaveDashboard}
-                  >
-                    {isSavingDashboard ? 'Saving' : 'Save'}
-                  </button>
-                  {!isOwner ? (
-                    <p className="body_text mt-3 text-text-soft">
-                      Admin sign in is required to save dashboard settings.
-                    </p>
-                  ) : null}
-                </div>
+                {!isOwner ? (
+                  <p className="body_text mt-6 border-t border-border pt-4 text-text-soft">
+                    Admin sign in is required to save dashboard settings.
+                  </p>
+                ) : null}
               </div>
             </aside>
           ) : null}

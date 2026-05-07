@@ -142,6 +142,7 @@ function createPanel(group: string, title: string): PanelKind {
 
 describe('DashboardGridRuntime', () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -161,13 +162,13 @@ describe('DashboardGridRuntime', () => {
           dashboardUid="statistics"
           dashboardVersion={3}
           initialPanelSettings={{
-            'panel-current-glucose': { colorMode: 'threeColors' },
+            'panel-current-glucose': { colorMode: 'standard' },
           }}
           layout={createLayout()}
           isOwner
           settingsRegistry={{
             'panel-current-glucose': {
-              defaultSettings: { colorMode: 'threeColors' },
+              defaultSettings: { colorMode: 'standard' },
               render: ({ updateSettings }) => (
                 <button
                   type="button"
@@ -235,6 +236,56 @@ describe('DashboardGridRuntime', () => {
     const viewport = screen.getByRole('region', { name: 'Notifications' });
     expect(within(viewport).getByText('Dashboard changes saved').closest('[data-variant="success"]')).toBeInTheDocument();
     expect(within(viewport).queryByText('Your latest layout and panel settings are now active.')).not.toBeInTheDocument();
+  });
+
+  test('recovers when the dashboard settings save request times out', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => {
+        reject(new DOMException('Aborted', 'AbortError'));
+      });
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <NotificationsProvider>
+        <DashboardGridRuntime
+          dashboardUid="statistics"
+          dashboardVersion={3}
+          layout={createLayout()}
+          isOwner
+        >
+          <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+            Current glucose panel
+          </DashboardGridPanel>
+        </DashboardGridRuntime>
+      </NotificationsProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+
+    act(() => {
+      gridLayoutMock.onLayoutChange?.([
+        { i: 'panel-current-glucose', x: 2, y: 1, w: 5, h: 7 },
+      ]);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save dashboard' }));
+    expect(screen.getByRole('button', { name: 'Save dashboard' })).toHaveTextContent('Saving');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+    vi.useRealTimers();
+
+    await waitFor(() => {
+      const saveButton = screen.getByRole('button', { name: 'Save dashboard' });
+      expect(saveButton).toHaveTextContent('Save');
+      expect(saveButton).not.toBeDisabled();
+    });
+
+    const viewport = screen.getByRole('region', { name: 'Notifications' });
+    expect(within(viewport).getByText('Saving dashboard settings timed out. Try again.')).toBeInTheDocument();
   });
 
   test('shows available compatible panels in the add panel drawer', async () => {
@@ -657,13 +708,13 @@ describe('DashboardGridRuntime', () => {
           dashboardUid="statistics"
           dashboardVersion={3}
           initialPanelSettings={{
-            'panel-current-glucose': { colorMode: 'threeColors' },
+            'panel-current-glucose': { colorMode: 'standard' },
           }}
           layout={createLayout()}
           isOwner={false}
           settingsRegistry={{
             'panel-current-glucose': {
-              defaultSettings: { colorMode: 'threeColors' },
+              defaultSettings: { colorMode: 'standard' },
               render: ({ updateSettings }) => (
                 <button
                   type="button"

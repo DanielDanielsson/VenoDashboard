@@ -10,6 +10,7 @@ export interface DashboardPanelCatalogEntry {
   defaultLayout: {
     width: number;
     height: number;
+    aspectRatio?: number;
   };
   defaultDefinition: PanelKind;
 }
@@ -52,7 +53,7 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     group: 'veno.live-glucose',
     compatibleDashboardType: 'live',
     allowMultiple: false,
-    defaultLayout: { width: 4, height: 8 },
+    defaultLayout: { width: 4, height: 8, aspectRatio: 1.35 },
     defaultDefinition: panel(1, 'Current Glucose', 'veno.live-glucose'),
   },
   {
@@ -62,7 +63,7 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     group: 'veno.connections-map',
     compatibleDashboardType: 'live',
     allowMultiple: false,
-    defaultLayout: { width: 12, height: 17 },
+    defaultLayout: { width: 12, height: 17, aspectRatio: 2.2 },
     defaultDefinition: panel(4, 'Connections', 'veno.connections-map'),
   },
   {
@@ -72,7 +73,7 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     group: 'veno.shared-timers',
     compatibleDashboardType: 'live',
     allowMultiple: false,
-    defaultLayout: { width: 4, height: 8 },
+    defaultLayout: { width: 4, height: 8, aspectRatio: 1.35 },
     defaultDefinition: panel(2, 'Timers', 'veno.shared-timers'),
   },
   {
@@ -82,7 +83,7 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     group: 'veno.average-glucose',
     compatibleDashboardType: 'timeRange',
     allowMultiple: false,
-    defaultLayout: { width: 4, height: 6 },
+    defaultLayout: { width: 4, height: 6, aspectRatio: 1.45 },
     defaultDefinition: panel(101, 'Average Glucose', 'veno.average-glucose'),
   },
   {
@@ -92,7 +93,7 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     group: 'veno.time-in-range',
     compatibleDashboardType: 'timeRange',
     allowMultiple: false,
-    defaultLayout: { width: 4, height: 6 },
+    defaultLayout: { width: 4, height: 6, aspectRatio: 1.45 },
     defaultDefinition: panel(103, 'Time in Range', 'veno.time-in-range', { layout: 'statistics' }),
   },
   {
@@ -102,7 +103,7 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     group: 'veno.workout-types',
     compatibleDashboardType: 'timeRange',
     allowMultiple: false,
-    defaultLayout: { width: 4, height: 6 },
+    defaultLayout: { width: 4, height: 6, aspectRatio: 1.45 },
     defaultDefinition: panel(106, 'Workout Types', 'veno.workout-types'),
   },
   {
@@ -112,7 +113,7 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     group: 'veno.glucose-timeline',
     compatibleDashboardType: 'timeRange',
     allowMultiple: false,
-    defaultLayout: { width: 12, height: 24 },
+    defaultLayout: { width: 12, height: 24, aspectRatio: 1.6 },
     defaultDefinition: panel(104, 'Glucose Timeline', 'veno.glucose-timeline'),
   },
   {
@@ -122,7 +123,7 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     group: 'veno.glucose-agp',
     compatibleDashboardType: 'timeRange',
     allowMultiple: false,
-    defaultLayout: { width: 12, height: 14 },
+    defaultLayout: { width: 12, height: 14, aspectRatio: 1.8 },
     defaultDefinition: panel(105, 'Ambulatory Glucose Profile', 'veno.glucose-agp'),
   },
 ];
