@@ -1,17 +1,41 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
+import type { GlucoseColorMode } from '@/lib/glucose/tints';
+import {
+  formatGlucoseDeltaValue,
+  formatGlucoseValue,
+  type GlucoseUnit,
+} from '@/lib/glucose/units';
+import { DataFreshnessLight } from '@ui/components/DataFreshnessLight/DataFreshnessLight';
 import { GlucoseIndicator } from '@ui/components/GlucoseIndicator/GlucoseIndicator';
 
 interface LatestReading {
+  id?: string;
   valueMmolL: number;
   trend: string;
   timestamp: string;
 }
 
+interface ChartPoint {
+  readingId?: string;
+  valueMmolL: number;
+  timestamp: string;
+}
+
+interface HistoryResponse {
+  items?: ChartPoint[];
+  latest?: LatestReading | null;
+}
+
 interface StreamEnvelope {
   source?: string;
   reading?: LatestReading;
+}
+
+interface ReadingState {
+  latest: LatestReading;
+  previous: ChartPoint | LatestReading | null;
 }
 
 function normalizeStreamPayload(raw: string): LatestReading | null {
@@ -31,16 +55,93 @@ function normalizeStreamPayload(raw: string): LatestReading | null {
   }
 }
 
-interface DashboardGlucoseBadgeProps {
-  enableStream?: boolean;
-  pollIntervalMs?: number;
+function getReadingKey(
+  reading: Pick<LatestReading, 'timestamp'> & {
+    id?: string;
+    readingId?: string;
+  },
+): string {
+  return reading.id ?? reading.readingId ?? reading.timestamp;
 }
 
+function pickPreviousReading(
+  latest: LatestReading,
+  items: ChartPoint[] | undefined,
+): ChartPoint | null {
+  const latestKey = getReadingKey(latest);
+
+  return (
+    (items ?? [])
+      .filter((item) => getReadingKey(item) !== latestKey)
+      .sort(
+        (left, right) =>
+          new Date(right.timestamp).getTime() -
+          new Date(left.timestamp).getTime(),
+      )[0] ?? null
+  );
+}
+
+function updateReadingStateWithLatest(
+  current: ReadingState | null,
+  latest: LatestReading,
+  previous: ChartPoint | LatestReading | null = current?.latest ?? null,
+): ReadingState {
+  if (!current || getReadingKey(current.latest) !== getReadingKey(latest)) {
+    return { latest, previous };
+  }
+
+  return {
+    latest,
+    previous: current.previous,
+  };
+}
+
+function formatGlucoseDelta(
+  latest: LatestReading,
+  previous: ChartPoint | LatestReading | null,
+  unit: GlucoseUnit,
+): string {
+  if (!previous) {
+    return 'n/a';
+  }
+
+  return formatGlucoseDeltaValue(latest.valueMmolL - previous.valueMmolL, unit);
+}
+
+interface DashboardGlucoseBadgeProps {
+  contentAlignment?: 'horizontal' | 'vertical';
+  colorMode?: GlucoseColorMode;
+  enableStream?: boolean;
+  fitToContainer?: boolean;
+  glucoseUnit?: GlucoseUnit;
+  metadataVisibility?: {
+    showUnit: boolean;
+    showUpdated: boolean;
+    showDiff: boolean;
+    showSource: boolean;
+  };
+  pollIntervalMs?: number;
+  showDetails?: boolean;
+}
+
+const CURRENT_GLUCOSE_SOURCE_LABEL = 'Dexcom Share API';
+
 export function DashboardGlucoseBadge({
+  contentAlignment = 'vertical',
+  colorMode = 'standard',
   enableStream = true,
-  pollIntervalMs = 60_000
+  fitToContainer = false,
+  glucoseUnit = 'mmol/L',
+  metadataVisibility = {
+    showUnit: true,
+    showUpdated: true,
+    showDiff: true,
+    showSource: true,
+  },
+  pollIntervalMs = 60_000,
+  showDetails = false,
 }: DashboardGlucoseBadgeProps) {
-  const [latest, setLatest] = useState<LatestReading | null>(null);
+  const [readingState, setReadingState] = useState<ReadingState | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -49,11 +150,15 @@ export function DashboardGlucoseBadge({
 
     async function fetchLatest() {
       try {
-        const res = await fetch('/api/dashboard/glucose/history?limit=1');
+        const res = await fetch('/api/dashboard/glucose/history?limit=2');
         if (!res.ok) return;
-        const json = await res.json();
+        const json = (await res.json()) as HistoryResponse;
         if (mounted && json.latest) {
-          setLatest(json.latest);
+          const latest = json.latest;
+          const previous = pickPreviousReading(latest, json.items);
+          setReadingState((current) =>
+            updateReadingStateWithLatest(current, latest, previous),
+          );
         }
       } catch {
         // Silent fail
@@ -61,8 +166,12 @@ export function DashboardGlucoseBadge({
     }
 
     function publishLatest(reading: LatestReading) {
-      setLatest(reading);
-      window.dispatchEvent(new CustomEvent('pulse-glucose-latest', { detail: reading }));
+      setReadingState((current) =>
+        updateReadingStateWithLatest(current, reading),
+      );
+      window.dispatchEvent(
+        new CustomEvent('pulse-glucose-latest', { detail: reading }),
+      );
     }
 
     function startPolling() {
@@ -111,7 +220,9 @@ export function DashboardGlucoseBadge({
     function handleEvent(e: Event) {
       const detail = (e as CustomEvent).detail;
       if (detail && mounted) {
-        setLatest(detail);
+        setReadingState((current) =>
+          updateReadingStateWithLatest(current, detail),
+        );
       }
     }
 
@@ -126,15 +237,111 @@ export function DashboardGlucoseBadge({
     };
   }, [enableStream, pollIntervalMs]);
 
-  if (!latest) return null;
+  if (!readingState) return null;
 
-  return (
+  const { latest, previous } = readingState;
+  const glucoseDelta = formatGlucoseDelta(latest, previous, glucoseUnit);
+  const displayedGlucoseValue = formatGlucoseValue(latest.valueMmolL, glucoseUnit);
+  const hasVisibleMetadata = Boolean(
+    metadataVisibility.showUnit ||
+    metadataVisibility.showUpdated ||
+    metadataVisibility.showDiff ||
+    metadataVisibility.showSource,
+  );
+
+  const indicator = (
     <GlucoseIndicator
       value={latest.valueMmolL}
       trend={latest.trend}
+      displayValue={displayedGlucoseValue}
       timestamp={latest.timestamp}
       size="lg"
+      unit={glucoseUnit}
       showAge={false}
+      showUnit={!showDetails}
+      fitToContainer={fitToContainer}
+      fitPlacement="center"
+      colorMode={colorMode}
     />
+  );
+
+  if (!showDetails || !hasVisibleMetadata) {
+    return indicator;
+  }
+
+  const layoutClassName = contentAlignment === 'horizontal'
+    ? 'items-center justify-center gap-8'
+    : 'content-center justify-items-center';
+  const metadataClassName = contentAlignment === 'horizontal'
+    ? 'content-center justify-self-end'
+    : 'content-start justify-self-center';
+  const indicatorContainerClassName = 'place-items-center';
+  const rootStyle: CSSProperties = {
+    containerType: 'size',
+    ...(contentAlignment === 'horizontal'
+      ? {
+          gridTemplateColumns:
+            'minmax(10rem, max-content) minmax(10rem, min(72cqh, 40rem))',
+        }
+      : {}),
+  };
+  const indicatorContainerStyle: CSSProperties = {
+    containerType: 'size',
+    ...(contentAlignment === 'horizontal'
+      ? {
+          height: 'min(72cqh, 40rem)',
+          width: 'min(72cqh, 40rem)',
+        }
+      : {}),
+    ...(contentAlignment === 'vertical'
+      ? {
+          height: 'min(72cqw, max(10rem, calc(100cqh - 7rem)), 40rem)',
+          width: 'min(100%, 40rem)',
+        }
+      : {}),
+  };
+
+  return (
+    <div
+      className={`grid h-full min-h-0 w-full min-w-0 gap-3 overflow-hidden ${layoutClassName}`}
+      style={rootStyle}
+    >
+      <dl
+        className={`z-10 grid min-w-0 gap-2 overflow-hidden text-left ${metadataClassName}`}
+      >
+        {metadataVisibility.showUnit ? (
+          <div className="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-4">
+            <dt className="ui_micro_label text-text-soft">Unit</dt>
+            <dd className="ui_caption m-0 min-w-0 break-words text-text-dim">{glucoseUnit}</dd>
+          </div>
+        ) : null}
+        {metadataVisibility.showUpdated ? (
+          <div className="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-4">
+            <dt className="ui_micro_label text-text-soft">Updated</dt>
+            <dd className="m-0">
+              <DataFreshnessLight timestamp={latest.timestamp} />
+            </dd>
+          </div>
+        ) : null}
+        {metadataVisibility.showDiff ? (
+          <div className="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-4">
+            <dt className="ui_micro_label text-text-soft">Diff</dt>
+            <dd className="ui_caption m-0 min-w-0 break-words text-text-dim">{glucoseDelta}</dd>
+          </div>
+        ) : null}
+        {metadataVisibility.showSource ? (
+          <div className="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-4">
+            <dt className="ui_micro_label text-text-soft">Source</dt>
+            <dd className="ui_caption m-0 min-w-0 break-words text-text-dim">{CURRENT_GLUCOSE_SOURCE_LABEL}</dd>
+          </div>
+        ) : null}
+      </dl>
+      <div
+        className={`grid h-full min-h-0 w-full min-w-0 overflow-hidden ${indicatorContainerClassName}`}
+        style={indicatorContainerStyle}
+      >
+        {indicator}
+      </div>
+    </div>
   );
 }
