@@ -1,8 +1,15 @@
 'use client';
 
-import { DashboardDefinitionRenderer, overviewPanelRegistry, type OverviewDashboardContext } from '@ui/compositions/DashboardDefinitionRenderer';
+import { useMemo } from 'react';
+import {
+  DashboardDefinitionRenderer,
+  overviewPanelRegistry,
+  type OverviewDashboardContext,
+} from '@ui/compositions/DashboardDefinitionRenderer';
+import type { DashboardPanelSettingsRegistry } from '@ui/compositions/DashboardGrid';
 import { DashboardUrlStateBridge } from '@ui/compositions/DashboardUrlStateBridge/DashboardUrlStateBridge';
 import { DashboardViewPanelUrlStateBridge } from '@ui/compositions/DashboardViewPanelUrlStateBridge/DashboardViewPanelUrlStateBridge';
+import { createCurrentGlucosePanelSettingsRegistration } from '@ui/compositions/LiveGlucosePanel';
 import type { DashboardDefinition } from '@/lib/dashboard/schema';
 import { getDashboardViewPanelAliases } from '@/lib/dashboard/view-panel';
 
@@ -19,9 +26,19 @@ export function OverviewDashboardView({
   dashboardVersion,
   allowDashboardDelete = false,
 }: OverviewDashboardViewProps) {
+  const settingsRegistry = useMemo<DashboardPanelSettingsRegistry>(
+    () => ({
+      'panel-current-glucose': createCurrentGlucosePanelSettingsRegistration(),
+    }),
+    [],
+  );
+
   return (
     <>
-      <DashboardUrlStateBridge dashboardTitle={dashboard.spec.title} rejectTimeRange />
+      <DashboardUrlStateBridge
+        dashboardTitle={dashboard.spec.title}
+        rejectTimeRange
+      />
       <DashboardViewPanelUrlStateBridge
         dashboardTitle={dashboard.spec.title}
         dashboardUid={dashboard.spec.uid}
@@ -37,6 +54,7 @@ export function OverviewDashboardView({
             isOwner={context.isOwner}
             viewedPanelId={viewedPanelId}
             onViewedPanelChange={onViewedPanelChange}
+            settingsRegistry={settingsRegistry}
             timeInRangeDefaultLayout="overview"
             context={context}
             allowDashboardDelete={allowDashboardDelete}
