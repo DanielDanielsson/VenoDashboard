@@ -21,11 +21,11 @@ Core model:
 4. `src/lib/dashboard/settings.ts`
 5. `src/lib/dashboard/resources.ts`
 
-Built in dashboard definitions:
+Dashboard definitions are database owned:
 
-1. `src/lib/dashboard/definitions/overview.json`
-2. `src/lib/dashboard/definitions/statistics.json`
-3. `src/lib/dashboard/registry.ts`
+1. dashboard records are loaded through `src/lib/dashboard/resources.ts`
+2. the dashboard library is loaded through `src/lib/dashboard/library.ts`
+3. local JSON dashboard definitions must not be used as runtime fallbacks
 
 Rendering and interactions:
 
@@ -37,8 +37,9 @@ Rendering and interactions:
 
 Panel registries:
 
-1. `ui/compositions/DashboardDefinitionRenderer/overviewPanelRegistry.tsx`
+1. `ui/compositions/DashboardDefinitionRenderer/LiveDashboardRegistry.tsx`
 2. `ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView.tsx`
+3. `ui/compositions/GlucoseAnalysisView/TimeRangeDashboardRegistry.tsx`
 
 ## Current Panels
 
@@ -47,6 +48,7 @@ Live dashboard panels:
 1. `panel-current-glucose`, group `veno.live-glucose`, component `LiveGlucosePanel`
 2. `panel-timers`, group `veno.shared-timers`, component `SharedTimersPanel`
 3. `panel-connections`, group `veno.connections-map`, component `ConnectionsMapPanel`
+4. addable text panels, group `veno.text`, component `TextPanel`
 
 Time range dashboard panels:
 
@@ -55,6 +57,7 @@ Time range dashboard panels:
 3. `panel-workout-types`, group `veno.workout-types`, component `WorkoutTypePanel`
 4. `panel-glucose-timeline`, group `veno.glucose-timeline`, rendered inside `GlucoseAnalysisView`
 5. `panel-agp`, group `veno.glucose-agp`, rendered inside `GlucoseAnalysisView`
+6. addable text panels, group `veno.text`, component `TextPanel`
 
 Reusable chart components:
 
@@ -77,9 +80,9 @@ Every persisted panel has these parts:
 5. a `DASHBOARD_PANEL_CATALOG` entry when the panel can be added to user dashboards
 6. a registry entry that maps the group to rendered React content
 7. optional settings stored in `panel.spec.vizConfig.spec.options`
-8. optional settings editor registration for the shared right side settings drawer
+8. optional group keyed settings editor registration for the shared right side settings drawer
 
-`parseDashboardDefinition` fills missing `data`, `options`, and `fieldConfig` defaults. Do not rely on that as an excuse to create incomplete hand written definitions when adding new built in panels.
+`parseDashboardDefinition` fills missing `data`, `options`, and `fieldConfig` defaults. Do not rely on that as an excuse to create incomplete hand written definitions when adding dashboard seed or migration data.
 
 ## Dashboard Types
 
@@ -92,26 +95,42 @@ Rules:
 
 1. live dashboards render through `OverviewDashboardView` and `DashboardDefinitionRenderer`
 2. time range dashboards render through `GlucoseAnalysisView`
-3. a panel belongs to exactly one dashboard type in `DASHBOARD_PANEL_CATALOG`
-4. `validateDashboardPanelCompatibility` rejects unknown groups and cross type panels
-5. user created dashboards use the same catalog, renderer, grid, add panel drawer, settings save path, and compatibility checks as built in dashboards
+3. a panel declares one or more compatible dashboard types in `DASHBOARD_PANEL_CATALOG.compatibleDashboardTypes`
+4. `validateDashboardPanelCompatibility` rejects unknown groups and panels used outside their compatible dashboard types
+5. all persisted dashboards use the same catalog, renderer, grid, add panel drawer, settings save path, and compatibility checks
 6. do not add a mixed dashboard escape hatch in V1
+
+Database ownership rules:
+
+1. all dashboard definitions, including `overview` and `statistics`, are loaded from VenoAPI/database records at runtime
+2. do not add local dashboard JSON definitions or registry fallbacks
+3. if a dashboard resource cannot be loaded, treat it as a data or environment problem
+4. compatibility routes such as `/dashboards/overview` may remain, but they must load database dashboard records by uid
+5. test fixtures may define local dashboard objects, but app code must not use them as runtime defaults
+
+Shared panel rules:
+
+1. panels may support both `live` and `timeRange` only when rendering and data needs are dashboard type agnostic
+2. the first shared panel is the text panel, group `veno.text`
+3. shared panels still render through the dashboard specific registry for each dashboard type
+4. shared panels must not introduce cross type data dependencies
 
 ## Golden Path For A New Panel
 
 Follow this order.
 
-1. Decide whether the panel is `live` or `timeRange`.
+1. Decide whether the panel is `live`, `timeRange`, or truly compatible with both dashboard types.
 2. Check if an existing panel or reusable chart component can be reused.
 3. Create the rendering composition under `ui/compositions/<PanelName>/` when the panel has its own reusable surface.
 4. Keep large data shaping helpers beside the composition.
-5. Add or update the built in dashboard JSON only if the panel should ship on a built in dashboard.
+5. Add or update database seed or migration data only if the panel should ship on an existing dashboard.
 6. Add the panel element under `spec.elements`.
 7. Add the layout item under `spec.layout.spec.items`.
-8. Add a `DASHBOARD_PANEL_CATALOG` entry with `id`, `elementName`, `title`, `group`, `compatibleDashboardType`, `allowMultiple`, `defaultLayout`, and `defaultDefinition`.
+8. Add a `DASHBOARD_PANEL_CATALOG` entry with `id`, `elementName`, `title`, `group`, `compatibleDashboardTypes`, `allowMultiple`, `defaultLayout`, and `defaultDefinition`.
 9. Register the group in the correct panel registry.
-10. Render through `DashboardDefinitionRenderer`.
-11. Add focused tests for schema, catalog, registry, rendering, and settings behavior as applicable.
+10. If the panel has settings, add one group keyed settings registration for its `vizConfig.group`.
+11. Render through `DashboardDefinitionRenderer`.
+12. Add focused tests for schema, catalog, registry, rendering, and settings behavior as applicable.
 
 Do not hardcode dashboard grid JSX in page components.
 
@@ -122,7 +141,7 @@ Catalog layout rules:
 3. when adding a panel to the catalog, include `defaultLayout.aspectRatio` when the panel has a preferred visual shape
 4. `DashboardGrid` uses `defaultLayout.aspectRatio` to calculate a sensible starting height when a user adds a panel
 5. keep `defaultLayout.height` as a fallback for old callers, invalid aspect ratios, and non measured grid states
-6. choose aspect ratios based on the rendered panel content, not on the current built in dashboard placement alone
+6. choose aspect ratios based on the rendered panel content, not on one existing dashboard placement alone
 
 ## Settings Path
 
@@ -142,6 +161,9 @@ Rules:
 10. settings that change the desired panel shape should call the shared layout helper from the settings registration, not mutate dashboard JSON directly
 11. prefer `resizeLayoutToAspectRatio` for shape changes instead of swapping grid `width` and `height`
 12. use explicit min and max width and height bounds when a setting can resize a panel
+13. persisted settings values are keyed by the runtime element id, such as `panel-text-2`
+14. settings editor registrations are keyed by stable panel group, such as `veno.text`, so multiple instances of the same panel kind share the same editor contract
+15. do not add per element registration factories for addable panel kinds
 
 Known settings:
 
@@ -149,6 +171,26 @@ Known settings:
 2. `panel-glucose-timeline` stores `colorMode` and `yAxisMax`
 3. AGP currently reuses the glucose timeline `yAxisMax` setting
 4. `panel-current-glucose` stores `contentAlignment`, `colorMode`, unit, and information label visibility
+5. text panels store rich text content under `content`
+
+Settings registry rules:
+
+1. `DashboardPanelSettingsRegistry` keys are `panel.spec.vizConfig.group` values
+2. `DashboardGrid` resolves the settings editor from the panel group and saves values under the concrete element id
+3. one settings registration should support every instance of that panel group
+4. use panel id only when reading or writing current values through `useDashboardPanelSettings(panelId, defaultSettings)`
+5. adding another instance of a panel must not require adding another settings registry key
+
+Text panel rules:
+
+1. text panels use group `veno.text`
+2. text panels are compatible with both `live` and `timeRange` dashboards
+3. text panels may appear multiple times on the same dashboard
+4. text panel settings store a structured rich text document in `vizConfig.spec.options.content`
+5. the reusable editor lives in `ui/components/RichTextEditor`
+6. the initial editor supports normal text, heading one, and heading two blocks
+7. do not store editor content as HTML
+8. render saved text through the reusable rich text renderer, not through `dangerouslySetInnerHTML`
 
 ## URL And Interaction Rules
 
@@ -262,6 +304,8 @@ Test these cases when relevant:
 10. catalog aspect ratios produce sensible added panel dimensions
 11. setting driven aspect ratio updates save through the same dashboard layout save path
 12. aspect ratio resizing does not run on narrow non draggable layouts
+13. multi instance panels create unique element keys such as `panel-text`, `panel-text-2`, and `panel-text-3`
+14. multiple instances of one panel group can edit and save settings independently
 
 ## Red Flags
 
@@ -276,6 +320,8 @@ Stop and rethink if the change does any of these:
 7. adds native styled selects for dashboard controls
 8. adds feature specific toast containers
 9. renames stable panel ids or groups without a migration
-10. lets live and time range panels mix without catalog validation
+10. lets panels render on live and time range dashboards without declaring both types in catalog validation
 11. swaps grid width and height as if they were the same unit
 12. changes panel layout from settings without using the shared grid layout path
+13. stores rich text panel content as raw HTML
+14. keys settings editor registrations by element id instead of panel group
