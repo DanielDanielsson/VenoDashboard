@@ -254,15 +254,11 @@ describe('dashboard resource loading', () => {
     );
   });
 
-  test('falls back to local dashboard JSON when the public dashboard resource cannot be reached', async () => {
+  test('rejects when the public dashboard resource cannot be reached', async () => {
     mocks.fetchDashboardResource.mockRejectedValue(new Error('fetch failed'));
 
     const { loadDashboardResource } = await import('@/lib/dashboard/resources');
-    const result = await loadDashboardResource('overview');
 
-    expect(result.dashboard.spec.title).toBe('Overview');
-    expect(result.type).toBe('live');
-    expect(result.version).toBeNull();
-    expect(result.source).toBe('fallback');
+    await expect(loadDashboardResource('overview')).rejects.toThrow('fetch failed');
   });
 });

@@ -74,4 +74,18 @@ describe('dashboard library loading', () => {
       { uid: 'overview', isHome: false, isPinned: false },
     ]);
   });
+
+  test('rejects when the dashboard list cannot be loaded', async () => {
+    mocks.fetchDashboardList.mockRejectedValue(new Error('fetch failed'));
+    mocks.fetchDashboardPreferences.mockResolvedValue({
+      preferences: {
+        homeDashboardUid: 'statistics',
+        pinnedDashboardUids: [],
+      },
+    });
+
+    const { loadDashboardLibrary } = await import('@/lib/dashboard/library');
+
+    await expect(loadDashboardLibrary()).rejects.toThrow('fetch failed');
+  });
 });

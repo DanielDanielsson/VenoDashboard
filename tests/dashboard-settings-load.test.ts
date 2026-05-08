@@ -98,25 +98,21 @@ describe('dashboard settings loading', () => {
     });
   });
 
-  test('falls back to built in dashboard JSON when persisted settings are missing', async () => {
+  test('rejects when persisted dashboard settings are missing', async () => {
     mocks.fetchDashboardSettings.mockRejectedValue(
       new mocks.PulseApiClientError(404, 'Dashboard settings were not found.'),
     );
 
     const { loadDashboardDefinition } = await import('@/lib/dashboard/settings');
-    const result = await loadDashboardDefinition('statistics');
 
-    expect(result.dashboard.spec.title).toBe('Statistics');
-    expect(result.version).toBeNull();
+    await expect(loadDashboardDefinition('statistics')).rejects.toThrow('Dashboard settings were not found.');
   });
 
-  test('falls back to built in dashboard JSON when persisted settings cannot be reached', async () => {
+  test('rejects when persisted dashboard settings cannot be reached', async () => {
     mocks.fetchDashboardSettings.mockRejectedValue(new Error('fetch failed'));
 
     const { loadDashboardDefinition } = await import('@/lib/dashboard/settings');
-    const result = await loadDashboardDefinition('statistics');
 
-    expect(result.dashboard.spec.title).toBe('Statistics');
-    expect(result.version).toBeNull();
+    await expect(loadDashboardDefinition('statistics')).rejects.toThrow('fetch failed');
   });
 });

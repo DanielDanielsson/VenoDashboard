@@ -3,7 +3,7 @@ import { render as rtlRender, screen } from '@testing-library/react';
 import { describe, expect, test, vi } from 'vitest';
 import { createPanelRegistry } from '@/lib/dashboard/panel-registry';
 import { NotificationsProvider } from '@ui/compositions/NotificationsProvider';
-import { getDashboardDefinition } from '@/lib/dashboard/registry';
+import { parseDashboardDefinition } from '@/lib/dashboard/schema';
 import { DashboardDefinitionRenderer } from './DashboardDefinitionRenderer';
 
 vi.mock('next/navigation', () => ({
@@ -14,6 +14,66 @@ vi.mock('next/navigation', () => ({
 
 function render(ui: React.ReactElement) {
   return rtlRender(<NotificationsProvider>{ui}</NotificationsProvider>);
+}
+
+function createOverviewDashboardDefinition() {
+  return parseDashboardDefinition({
+    kind: 'Dashboard',
+    spec: {
+      uid: 'overview',
+      title: 'Overview',
+      timeSettings: {
+        autoRefresh: '',
+        autoRefreshIntervals: ['5s'],
+      },
+      elements: {
+        'panel-current-glucose': panel(1, 'Current Glucose', 'veno.live-glucose'),
+        'panel-timers': panel(2, 'Timers', 'veno.shared-timers'),
+        'panel-connections': panel(3, 'Connections', 'veno.connections-map'),
+      },
+      layout: {
+        kind: 'GridLayout',
+        spec: {
+          items: [
+            layoutItem('panel-current-glucose', 0),
+            layoutItem('panel-timers', 1),
+            layoutItem('panel-connections', 2),
+          ],
+        },
+      },
+    },
+  });
+}
+
+function panel(id: number, title: string, group: string) {
+  return {
+    kind: 'Panel',
+    spec: {
+      id,
+      title,
+      vizConfig: {
+        kind: 'VizConfig',
+        group,
+        version: 'v1',
+      },
+    },
+  };
+}
+
+function layoutItem(name: string, y: number) {
+  return {
+    kind: 'GridLayoutItem',
+    spec: {
+      x: 0,
+      y,
+      width: 4,
+      height: 6,
+      element: {
+        kind: 'ElementReference',
+        name,
+      },
+    },
+  };
 }
 
 describe('DashboardDefinitionRenderer', () => {
@@ -35,7 +95,7 @@ describe('DashboardDefinitionRenderer', () => {
 
     render(
       <DashboardDefinitionRenderer
-        dashboard={getDashboardDefinition('overview')}
+        dashboard={createOverviewDashboardDefinition()}
         panelRegistry={registry}
         context={{ prefix: 'Overview' }}
       />,

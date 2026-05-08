@@ -36,16 +36,11 @@ describe('dashboard preferences loading', () => {
     });
   });
 
-  test('falls back to overview as home when the preference API cannot be reached', async () => {
+  test('rejects when the preference API cannot be reached', async () => {
     mocks.fetchDashboardPreferences.mockRejectedValue(new Error('fetch failed'));
 
     const { loadDashboardPreferences } = await import('@/lib/dashboard/preferences');
-    const preferences = await loadDashboardPreferences();
 
-    expect(preferences).toEqual({
-      homeDashboardUid: 'overview',
-      pinnedDashboardUids: [],
-      source: 'fallback',
-    });
+    await expect(loadDashboardPreferences()).rejects.toThrow('fetch failed');
   });
 });

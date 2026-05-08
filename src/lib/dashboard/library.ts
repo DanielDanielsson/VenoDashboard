@@ -16,23 +16,6 @@ export interface DashboardLibrary {
   dashboards: DashboardLibraryItem[];
 }
 
-const FALLBACK_DASHBOARDS: Array<Omit<DashboardLibraryItem, 'isHome' | 'isPinned'>> = [
-  {
-    uid: 'overview',
-    title: 'Overview',
-    type: 'live',
-    version: null,
-    updatedAt: null,
-  },
-  {
-    uid: 'statistics',
-    title: 'Statistics',
-    type: 'timeRange',
-    version: null,
-    updatedAt: null,
-  },
-];
-
 function updatedAtMillis(value: string | null): number {
   if (!value) {
     return 0;
@@ -44,7 +27,7 @@ function updatedAtMillis(value: string | null): number {
 
 export async function loadDashboardLibrary(): Promise<DashboardLibrary> {
   const [dashboardResponse, preferences] = await Promise.all([
-    fetchDashboardList().catch(() => ({ dashboards: FALLBACK_DASHBOARDS })),
+    fetchDashboardList(),
     loadDashboardPreferences(),
   ]);
   const pinnedIndex = new Map(

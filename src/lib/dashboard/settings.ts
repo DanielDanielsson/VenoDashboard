@@ -1,6 +1,5 @@
 import type { DashboardTimeSettingsKind, GridLayoutItemKind, PanelKind } from './schema';
-import { PulseApiClientError, fetchDashboardSettings } from '@/lib/pulse-api/client';
-import { getDashboardDefinition, type BuiltInDashboardUid } from './registry';
+import { fetchDashboardSettings } from '@/lib/pulse-api/client';
 import { parseDashboardDefinition, type DashboardDefinition } from './schema';
 
 export const DASHBOARD_SETTINGS_SCHEMA_VERSION = 'veno.dashboard-settings.v2';
@@ -40,24 +39,13 @@ export interface LoadedDashboardDefinition {
   version: number | null;
 }
 
-export async function loadDashboardDefinition(dashboardUid: BuiltInDashboardUid): Promise<LoadedDashboardDefinition> {
-  try {
-    const response = await fetchDashboardSettings(dashboardUid);
+export async function loadDashboardDefinition(dashboardUid: string): Promise<LoadedDashboardDefinition> {
+  const response = await fetchDashboardSettings(dashboardUid);
 
-    return {
-      dashboard: parseDashboardDefinition(response.dashboardSettings.dashboard),
-      version: response.dashboardSettings.version,
-    };
-  } catch (error) {
-    if (!(error instanceof PulseApiClientError) || error.status === 404) {
-      return {
-        dashboard: getDashboardDefinition(dashboardUid),
-        version: null,
-      };
-    }
-
-    throw error;
-  }
+  return {
+    dashboard: parseDashboardDefinition(response.dashboardSettings.dashboard),
+    version: response.dashboardSettings.version,
+  };
 }
 
 export function extractDashboardPanelSettings(dashboard: DashboardDefinition): DashboardPanelSettingsMap {
@@ -95,7 +83,11 @@ export function buildDashboardSettingsDocument(
     timeSettings?: DashboardTimeSettingsKind;
   } = {},
 ): PersistedDashboardDefinition {
-  const baseDashboard = input.dashboard ?? getDashboardDefinition(dashboardUid as BuiltInDashboardUid);
+  if (!input.dashboard) {
+    throw new Error('Dashboard settings cannot be built without an existing dashboard definition.');
+  }
+
+  const baseDashboard = input.dashboard;
   const dashboard = structuredClone(baseDashboard) as PersistedDashboardDefinition;
   dashboard.schemaVersion = DASHBOARD_SETTINGS_SCHEMA_VERSION;
 

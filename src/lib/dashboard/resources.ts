@@ -1,22 +1,12 @@
 import { fetchDashboardResource, fetchDashboardSettings, PulseApiClientError } from '@/lib/pulse-api/client';
 import { validateDashboardPanelCompatibility } from './panel-catalog';
-import { getDashboardDefinition, type BuiltInDashboardUid } from './registry';
 import { parseDashboardDefinition, type DashboardDefinition, type DashboardType } from './schema';
 
 export interface LoadedDashboardResource {
   dashboard: DashboardDefinition;
   type: DashboardType;
   version: number | null;
-  source: 'api' | 'fallback';
-}
-
-const FALLBACK_DASHBOARD_TYPES: Record<BuiltInDashboardUid, DashboardType> = {
-  overview: 'live',
-  statistics: 'timeRange',
-};
-
-function isBuiltInDashboardUid(dashboardUid: string): dashboardUid is BuiltInDashboardUid {
-  return dashboardUid === 'overview' || dashboardUid === 'statistics';
+  source: 'api';
 }
 
 async function loadPersistedDashboardSettings(dashboardUid: string): Promise<DashboardDefinition | null> {
@@ -42,34 +32,16 @@ async function loadPersistedDashboardSettings(dashboardUid: string): Promise<Das
 }
 
 export async function loadDashboardResource(dashboardUid: string): Promise<LoadedDashboardResource> {
-  try {
-    const response = await fetchDashboardResource(dashboardUid);
-    const dashboard = await loadPersistedDashboardSettings(dashboardUid)
-      ?? parseDashboardDefinition(response.dashboard.dashboard);
+  const response = await fetchDashboardResource(dashboardUid);
+  const dashboard = await loadPersistedDashboardSettings(dashboardUid)
+    ?? parseDashboardDefinition(response.dashboard.dashboard);
 
-    validateDashboardPanelCompatibility(dashboard, response.dashboard.type);
+  validateDashboardPanelCompatibility(dashboard, response.dashboard.type);
 
-    return {
-      dashboard,
-      type: response.dashboard.type,
-      version: response.dashboard.version,
-      source: 'api',
-    };
-  } catch (error) {
-    if (!isBuiltInDashboardUid(dashboardUid)) {
-      throw error;
-    }
-
-    const dashboard = getDashboardDefinition(dashboardUid);
-    const type = FALLBACK_DASHBOARD_TYPES[dashboardUid];
-
-    validateDashboardPanelCompatibility(dashboard, type);
-
-    return {
-      dashboard,
-      type,
-      version: null,
-      source: 'fallback',
-    };
-  }
+  return {
+    dashboard,
+    type: response.dashboard.type,
+    version: response.dashboard.version,
+    source: 'api',
+  };
 }
