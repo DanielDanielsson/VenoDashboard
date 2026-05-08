@@ -7,11 +7,15 @@ import type { DashboardSettingsResponse } from '@/lib/dashboard/settings';
 import type { DashboardTimeSettingsKind, DashboardType, GridLayoutKind, PanelKind } from '@/lib/dashboard/schema';
 import { getPanelCatalogEntriesForDashboardType } from '@/lib/dashboard/panel-catalog';
 import { toDashboardGridLayoutItems } from '@/lib/dashboard/grid-layout';
-import { DashboardGrid, type DashboardPanelSettingsRegistry } from '@ui/compositions/DashboardGrid';
+import {
+  DashboardGrid,
+  type DashboardPanelSettingsRegistry,
+} from '@ui/compositions/DashboardGrid';
 import {
   createTimeInRangePanelSettingsRegistration,
   type TimeInRangePanelLayout,
 } from '@ui/compositions/TimeInRangePanel';
+import { createTextPanelSettingsRegistration } from '@ui/compositions/TextPanel';
 import { useDashboardNotifications } from './useDashboardNotifications';
 
 interface DashboardGridRuntimeProps {
@@ -93,10 +97,12 @@ export function DashboardGridRuntime({
     const registry: DashboardPanelSettingsRegistry = { ...providedSettingsRegistry };
 
     if (!timeInRangeDefaultLayout) {
+      registry['veno.text'] = registry['veno.text'] ?? createTextPanelSettingsRegistration();
       return registry;
     }
 
-    registry['panel-time-in-range'] = createTimeInRangePanelSettingsRegistration(timeInRangeDefaultLayout);
+    registry['veno.time-in-range'] = createTimeInRangePanelSettingsRegistration(timeInRangeDefaultLayout);
+    registry['veno.text'] = registry['veno.text'] ?? createTextPanelSettingsRegistration();
     return registry;
   }, [providedSettingsRegistry, timeInRangeDefaultLayout]);
 

@@ -23,7 +23,8 @@ export interface DashboardPanelSettingsRegistration<TSettings = unknown> {
   }) => ReactNode;
 }
 
-export type DashboardPanelSettingsRegistry = Record<string, DashboardPanelSettingsRegistration>;
+export type DashboardPanelSettingsGroup = string;
+export type DashboardPanelSettingsRegistry = Record<DashboardPanelSettingsGroup, DashboardPanelSettingsRegistration>;
 
 export interface DashboardPanelLayoutState {
   x: number;
@@ -339,13 +340,33 @@ function serializeElements(elements: Record<string, PanelKind>): string {
   return JSON.stringify(sortSerializable(elements));
 }
 
+function getPanelSettingsRegistration(
+  settingsRegistry: DashboardPanelSettingsRegistry,
+  panel: PanelKind,
+): DashboardPanelSettingsRegistration | undefined {
+  return settingsRegistry[panel.spec.vizConfig.group];
+}
+
+function getPanelSettingsEntries(
+  settingsRegistry: DashboardPanelSettingsRegistry,
+  elements: Record<string, PanelKind>,
+): Array<[string, DashboardPanelSettingsRegistration]> {
+  return Object.entries(elements)
+    .map(([panelId, panel]) => {
+      const registration = getPanelSettingsRegistration(settingsRegistry, panel);
+      return registration ? [panelId, registration] as const : null;
+    })
+    .filter((entry): entry is [string, DashboardPanelSettingsRegistration] => Boolean(entry));
+}
+
 function buildEffectivePanelSettings(
   settingsRegistry: DashboardPanelSettingsRegistry,
+  elements: Record<string, PanelKind>,
   persistedPanelSettings: Record<string, unknown>,
   runtimePanelSettings: Record<string, unknown>,
 ): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(settingsRegistry).map(([panelId, registration]) => [
+    getPanelSettingsEntries(settingsRegistry, elements).map(([panelId, registration]) => [
       panelId,
       mergeDefaultSettings(
         registration.defaultSettings,
@@ -353,6 +374,33 @@ function buildEffectivePanelSettings(
       ),
     ]),
   );
+}
+
+function getNextAddedPanelId(
+  entry: DashboardPanelCatalogEntry,
+  elements: Record<string, PanelKind>,
+): string {
+  if (!entry.allowMultiple || !elements[entry.elementName]) {
+    return entry.elementName;
+  }
+
+  let nextIndex = 2;
+  let nextPanelId = `${entry.elementName}-${nextIndex}`;
+
+  while (elements[nextPanelId]) {
+    nextIndex += 1;
+    nextPanelId = `${entry.elementName}-${nextIndex}`;
+  }
+
+  return nextPanelId;
+}
+
+function getNextAddedPanelNumericId(elements: Record<string, PanelKind>): number {
+  const existingIds = Object.values(elements)
+    .map((element) => element.spec.id)
+    .filter((id) => Number.isFinite(id));
+
+  return existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
 }
 
 export function DashboardGrid({
@@ -423,7 +471,7 @@ export function DashboardGrid({
     );
 
     return panelCatalogEntries.filter((entry) => (
-      entry.compatibleDashboardType === dashboardType &&
+      entry.compatibleDashboardTypes.includes(dashboardType) &&
       (entry.allowMultiple || !currentGroups.has(entry.group))
     ));
   }, [dashboardType, isOwner, panelCatalogEntries, runtimeElements]);
@@ -526,11 +574,11 @@ export function DashboardGrid({
   );
 
   const effectivePanelSettings = useMemo(
-    () => buildEffectivePanelSettings(settingsRegistry, persistedPanelSettings, runtimePanelSettings),
-    [persistedPanelSettings, runtimePanelSettings, settingsRegistry],
+    () => buildEffectivePanelSettings(settingsRegistry, runtimeElements, persistedPanelSettings, runtimePanelSettings),
+    [persistedPanelSettings, runtimeElements, runtimePanelSettings, settingsRegistry],
   );
   const hasUnsavedSettings = useMemo(
-    () => Object.entries(settingsRegistry).some(([panelId, registration]) => {
+    () => getPanelSettingsEntries(settingsRegistry, runtimeElements).some(([panelId, registration]) => {
       const currentSettings = effectivePanelSettings[panelId];
       const persistedSettings = mergeDefaultSettings(
         registration.defaultSettings,
@@ -539,7 +587,7 @@ export function DashboardGrid({
 
       return serializeSettings(currentSettings) !== serializeSettings(persistedSettings);
     }),
-    [effectivePanelSettings, persistedPanelSettings, settingsRegistry],
+    [effectivePanelSettings, persistedPanelSettings, runtimeElements, settingsRegistry],
   );
   const hasUnsavedLayout = useMemo(
     () => serializeLayout(runtimeLayout) !== serializeLayout(persistedLayout),
@@ -588,7 +636,7 @@ export function DashboardGrid({
         layout: nextPersistedLayout,
       };
 
-      if (Object.keys(nextPersistedElements).length > 0) {
+      if (hasUnsavedElements) {
         saveInput.elements = nextPersistedElements;
       }
 
@@ -680,7 +728,7 @@ export function DashboardGrid({
   }, [isDraggable, updatePanelLayout, width]);
 
   function handleAddPanel(entry: DashboardPanelCatalogEntry) {
-    const nextPanelId = entry.elementName;
+    const nextPanelId = getNextAddedPanelId(entry, runtimeElements);
     const nextY = runtimeLayout.reduce(
       (maxY, item) => Math.max(maxY, item.y + item.h),
       0,
@@ -693,9 +741,12 @@ export function DashboardGrid({
       entry.defaultLayout.height,
     );
 
+    const nextPanel = structuredClone(entry.defaultDefinition);
+    nextPanel.spec.id = getNextAddedPanelNumericId(runtimeElements);
+
     setRuntimeElements((current) => ({
       ...current,
-      [nextPanelId]: structuredClone(entry.defaultDefinition),
+      [nextPanelId]: nextPanel,
     }));
     setRuntimeLayout((current) => [
       ...current,
@@ -801,7 +852,10 @@ export function DashboardGrid({
     window.location.assign(nextAction.href);
   }
 
-  const editedPanelRegistration = editedPanel ? settingsRegistry[editedPanel.panelId] : undefined;
+  const editedPanelKind = editedPanel ? runtimeElements[editedPanel.panelId] : undefined;
+  const editedPanelRegistration = editedPanelKind
+    ? getPanelSettingsRegistration(settingsRegistry, editedPanelKind)
+    : undefined;
   const editedPanelSettings = editedPanel && editedPanelRegistration
     ? settingsContextValue.getSettings(editedPanel.panelId, editedPanelRegistration.defaultSettings)
     : undefined;

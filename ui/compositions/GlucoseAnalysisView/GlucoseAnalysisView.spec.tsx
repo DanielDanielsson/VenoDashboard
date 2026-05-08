@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { formatWorkoutTimeRange } from '@/lib/glucose/workout-display';
-import { getDashboardDefinition } from '@/lib/dashboard/registry';
+import { parseDashboardDefinition, type DashboardDefinition } from '@/lib/dashboard/schema';
 import { NotificationsProvider } from '@ui/compositions/NotificationsProvider';
-import { GlucoseAnalysisView } from './GlucoseAnalysisView';
+import { GlucoseAnalysisView as BaseGlucoseAnalysisView } from './GlucoseAnalysisView';
 
 const historyMutateMock = vi.fn();
 const useSWRMock = vi.fn();
@@ -17,6 +17,91 @@ const routerMock = { replace: replaceMock };
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(<NotificationsProvider>{ui}</NotificationsProvider>);
+}
+
+function createStatisticsDashboardDefinition(): DashboardDefinition {
+  return parseDashboardDefinition({
+    kind: 'Dashboard',
+    spec: {
+      uid: 'statistics',
+      title: 'Statistics',
+      timeSettings: {
+        autoRefresh: '',
+        autoRefreshIntervals: ['5s', '10s', '30s', '1m', '5m', '15m', '30m', '1h'],
+      },
+      elements: {
+        'panel-average-glucose': createPanel(101, 'Average Glucose', 'veno.average-glucose'),
+        'panel-time-in-range': createPanel(103, 'Time in Range', 'veno.time-in-range', { layout: 'statistics' }),
+        'panel-workout-types': createPanel(106, 'Workout Types', 'veno.workout-types'),
+        'panel-glucose-timeline': createPanel(104, 'Glucose Timeline', 'veno.glucose-timeline'),
+        'panel-agp': createPanel(105, 'Ambulatory Glucose Profile', 'veno.glucose-agp'),
+      },
+      layout: {
+        kind: 'GridLayout',
+        spec: {
+          items: [
+            gridItem('panel-average-glucose', { x: 0, y: 0, width: 4, height: 6 }),
+            gridItem('panel-time-in-range', { x: 4, y: 0, width: 4, height: 6 }),
+            gridItem('panel-workout-types', { x: 8, y: 0, width: 4, height: 6 }),
+            gridItem('panel-glucose-timeline', { x: 0, y: 6, width: 12, height: 24 }),
+            gridItem('panel-agp', { x: 0, y: 30, width: 12, height: 14 }),
+          ],
+        },
+      },
+    },
+  });
+}
+
+function createPanel(id: number, title: string, group: string, options: Record<string, unknown> = {}) {
+  return {
+    kind: 'Panel',
+    spec: {
+      id,
+      title,
+      vizConfig: {
+        kind: 'VizConfig',
+        group,
+        version: 'v1',
+        spec: {
+          options,
+          fieldConfig: {
+            defaults: {},
+            overrides: [],
+          },
+        },
+      },
+    },
+  };
+}
+
+function gridItem(
+  name: string,
+  spec: { x: number; y: number; width: number; height: number },
+) {
+  return {
+    kind: 'GridLayoutItem',
+    spec: {
+      ...spec,
+      element: {
+        kind: 'ElementReference',
+        name,
+      },
+    },
+  };
+}
+
+function GlucoseAnalysisView({
+  dashboardDefinition,
+  ...props
+}: Omit<ComponentProps<typeof BaseGlucoseAnalysisView>, 'dashboardDefinition'> & {
+  dashboardDefinition?: DashboardDefinition;
+}) {
+  return (
+    <BaseGlucoseAnalysisView
+      {...props}
+      dashboardDefinition={dashboardDefinition ?? createStatisticsDashboardDefinition()}
+    />
+  );
 }
 
 vi.mock('next/navigation', () => ({
@@ -544,7 +629,7 @@ describe('GlucoseAnalysisView', () => {
   });
 
   test('uses saved dashboard auto refresh settings to refresh history', async () => {
-    const dashboardDefinition = structuredClone(getDashboardDefinition('statistics'));
+    const dashboardDefinition = structuredClone(createStatisticsDashboardDefinition());
     dashboardDefinition.spec.timeSettings.autoRefresh = '5s';
     vi.useFakeTimers();
 
@@ -696,7 +781,7 @@ describe('GlucoseAnalysisView', () => {
   });
 
   test('applies persisted glucose timeline settings from the dashboard definition', () => {
-    const dashboardDefinition = structuredClone(getDashboardDefinition('statistics'));
+    const dashboardDefinition = structuredClone(createStatisticsDashboardDefinition());
     dashboardDefinition.spec.elements['panel-glucose-timeline'].spec.vizConfig.spec.options = {
       colorMode: 'gradient',
       yAxisMax: 18,
@@ -737,7 +822,7 @@ describe('GlucoseAnalysisView', () => {
   });
 
   test('renders a second time range dashboard definition with compatible catalog panels', () => {
-    const dashboardDefinition = structuredClone(getDashboardDefinition('statistics'));
+    const dashboardDefinition = structuredClone(createStatisticsDashboardDefinition());
     dashboardDefinition.spec.uid = 'training-review';
     dashboardDefinition.spec.title = 'Training review';
     dashboardDefinition.spec.elements = {

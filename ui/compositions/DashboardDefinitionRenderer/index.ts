@@ -1,3 +1,3 @@
 export { DashboardDefinitionRenderer } from './DashboardDefinitionRenderer';
-export { overviewPanelRegistry } from './overviewPanelRegistry';
-export type { OverviewDashboardContext } from './overviewPanelRegistry';
+export { liveDashboardRegistry } from './LiveDashboardRegistry';
+export type { LiveDashboardContext } from './LiveDashboardRegistry';

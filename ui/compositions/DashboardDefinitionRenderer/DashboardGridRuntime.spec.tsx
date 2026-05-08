@@ -164,10 +164,13 @@ describe('DashboardGridRuntime', () => {
           initialPanelSettings={{
             'panel-current-glucose': { colorMode: 'standard' },
           }}
+          initialElements={{
+            'panel-current-glucose': createPanel('veno.live-glucose', 'Current Glucose'),
+          }}
           layout={createLayout()}
           isOwner
           settingsRegistry={{
-            'panel-current-glucose': {
+            'veno.live-glucose': {
               defaultSettings: { colorMode: 'standard' },
               render: ({ updateSettings }) => (
                 <button
@@ -710,10 +713,13 @@ describe('DashboardGridRuntime', () => {
           initialPanelSettings={{
             'panel-current-glucose': { colorMode: 'standard' },
           }}
+          initialElements={{
+            'panel-current-glucose': createPanel('veno.live-glucose', 'Current Glucose'),
+          }}
           layout={createLayout()}
           isOwner={false}
           settingsRegistry={{
-            'panel-current-glucose': {
+            'veno.live-glucose': {
               defaultSettings: { colorMode: 'standard' },
               render: ({ updateSettings }) => (
                 <button

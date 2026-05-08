@@ -12,6 +12,7 @@ describe('dashboard panel catalog', () => {
       'veno.live-glucose',
       'veno.connections-map',
       'veno.shared-timers',
+      'veno.text',
     ]);
     expect(getPanelCatalogEntriesForDashboardType('timeRange').map((entry) => entry.group)).toEqual([
       'veno.average-glucose',
@@ -19,15 +20,19 @@ describe('dashboard panel catalog', () => {
       'veno.workout-types',
       'veno.glucose-timeline',
       'veno.glucose-agp',
+      'veno.text',
     ]);
   });
 
-  test('current catalog entries allow one compatible dashboard type and no multiple instances', () => {
+  test('catalog entries declare compatible dashboard types and multiple instance support', () => {
     const timeInRange = getPanelCatalogEntry('veno.time-in-range');
+    const text = getPanelCatalogEntry('veno.text');
 
-    expect(timeInRange?.compatibleDashboardType).toBe('timeRange');
+    expect(timeInRange?.compatibleDashboardTypes).toEqual(['timeRange']);
     expect(timeInRange?.allowMultiple).toBe(false);
     expect(timeInRange?.defaultDefinition.spec.vizConfig.group).toBe('veno.time-in-range');
+    expect(text?.compatibleDashboardTypes).toEqual(['live', 'timeRange']);
+    expect(text?.allowMultiple).toBe(true);
   });
 
   test('rejects a dashboard definition with incompatible panel groups', () => {

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { DashboardTitleEditor } from '@ui/compositions/DashboardTitleEditor/DashboardTitleEditor';
 import { GlucoseAnalysisView } from '@ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView';
-import type { OverviewDashboardContext } from '@ui/compositions/DashboardDefinitionRenderer';
+import type { LiveDashboardContext } from '@ui/compositions/DashboardDefinitionRenderer';
 import { OverviewDashboardView } from '@ui/compositions/OverviewDashboardView/OverviewDashboardView';
 import { getOwnerSession } from '@/lib/auth';
 import {
@@ -34,7 +34,7 @@ interface DashboardPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
-async function loadLiveDashboardContext(isOwner: boolean): Promise<OverviewDashboardContext> {
+async function loadLiveDashboardContext(isOwner: boolean): Promise<LiveDashboardContext> {
   const now = new Date();
   const healthStepsFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const healthStepsTo = now.toISOString();
@@ -89,7 +89,7 @@ export default async function DashboardPage({ params, searchParams }: DashboardP
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const initialUrlState = parseStatisticsDashboardUrlState(resolvedSearchParams);
   let initialSnapshot;
-  let liveDashboardContext: OverviewDashboardContext | null = null;
+  let liveDashboardContext: LiveDashboardContext | null = null;
 
   if (dashboardState.type === 'timeRange') {
     try {

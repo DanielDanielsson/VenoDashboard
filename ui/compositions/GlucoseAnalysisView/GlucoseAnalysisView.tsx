@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactElement, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactElement } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import useSWR, { useSWRConfig } from 'swr';
 import { GlucoseChart } from '@ui/components/GlucoseChart/GlucoseChart';
@@ -20,8 +20,6 @@ import {
 import { DashboardDefinitionRenderer } from '@ui/compositions/DashboardDefinitionRenderer';
 import { NumberInput } from '@ui/components/NumberInput';
 import { SegmentedControl } from '@ui/components/SegmentedControl';
-import { createPanelRegistry } from '@/lib/dashboard/panel-registry';
-import { getDashboardDefinition } from '@/lib/dashboard/registry';
 import type { DashboardDefinition } from '@/lib/dashboard/schema';
 import {
   getDefaultStatisticsSelection,
@@ -82,6 +80,7 @@ import type {
 } from '@/lib/glucose/types';
 import type { ConsumerProfileResponse } from '@/lib/pulse-api/types';
 import { useDashboardNotifications } from '@ui/compositions/DashboardDefinitionRenderer/useDashboardNotifications';
+import { timeRangeDashboardRegistry } from './TimeRangeDashboardRegistry';
 
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
@@ -103,41 +102,10 @@ type GlucoseTimelinePanelSettings = {
   yAxisMax: number;
 };
 
-interface StatisticsDashboardContext {
-  renderAverageGlucosePanel: () => ReactNode;
-  renderTimeInRangePanel: () => ReactNode;
-  renderWorkoutTypesPanel: () => ReactNode;
-  renderGlucoseTimelinePanel: () => ReactNode;
-  renderAgpPanel: () => ReactNode;
-}
-
 const DEFAULT_GLUCOSE_TIMELINE_PANEL_SETTINGS: GlucoseTimelinePanelSettings = {
   colorMode: DEFAULT_GLUCOSE_CHART_COLOR_MODE,
   yAxisMax: 25,
 };
-
-const statisticsPanelRegistry = createPanelRegistry<StatisticsDashboardContext>([
-  {
-    group: 'veno.average-glucose',
-    render: ({ context }) => context.renderAverageGlucosePanel(),
-  },
-  {
-    group: 'veno.time-in-range',
-    render: ({ context }) => context.renderTimeInRangePanel(),
-  },
-  {
-    group: 'veno.workout-types',
-    render: ({ context }) => context.renderWorkoutTypesPanel(),
-  },
-  {
-    group: 'veno.glucose-timeline',
-    render: ({ context }) => context.renderGlucoseTimelinePanel(),
-  },
-  {
-    group: 'veno.glucose-agp',
-    render: ({ context }) => context.renderAgpPanel(),
-  },
-]);
 
 function getUpdatesKey(revision: string): string {
   return `/api/dashboard/glucose/updates?since=${encodeURIComponent(revision)}`;
@@ -304,7 +272,7 @@ function getSelectionSignature(selection: HistorySelection): string {
 export function GlucoseAnalysisView({
   isOwner = false,
   initialSnapshot,
-  dashboardDefinition = getDashboardDefinition('statistics'),
+  dashboardDefinition,
   dashboardVersion = null,
   initialSelection,
   initialTimeZone,
@@ -312,7 +280,7 @@ export function GlucoseAnalysisView({
 }: {
   isOwner?: boolean;
   initialSnapshot?: GlucoseApiResponse;
-  dashboardDefinition?: DashboardDefinition;
+  dashboardDefinition: DashboardDefinition;
   dashboardVersion?: number | null;
   initialSelection?: HistorySelection;
   initialTimeZone?: string;
@@ -479,7 +447,7 @@ export function GlucoseAnalysisView({
 
   const settingsRegistry = useMemo<DashboardPanelSettingsRegistry>(
     () => ({
-      [GLUCOSE_TIMELINE_PANEL_ID]: {
+      'veno.glucose-timeline': {
         defaultSettings: DEFAULT_GLUCOSE_TIMELINE_PANEL_SETTINGS,
         render: ({ settings, updateSettings }) => (
           <GlucoseTimelineSettingsFields
@@ -488,7 +456,7 @@ export function GlucoseAnalysisView({
           />
         ),
       },
-      'panel-time-in-range': createTimeInRangePanelSettingsRegistration('statistics'),
+      'veno.time-in-range': createTimeInRangePanelSettingsRegistration('statistics'),
     }),
     [],
   );
@@ -1255,7 +1223,7 @@ export function GlucoseAnalysisView({
           dashboard={dashboardDefinition}
           dashboardType="timeRange"
           dashboardVersion={dashboardVersion}
-        panelRegistry={statisticsPanelRegistry}
+        panelRegistry={timeRangeDashboardRegistry}
         isOwner={isOwner}
         viewedPanelId={viewedPanelId}
         onViewedPanelChange={onViewedPanelChange}

@@ -513,8 +513,11 @@ describe('DashboardGrid', () => {
         initialPanelSettings={{
           'panel-current-glucose': { colorMode: 'standard' },
         }}
+        initialElements={{
+          'panel-current-glucose': createPanel('veno.live-glucose', 'Current Glucose'),
+        }}
         settingsRegistry={{
-          'panel-current-glucose': {
+          'veno.live-glucose': {
             defaultSettings: { colorMode: 'standard' },
             render: ({ updateSettings }) => (
               <button
@@ -585,8 +588,11 @@ describe('DashboardGrid', () => {
         initialPanelSettings={{
           'panel-current-glucose': { contentAlignment: 'vertical' },
         }}
+        initialElements={{
+          'panel-current-glucose': createPanel('veno.live-glucose', 'Current Glucose'),
+        }}
         settingsRegistry={{
-          'panel-current-glucose': {
+          'veno.live-glucose': {
             defaultSettings: { contentAlignment: 'vertical' },
             render: ({ updateSettings, resizeLayoutToAspectRatio }) => (
               <button
@@ -654,7 +660,7 @@ describe('DashboardGrid', () => {
       'panel-current-glucose': { unit: 'mmol/L' },
     };
     const settingsRegistry: DashboardPanelSettingsRegistry = {
-      'panel-current-glucose': {
+      'veno.live-glucose': {
         defaultSettings: { unit: 'mmol/L' },
         render: ({ updateSettings }) => (
           <button
@@ -677,6 +683,9 @@ describe('DashboardGrid', () => {
         layout={createLayout()}
         isOwner
         initialPanelSettings={initialPanelSettings}
+        initialElements={{
+          'panel-current-glucose': createPanel('veno.live-glucose', 'Current Glucose'),
+        }}
         settingsRegistry={settingsRegistry}
         onSaveDashboard={onSaveDashboard}
       >
@@ -714,6 +723,9 @@ describe('DashboardGrid', () => {
         initialPanelSettings={{
           'panel-current-glucose': { unit: 'mmol/L' },
         }}
+        initialElements={{
+          'panel-current-glucose': createPanel('veno.live-glucose', 'Current Glucose'),
+        }}
         settingsRegistry={settingsRegistry}
         onSaveDashboard={onSaveDashboard}
       >
@@ -738,8 +750,11 @@ describe('DashboardGrid', () => {
         initialPanelSettings={{
           'panel-current-glucose': { colorMode: 'standard' },
         }}
+        initialElements={{
+          'panel-current-glucose': createPanel('veno.live-glucose', 'Current Glucose'),
+        }}
         settingsRegistry={{
-          'panel-current-glucose': {
+          'veno.live-glucose': {
             defaultSettings: { colorMode: 'standard' },
             render: ({ updateSettings }) => (
               <button
@@ -1029,7 +1044,7 @@ describe('DashboardGrid', () => {
         elementName: 'panel-current-glucose',
         title: 'Current Glucose',
         group: 'veno.live-glucose',
-        compatibleDashboardType: 'live',
+        compatibleDashboardTypes: ['live'],
         allowMultiple: false,
         defaultLayout: { width: 4, height: 9, aspectRatio: 2 },
         defaultDefinition: createPanel('veno.live-glucose', 'Current Glucose'),
@@ -1058,6 +1073,122 @@ describe('DashboardGrid', () => {
     expect(gridLayoutMock.layout).toEqual([
       { i: 'panel-current-glucose', x: 0, y: 0, w: 4, h: 5 },
     ]);
+  });
+
+  test('creates unique element keys for addable panels that allow multiple instances', () => {
+    const panelCatalogEntries = [
+      {
+        id: 'text',
+        elementName: 'panel-text',
+        title: 'Text',
+        group: 'veno.text',
+        compatibleDashboardTypes: ['live'],
+        allowMultiple: true,
+        defaultLayout: { width: 4, height: 6, aspectRatio: 1.45 },
+        defaultDefinition: createPanel('veno.text', 'Text'),
+      },
+    ] satisfies DashboardPanelCatalogEntry[];
+
+    render(
+      <DashboardGrid
+        layout={createEmptyLayout()}
+        dashboardType="live"
+        isOwner
+        panelCatalogEntries={panelCatalogEntries}
+        renderPanel={(panelId, panel) => (
+          <div key={panelId}>{panelId}: {panel.spec.title}</div>
+        )}
+      >
+        {null}
+      </DashboardGrid>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add panel' }));
+    fireEvent.click(within(screen.getByRole('complementary', { name: 'Add panel' })).getByRole('button', { name: 'Text' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add panel' }));
+    fireEvent.click(within(screen.getByRole('complementary', { name: 'Add panel' })).getByRole('button', { name: 'Text' }));
+
+    expect(screen.getByText('panel-text: Text')).toBeInTheDocument();
+    expect(screen.getByText('panel-text-2: Text')).toBeInTheDocument();
+    expect(gridLayoutMock.layout.map((item) => item.i)).toEqual(['panel-text', 'panel-text-2']);
+  });
+
+  test('uses one group settings registration for multiple panel instances', async () => {
+    const onSaveDashboard = vi.fn().mockResolvedValue(undefined);
+    const layout: GridLayoutKind = {
+      kind: 'GridLayout',
+      spec: {
+        items: [
+          gridItem('panel-text', { x: 0, y: 0, width: 4, height: 6 }),
+          gridItem('panel-text-2', { x: 4, y: 0, width: 4, height: 6 }),
+        ],
+      },
+    };
+    const initialElements = {
+      'panel-text': createPanel('veno.text', 'Text'),
+      'panel-text-2': createPanel('veno.text', 'Text'),
+    };
+
+    render(
+      <DashboardGrid
+        layout={layout}
+        isOwner
+        initialElements={initialElements}
+        initialPanelSettings={{
+          'panel-text': { text: 'First' },
+          'panel-text-2': { text: 'Second' },
+        }}
+        settingsRegistry={{
+          'veno.text': {
+            defaultSettings: { text: '' },
+            render: ({ updateSettings }) => (
+              <button
+                type="button"
+                onClick={() => {
+                  updateSettings((current) => ({
+                    ...(current as { text: string }),
+                    text: 'Edited second',
+                  }));
+                }}
+              >
+                Edit text
+              </button>
+            ),
+          },
+        }}
+        onSaveDashboard={onSaveDashboard}
+      >
+        <DashboardGridPanel key="panel-text" panelId="panel-text" title="Text">
+          First text panel
+        </DashboardGridPanel>
+        <DashboardGridPanel key="panel-text-2" panelId="panel-text-2" title="Text">
+          Second text panel
+        </DashboardGridPanel>
+      </DashboardGrid>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    fireEvent.click(
+      within(document.querySelector('[data-dashboard-panel-id="panel-text-2"]') as HTMLElement)
+        .getByRole('button', { name: 'Open panel actions for Text' }),
+    );
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    fireEvent.click(within(screen.getByRole('complementary', { name: 'Panel settings for Text' })).getByRole('button', { name: 'Edit text' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save dashboard' }));
+
+    await waitFor(() => {
+      expect(onSaveDashboard).toHaveBeenCalledWith({
+        panelSettings: {
+          'panel-text': { text: 'First' },
+          'panel-text-2': { text: 'Edited second' },
+        },
+        layout: [
+          { i: 'panel-text', x: 0, y: 0, w: 4, h: 6 },
+          { i: 'panel-text-2', x: 4, y: 0, w: 4, h: 6 },
+        ],
+      });
+    });
   });
 
   test('keeps drag and resize changes in local runtime state', () => {
@@ -1178,10 +1309,13 @@ describe('DashboardGrid', () => {
       <DashboardGrid
         layout={createLayout()}
         settingsRegistry={{
-          'panel-current-glucose': {
+          'veno.live-glucose': {
             defaultSettings: { colorMode: 'standard', yAxisMax: 25 },
             render: () => <p>Settings</p>,
           },
+        }}
+        initialElements={{
+          'panel-current-glucose': createPanel('veno.live-glucose', 'Current Glucose'),
         }}
         initialPanelSettings={{
           'panel-current-glucose': {},

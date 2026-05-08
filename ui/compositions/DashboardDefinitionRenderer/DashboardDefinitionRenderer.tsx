@@ -50,7 +50,7 @@ export function DashboardDefinitionRenderer<TContext>({
       initialElements={dashboard.spec.elements}
       renderPanel={(panelId: string, panel: PanelKind) => {
         const registration = panelRegistry.resolve(panel.spec.vizConfig.group);
-        const content = registration.render({ panel, context });
+        const content = registration.render({ panelId, panel, context });
 
         if (!content) {
           return null;
@@ -78,9 +78,10 @@ export function DashboardDefinitionRenderer<TContext>({
       allowDashboardDelete={allowDashboardDelete}
     >
       {dashboard.spec.layout.spec.items.map((item) => {
-        const panel = dashboard.spec.elements[item.spec.element.name];
+        const panelId = item.spec.element.name;
+        const panel = dashboard.spec.elements[panelId];
         const registration = panelRegistry.resolve(panel.spec.vizConfig.group);
-        const content = registration.render({ panel, context });
+        const content = registration.render({ panelId, panel, context });
 
         if (!content) {
           return null;
@@ -89,7 +90,7 @@ export function DashboardDefinitionRenderer<TContext>({
         return (
           <DashboardGridPanel
             key={item.spec.element.name}
-            panelId={item.spec.element.name}
+            panelId={panelId}
             title={panel.spec.title}
           >
             {content}

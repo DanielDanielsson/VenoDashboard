@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { PanelKind } from './schema';
 
 export interface DashboardPanelRenderInput<TContext = unknown> {
+  panelId: string;
   panel: PanelKind;
   context: TContext;
 }

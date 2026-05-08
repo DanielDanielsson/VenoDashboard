@@ -3,8 +3,8 @@
 import { useMemo } from 'react';
 import {
   DashboardDefinitionRenderer,
-  overviewPanelRegistry,
-  type OverviewDashboardContext,
+  liveDashboardRegistry,
+  type LiveDashboardContext,
 } from '@ui/compositions/DashboardDefinitionRenderer';
 import type { DashboardPanelSettingsRegistry } from '@ui/compositions/DashboardGrid';
 import { DashboardUrlStateBridge } from '@ui/compositions/DashboardUrlStateBridge/DashboardUrlStateBridge';
@@ -14,7 +14,7 @@ import type { DashboardDefinition } from '@/lib/dashboard/schema';
 import { getDashboardViewPanelAliases } from '@/lib/dashboard/view-panel';
 
 interface OverviewDashboardViewProps {
-  context: OverviewDashboardContext;
+  context: LiveDashboardContext;
   dashboard: DashboardDefinition;
   dashboardVersion: number | null;
   allowDashboardDelete?: boolean;
@@ -28,7 +28,7 @@ export function OverviewDashboardView({
 }: OverviewDashboardViewProps) {
   const settingsRegistry = useMemo<DashboardPanelSettingsRegistry>(
     () => ({
-      'panel-current-glucose': createCurrentGlucosePanelSettingsRegistration(),
+      'veno.live-glucose': createCurrentGlucosePanelSettingsRegistration(),
     }),
     [],
   );
@@ -50,7 +50,7 @@ export function OverviewDashboardView({
             dashboard={dashboard}
             dashboardType="live"
             dashboardVersion={dashboardVersion}
-            panelRegistry={overviewPanelRegistry}
+            panelRegistry={liveDashboardRegistry}
             isOwner={context.isOwner}
             viewedPanelId={viewedPanelId}
             onViewedPanelChange={onViewedPanelChange}

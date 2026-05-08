@@ -3,15 +3,16 @@ import type { ConnectionMapSnapshot } from '@/lib/dashboard/connection-map';
 import { ConnectionsMapPanel } from '@ui/compositions/ConnectionsMapPanel';
 import { LiveGlucosePanel } from '@ui/compositions/LiveGlucosePanel';
 import { SharedTimersPanel } from '@ui/compositions/SharedTimersPanel/SharedTimersPanel';
+import { TextPanel } from '@ui/compositions/TextPanel';
 import { TimeInRangePanel } from '@ui/compositions/TimeInRangePanel';
 
-export interface OverviewDashboardContext {
+export interface LiveDashboardContext {
   isOwner: boolean;
   latestReadingTimestamp?: string;
   initialConnectionSnapshot: ConnectionMapSnapshot | null;
 }
 
-export const overviewPanelRegistry = createPanelRegistry<OverviewDashboardContext>([
+export const liveDashboardRegistry = createPanelRegistry<LiveDashboardContext>([
   {
     group: 'veno.live-glucose',
     render: ({ context }) => (
@@ -35,5 +36,9 @@ export const overviewPanelRegistry = createPanelRegistry<OverviewDashboardContex
       context.initialConnectionSnapshot ? (
         <ConnectionsMapPanel initialSnapshot={context.initialConnectionSnapshot} />
       ) : null,
+  },
+  {
+    group: 'veno.text',
+    render: ({ panelId, panel }) => <TextPanel panelId={panelId} title={panel.spec.title} />,
   },
 ]);
