@@ -1,4 +1,5 @@
 import { fetchDashboardResource, fetchDashboardSettings, PulseApiClientError } from '@/lib/pulse-api/client';
+import { hasAdminApiToken } from '@/lib/pulse-api/env';
 import { validateDashboardPanelCompatibility } from './panel-catalog';
 import { parseDashboardDefinition, type DashboardDefinition, type DashboardType } from './schema';
 
@@ -10,6 +11,10 @@ export interface LoadedDashboardResource {
 }
 
 async function loadPersistedDashboardSettings(dashboardUid: string): Promise<DashboardDefinition | null> {
+  if (!hasAdminApiToken()) {
+    return null;
+  }
+
   try {
     const response = await fetchDashboardSettings(dashboardUid);
     return parseDashboardDefinition(response.dashboardSettings.dashboard);

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   fetchDashboardResource: vi.fn(),
@@ -22,6 +22,10 @@ describe('dashboard resource loading', () => {
     mocks.fetchDashboardSettings.mockRejectedValue(Object.assign(new Error('Dashboard settings were not found.'), {
       status: 404,
     }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   test('uses the public dashboard resource when VenoAPI returns one', async () => {
@@ -94,7 +98,76 @@ describe('dashboard resource loading', () => {
     expect(result.source).toBe('api');
   });
 
+  test('uses the public dashboard resource without loading admin settings when no admin token is configured', async () => {
+    vi.stubEnv('ADMIN_BEARER_TOKEN', '');
+    mocks.fetchDashboardResource.mockResolvedValue({
+      dashboard: {
+        uid: 'overview',
+        title: 'API Overview',
+        type: 'live',
+        version: 4,
+        dashboard: {
+          kind: 'Dashboard',
+          schemaVersion: 'veno.dashboard.v1',
+          spec: {
+            uid: 'overview',
+            title: 'API Overview',
+            timeSettings: {
+              autoRefresh: '',
+              autoRefreshIntervals: ['5s'],
+            },
+            elements: {
+              'panel-current-glucose': {
+                kind: 'Panel',
+                spec: {
+                  id: 1,
+                  title: 'Current Glucose',
+                  vizConfig: {
+                    kind: 'VizConfig',
+                    group: 'veno.live-glucose',
+                    version: 'v1',
+                    spec: {
+                      options: {},
+                      fieldConfig: { defaults: {}, overrides: [] },
+                    },
+                  },
+                },
+              },
+            },
+            layout: {
+              kind: 'GridLayout',
+              spec: {
+                items: [
+                  {
+                    kind: 'GridLayoutItem',
+                    spec: {
+                      x: 0,
+                      y: 0,
+                      width: 4,
+                      height: 6,
+                      element: {
+                        kind: 'ElementReference',
+                        name: 'panel-current-glucose',
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const { loadDashboardResource } = await import('@/lib/dashboard/resources');
+    const result = await loadDashboardResource('overview');
+
+    expect(mocks.fetchDashboardSettings).not.toHaveBeenCalled();
+    expect(result.dashboard.spec.title).toBe('API Overview');
+  });
+
   test('prefers persisted dashboard settings over the public dashboard resource document', async () => {
+    vi.stubEnv('ADMIN_BEARER_TOKEN', 'test-admin-token');
     mocks.fetchDashboardResource.mockResolvedValue({
       dashboard: {
         uid: 'training-review',

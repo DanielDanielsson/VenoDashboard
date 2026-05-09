@@ -40,6 +40,10 @@ export function getAdminApiToken(): string {
   return token;
 }
 
+export function hasAdminApiToken(): boolean {
+  return Boolean(readEnv('ADMIN_BEARER_TOKEN'));
+}
+
 export function getDexcomGatewayAdminToken(): string {
   return readEnv('DEXCOM_GATEWAY_ADMIN_TOKEN') || getAdminApiToken();
 }
