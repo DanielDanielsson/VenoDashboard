@@ -136,11 +136,16 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     defaultLayout: { width: 4, height: 6, aspectRatio: 1.45 },
     defaultDefinition: panel(201, 'Text', 'veno.text', {
       content: {
+        version: 1,
         blocks: [
           {
             id: 'intro',
             type: 'paragraph',
-            text: 'Add descriptive text for this dashboard.',
+            spans: [
+              {
+                text: 'Add descriptive text for this dashboard.',
+              },
+            ],
           },
         ],
       },

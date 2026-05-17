@@ -35,6 +35,27 @@ describe('dashboard panel catalog', () => {
     expect(text?.allowMultiple).toBe(true);
   });
 
+  test('text panel default content uses the WYSIWYG document schema', () => {
+    const text = getPanelCatalogEntry('veno.text');
+
+    expect(text?.defaultDefinition.spec.vizConfig.spec.options).toMatchObject({
+      content: {
+        version: 1,
+        blocks: [
+          {
+            id: 'intro',
+            type: 'paragraph',
+            spans: [
+              {
+                text: 'Add descriptive text for this dashboard.',
+              },
+            ],
+          },
+        ],
+      },
+    });
+  });
+
   test('rejects a dashboard definition with incompatible panel groups', () => {
     const dashboard = parseDashboardDefinition({
       kind: 'Dashboard',

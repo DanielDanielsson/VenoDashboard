@@ -3,19 +3,21 @@
 import { useMemo, type ReactElement } from 'react';
 import { DashboardPanel } from '@ui/components/DashboardPanel';
 import {
-  RichTextContent,
-  RichTextEditor,
-  createRichTextDocument,
-  normalizeRichTextDocument,
-  type RichTextDocument,
-} from '@ui/components/RichTextEditor';
+  WysiwygContent,
+  WysiwygEditor,
+  createWysiwygDocument,
+  normalizeWysiwygDocument,
+  type WysiwygDocument,
+} from '@ui/components/WysiwygEditor';
+import { TextInput } from '@ui/components/TextInput';
 import {
   useDashboardPanelSettings,
   type DashboardPanelSettingsRegistration,
 } from '@ui/compositions/DashboardGrid';
 
 export type TextPanelSettings = {
-  content: RichTextDocument;
+  title: string;
+  content: WysiwygDocument;
 };
 
 interface TextPanelProps {
@@ -24,16 +26,24 @@ interface TextPanelProps {
 }
 
 const DEFAULT_TEXT_PANEL_SETTINGS: TextPanelSettings = {
-  content: createRichTextDocument('Add descriptive text for this dashboard.'),
+  title: 'Text',
+  content: createWysiwygDocument('Add descriptive text for this dashboard.'),
 };
 
-function normalizeTextPanelSettings(value: unknown): TextPanelSettings {
-  const content = value && typeof value === 'object' && 'content' in value
-    ? (value as { content?: unknown }).content
+function normalizeTextPanelSettings(
+  value: unknown,
+  fallbackTitle = DEFAULT_TEXT_PANEL_SETTINGS.title,
+): TextPanelSettings {
+  const record = value && typeof value === 'object'
+    ? value as { title?: unknown; content?: unknown }
     : undefined;
+  const title = typeof record?.title === 'string'
+    ? record.title
+    : fallbackTitle;
 
   return {
-    content: normalizeRichTextDocument(content),
+    title,
+    content: normalizeWysiwygDocument(record?.content),
   };
 }
 
@@ -44,16 +54,28 @@ export function createTextPanelSettingsRegistration(): DashboardPanelSettingsReg
       const typedSettings = normalizeTextPanelSettings(settings);
 
       return (
-        <RichTextEditor
-          value={typedSettings.content}
-          onChange={(content) => {
-            updateSettings((current) => ({
-              ...normalizeTextPanelSettings(current),
-              content,
-            }));
-          }}
-          label="Content"
-        />
+        <div className="grid gap-5">
+          <TextInput
+            label="Title"
+            value={typedSettings.title}
+            onChange={(title) => {
+              updateSettings((current) => ({
+                ...normalizeTextPanelSettings(current),
+                title,
+              }));
+            }}
+          />
+          <WysiwygEditor
+            value={typedSettings.content}
+            onChange={(content) => {
+              updateSettings((current) => ({
+                ...normalizeTextPanelSettings(current),
+                content,
+              }));
+            }}
+            label="Content"
+          />
+        </div>
       );
     },
   };
@@ -63,13 +85,20 @@ export function TextPanel({
   panelId,
   title = 'Text',
 }: TextPanelProps): ReactElement {
-  const defaultSettings = useMemo(() => DEFAULT_TEXT_PANEL_SETTINGS, []);
+  const defaultSettings = useMemo(() => ({
+    ...DEFAULT_TEXT_PANEL_SETTINGS,
+    title,
+  }), [title]);
   const [settings] = useDashboardPanelSettings(panelId, defaultSettings);
-  const normalizedSettings = normalizeTextPanelSettings(settings);
+  const normalizedSettings = normalizeTextPanelSettings(settings, title);
 
   return (
-    <DashboardPanel title={title} twStyles="flex flex-col [&>div:last-child]:min-h-0 [&>div:last-child]:flex-1 [&>div:last-child]:overflow-y-auto">
-      <RichTextContent value={normalizedSettings.content} />
+    <DashboardPanel title={normalizedSettings.title} twStyles="flex flex-col [&>div:last-child]:flex [&>div:last-child]:min-h-0 [&>div:last-child]:flex-1 [&>div:last-child]:flex-col [&>div:last-child]:overflow-hidden">
+      <WysiwygContent
+        value={normalizedSettings.content}
+        showOverflowFade
+        twStyles="flex-1"
+      />
     </DashboardPanel>
   );
 }

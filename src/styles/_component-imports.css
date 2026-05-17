@@ -10,6 +10,8 @@
 @import "../../ui/components/NumberInput/numberInput.css";
 @import "../../ui/components/PieChart/pieChart.css";
 @import "../../ui/components/SecondaryButton/secondaryButton.css";
+@import "../../ui/components/TextInput/textInput.css";
+@import "../../ui/components/WysiwygEditor/wysiwygEditor.css";
 @import "../../ui/compositions/AppShell/appShell.css";
 @import "../../ui/compositions/ConnectionsMapPanel/connectionsMapPanel.css";
 @import "../../ui/compositions/DashboardGrid/dashboardGridPanel.css";

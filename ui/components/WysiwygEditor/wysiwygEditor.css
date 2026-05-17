@@ -1,0 +1,84 @@
+@custom-variant theme-wysiwyg-editor-light (.theme-wysiwyg-editor-light);
+@custom-variant theme-wysiwyg-editor-dark (.theme-wysiwyg-editor-dark);
+
+@layer theme {
+    :root {
+        --color-wysiwyg-editor-toolbar-bg-value: var(--color-base-surface-panel-light-muted);
+        --color-wysiwyg-editor-editor-bg-value: var(--color-base-paper);
+        --bg-wysiwyg-editor-menu: var(--color-base-paper-strong);
+        --color-wysiwyg-editor-border-value: var(--color-base-border-warm-medium);
+        --color-wysiwyg-editor-divider-value: var(--color-base-border-warm-subtle);
+        --color-wysiwyg-editor-focus-border-value: var(--color-base-ink);
+        --color-wysiwyg-editor-text-value: var(--text);
+        --color-wysiwyg-editor-text-muted-value: var(--color-base-text-warm-soft);
+        --color-wysiwyg-editor-button-bg-hover-value: var(--color-base-paper-surface);
+        --color-wysiwyg-editor-button-active-bg-value: var(--color-base-paper-surface-strong);
+        --color-wysiwyg-editor-button-active-border-value: var(--color-base-ink);
+        --color-wysiwyg-editor-button-active-text-value: var(--text);
+    }
+
+    .theme-dark {
+        --color-wysiwyg-editor-toolbar-bg-value: var(--color-base-night-strong);
+        --color-wysiwyg-editor-editor-bg-value: var(--color-base-night);
+        --bg-wysiwyg-editor-menu: var(--color-base-night-strong);
+        --color-wysiwyg-editor-border-value: var(--color-base-border-cool-strong);
+        --color-wysiwyg-editor-divider-value: var(--color-base-border-cool-subtle);
+        --color-wysiwyg-editor-focus-border-value: var(--color-base-white-soft);
+        --color-wysiwyg-editor-text-value: var(--text);
+        --color-wysiwyg-editor-text-muted-value: var(--color-base-white-dim);
+        --color-wysiwyg-editor-button-bg-hover-value: var(--color-base-panel-dark-bright);
+        --color-wysiwyg-editor-button-active-bg-value: var(--color-base-panel-dark-bright);
+        --color-wysiwyg-editor-button-active-border-value: var(--color-base-white-soft);
+        --color-wysiwyg-editor-button-active-text-value: var(--text);
+    }
+
+    .theme-wysiwyg-editor-light {
+        --color-wysiwyg-editor-toolbar-bg-value: var(--color-base-surface-panel-light-muted);
+        --color-wysiwyg-editor-editor-bg-value: var(--color-base-paper);
+        --bg-wysiwyg-editor-menu: var(--color-base-paper-strong);
+        --color-wysiwyg-editor-border-value: var(--color-base-border-warm-medium);
+        --color-wysiwyg-editor-divider-value: var(--color-base-border-warm-subtle);
+        --color-wysiwyg-editor-focus-border-value: var(--color-base-ink);
+        --color-wysiwyg-editor-text-value: var(--text);
+        --color-wysiwyg-editor-text-muted-value: var(--color-base-text-warm-soft);
+        --color-wysiwyg-editor-button-bg-hover-value: var(--color-base-paper-surface);
+        --color-wysiwyg-editor-button-active-bg-value: var(--color-base-paper-surface-strong);
+        --color-wysiwyg-editor-button-active-border-value: var(--color-base-ink);
+        --color-wysiwyg-editor-button-active-text-value: var(--text);
+    }
+
+    .theme-wysiwyg-editor-dark {
+        --color-wysiwyg-editor-toolbar-bg-value: var(--color-base-night-strong);
+        --color-wysiwyg-editor-editor-bg-value: var(--color-base-night);
+        --bg-wysiwyg-editor-menu: var(--color-base-night-strong);
+        --color-wysiwyg-editor-border-value: var(--color-base-border-cool-strong);
+        --color-wysiwyg-editor-divider-value: var(--color-base-border-cool-subtle);
+        --color-wysiwyg-editor-focus-border-value: var(--color-base-white-soft);
+        --color-wysiwyg-editor-text-value: var(--text);
+        --color-wysiwyg-editor-text-muted-value: var(--color-base-white-dim);
+        --color-wysiwyg-editor-button-bg-hover-value: var(--color-base-panel-dark-bright);
+        --color-wysiwyg-editor-button-active-bg-value: var(--color-base-panel-dark-bright);
+        --color-wysiwyg-editor-button-active-border-value: var(--color-base-white-soft);
+        --color-wysiwyg-editor-button-active-text-value: var(--text);
+    }
+}
+
+@theme inline {
+    --color-wysiwyg-editor-toolbar-bg: var(--color-wysiwyg-editor-toolbar-bg-value);
+    --color-wysiwyg-editor-editor-bg: var(--color-wysiwyg-editor-editor-bg-value);
+    --color-wysiwyg-editor-border: var(--color-wysiwyg-editor-border-value);
+    --color-wysiwyg-editor-divider: var(--color-wysiwyg-editor-divider-value);
+    --color-wysiwyg-editor-focus-border: var(--color-wysiwyg-editor-focus-border-value);
+    --color-wysiwyg-editor-text: var(--color-wysiwyg-editor-text-value);
+    --color-wysiwyg-editor-text-muted: var(--color-wysiwyg-editor-text-muted-value);
+    --color-wysiwyg-editor-button-bg-hover: var(--color-wysiwyg-editor-button-bg-hover-value);
+    --color-wysiwyg-editor-button-active-bg: var(--color-wysiwyg-editor-button-active-bg-value);
+    --color-wysiwyg-editor-button-active-border: var(--color-wysiwyg-editor-button-active-border-value);
+    --color-wysiwyg-editor-button-active-text: var(--color-wysiwyg-editor-button-active-text-value);
+}
+
+@layer components {
+    .wysiwyg-editor-menu {
+        background-color: var(--bg-wysiwyg-editor-menu);
+    }
+}
