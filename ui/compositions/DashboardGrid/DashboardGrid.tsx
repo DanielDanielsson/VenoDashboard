@@ -1162,9 +1162,9 @@ export function DashboardGrid({
             <aside
               aria-label={`Panel settings for ${editedPanel.title}`}
               role="complementary"
-              className="fixed right-0 top-0 z-50 flex h-screen w-[min(24rem,calc(100vw-2rem))] flex-col border-l border-border bg-bg p-6 shadow-2xl"
+              className="fixed right-0 top-0 z-50 flex h-screen w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden border-l border-border bg-bg p-6 shadow-2xl"
             >
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex shrink-0 items-start justify-between gap-4">
                 <h2 className="panel_title text-text">{editedPanel.title} settings</h2>
                 <div className="flex items-center gap-2">
                   <button
@@ -1184,8 +1184,11 @@ export function DashboardGrid({
                   </button>
                 </div>
               </div>
-              <div className="flex flex-1 flex-col">
-                <div className="mt-6 flex-1">
+              <div
+                data-testid="dashboard-panel-settings-scroll-region"
+                className="dashboard-panel-settings-scroll-region mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto pr-1"
+              >
+                <div className="flex-1">
                   {editedPanelRegistration && editedPanelSettings !== undefined ? (
                     editedPanelRegistration.render({
                       settings: editedPanelSettings,
@@ -1220,9 +1223,9 @@ export function DashboardGrid({
             <aside
               aria-label="Add panel"
               role="complementary"
-              className="fixed right-0 top-0 z-50 flex h-screen w-[min(24rem,calc(100vw-2rem))] flex-col border-l border-border bg-bg p-6 shadow-2xl"
+              className="fixed right-0 top-0 z-50 flex h-screen w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden border-l border-border bg-bg p-6 shadow-2xl"
             >
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex shrink-0 items-start justify-between gap-4">
                 <h2 className="panel_title text-text">Add panel</h2>
                 <button
                   type="button"
@@ -1232,7 +1235,7 @@ export function DashboardGrid({
                   Close
                 </button>
               </div>
-              <div className="mt-6 grid gap-2">
+              <div className="dashboard-panel-settings-scroll-region mt-6 grid min-h-0 flex-1 gap-2 overflow-y-auto pr-1">
                 {availablePanelCatalogEntries.length > 0 ? (
                   availablePanelCatalogEntries.map((entry) => (
                     <button

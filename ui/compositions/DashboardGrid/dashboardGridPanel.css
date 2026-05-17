@@ -26,3 +26,13 @@
   --color-dashboard-panel-menu-hover-bg: var(--color-dashboard-panel-menu-hover-bg);
   --shadow-dashboard-panel-menu: var(--shadow-dashboard-panel-menu);
 }
+
+@layer components {
+  .dashboard-panel-settings-scroll-region {
+    scrollbar-width: none;
+  }
+
+  .dashboard-panel-settings-scroll-region::-webkit-scrollbar {
+    display: none;
+  }
+}

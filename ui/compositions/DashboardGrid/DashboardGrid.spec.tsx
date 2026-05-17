@@ -468,6 +468,12 @@ describe('DashboardGrid', () => {
     expect(screen.getByRole('button', { name: 'Exit dashboard edit mode' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Current Glucose settings' })).toBeInTheDocument();
     expect(screen.getByText('No settings available yet.')).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard-panel-settings-scroll-region')).toHaveClass(
+      'dashboard-panel-settings-scroll-region',
+      'min-h-0',
+      'flex-1',
+      'overflow-y-auto',
+    );
   });
 
   test('exits edit mode and closes the settings drawer when entering solo panel view', () => {
