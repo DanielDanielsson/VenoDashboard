@@ -17,4 +17,14 @@ describe('DashboardPanel', () => {
     expect(container.firstChild).toHaveClass('rounded-[5px]');
     expect(container.firstChild).not.toHaveClass('rounded-tr-none');
   });
+
+  test('truncates long titles inside the header row', () => {
+    render(
+      <DashboardPanel title="A long text panel title that should not push actions outside the panel">
+        <p>Body</p>
+      </DashboardPanel>,
+    );
+
+    expect(screen.getByRole('heading')).toHaveClass('min-w-0', 'flex-1', 'truncate');
+  });
 });

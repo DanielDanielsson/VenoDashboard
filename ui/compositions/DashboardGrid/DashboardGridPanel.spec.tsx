@@ -23,6 +23,7 @@ describe('DashboardGridPanel', () => {
     const panel = screen.getByText('Panel content');
     expect(panel).toHaveClass('react-grid-item');
     expect(panel).toHaveClass('h-full');
+    expect(panel.className).toContain('[&_.dashboard-panel-drag-handle]:pr-16');
     expect(panel).toHaveStyle({ transform: 'translate(12px, 24px)' });
     expect(ref.current).toBe(panel);
   });

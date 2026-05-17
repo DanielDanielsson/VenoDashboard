@@ -29,7 +29,7 @@ export const DashboardPanel = ({
         headerClassName,
       )}
     >
-      <h2 className="panel_title text-dashboard-panel-title">
+      <h2 className="panel_title min-w-0 flex-1 truncate text-dashboard-panel-title">
         {title}
       </h2>
       {headerRight && (

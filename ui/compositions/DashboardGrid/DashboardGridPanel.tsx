@@ -21,7 +21,7 @@ export const DashboardGridPanel = forwardRef<HTMLDivElement, DashboardGridPanelP
       <div
         ref={ref}
         className={twMerge(
-          'relative h-full min-h-0 [&>section]:h-full',
+          'relative h-full min-h-0 [&>section]:h-full [&_.dashboard-panel-drag-handle]:pr-16',
           isLayoutEditingEnabled && '[&_.dashboard-panel-drag-handle]:cursor-move',
           isSoloPanelView && '[&>section]:flex [&>section]:flex-col [&>section>div:last-child]:min-h-0 [&>section>div:last-child]:overflow-y-auto',
           className,
