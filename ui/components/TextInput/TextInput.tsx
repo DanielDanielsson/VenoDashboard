@@ -9,6 +9,7 @@ export const TextInput = ({
   disabled,
   inputTwStyles,
   label,
+  labelTwStyles,
   onChange,
   twStyles,
   value,
@@ -21,7 +22,7 @@ export const TextInput = ({
       twStyles,
     )}
   >
-    <span className="ui_micro_label text-text-soft">{label}</span>
+    <span className={twMerge('ui_micro_label text-text-input-label', labelTwStyles)}>{label}</span>
     <Input
       {...props}
       aria-label={ariaLabel ?? (typeof label === 'string' ? label : undefined)}
@@ -29,7 +30,7 @@ export const TextInput = ({
       value={value}
       onChange={(event) => onChange(event.target.value)}
       twStyles={twMerge(
-        'ui_caption grid-drag-cancel w-full rounded-[4px] border border-text-input-border bg-text-input-bg px-3 py-2 text-text-input-text transition-colors placeholder:text-text-input-placeholder focus:border-text-input-focus-border focus:outline-none disabled:cursor-not-allowed',
+        'ui_input_text grid-drag-cancel h-10 w-full rounded-[4px] border border-text-input-border bg-text-input-bg px-3 py-2 text-text-input-text transition-colors placeholder:text-text-input-placeholder focus:border-text-input-focus-border focus:outline-none disabled:cursor-not-allowed',
         inputTwStyles,
       )}
     />

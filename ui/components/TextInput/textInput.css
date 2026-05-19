@@ -3,42 +3,47 @@
 
 @layer theme {
     :root {
-        --color-text-input-bg: transparent;
-        --color-text-input-border: var(--color-base-border-warm-input);
-        --color-text-input-focus-border: var(--color-base-ink);
-        --color-text-input-text: var(--text);
-        --color-text-input-placeholder: var(--color-base-text-warm-soft);
+        --color-text-input-bg-value: var(--color-base-paper);
+        --color-text-input-border-value: var(--color-base-border-warm-medium);
+        --color-text-input-focus-border-value: var(--color-wysiwyg-editor-border-value, var(--color-base-border-warm-medium));
+        --color-text-input-label-value: var(--color-base-text-warm-soft);
+        --color-text-input-text-value: var(--text);
+        --color-text-input-placeholder-value: var(--color-base-text-warm-soft);
     }
 
     .theme-dark {
-        --color-text-input-bg: transparent;
-        --color-text-input-border: var(--color-base-border-cool-input);
-        --color-text-input-focus-border: var(--color-base-white-soft);
-        --color-text-input-text: var(--text);
-        --color-text-input-placeholder: var(--color-base-white-muted);
+        --color-text-input-bg-value: var(--color-base-night);
+        --color-text-input-border-value: var(--color-base-border-cool-strong);
+        --color-text-input-focus-border-value: var(--color-wysiwyg-editor-border-value, var(--color-base-border-cool-strong));
+        --color-text-input-label-value: var(--color-base-white-dim);
+        --color-text-input-text-value: var(--text);
+        --color-text-input-placeholder-value: var(--color-base-white-muted);
     }
 
     .theme-text-input-light {
-        --color-text-input-bg: transparent;
-        --color-text-input-border: var(--color-base-border-warm-input);
-        --color-text-input-focus-border: var(--color-base-ink);
-        --color-text-input-text: var(--text);
-        --color-text-input-placeholder: var(--color-base-text-warm-soft);
+        --color-text-input-bg-value: var(--color-base-paper);
+        --color-text-input-border-value: var(--color-base-border-warm-medium);
+        --color-text-input-focus-border-value: var(--color-wysiwyg-editor-border-value, var(--color-base-border-warm-medium));
+        --color-text-input-label-value: var(--color-base-text-warm-soft);
+        --color-text-input-text-value: var(--text);
+        --color-text-input-placeholder-value: var(--color-base-text-warm-soft);
     }
 
     .theme-text-input-dark {
-        --color-text-input-bg: transparent;
-        --color-text-input-border: var(--color-base-border-cool-input);
-        --color-text-input-focus-border: var(--color-base-white-soft);
-        --color-text-input-text: var(--text);
-        --color-text-input-placeholder: var(--color-base-white-muted);
+        --color-text-input-bg-value: var(--color-base-night);
+        --color-text-input-border-value: var(--color-base-border-cool-strong);
+        --color-text-input-focus-border-value: var(--color-wysiwyg-editor-border-value, var(--color-base-border-cool-strong));
+        --color-text-input-label-value: var(--color-base-white-dim);
+        --color-text-input-text-value: var(--text);
+        --color-text-input-placeholder-value: var(--color-base-white-muted);
     }
 }
 
 @theme inline {
-    --color-text-input-bg: var(--color-text-input-bg);
-    --color-text-input-border: var(--color-text-input-border);
-    --color-text-input-focus-border: var(--color-text-input-focus-border);
-    --color-text-input-text: var(--color-text-input-text);
-    --color-text-input-placeholder: var(--color-text-input-placeholder);
+    --color-text-input-bg: var(--color-text-input-bg-value);
+    --color-text-input-border: var(--color-text-input-border-value);
+    --color-text-input-focus-border: var(--color-text-input-focus-border-value);
+    --color-text-input-label: var(--color-text-input-label-value);
+    --color-text-input-text: var(--color-text-input-text-value);
+    --color-text-input-placeholder: var(--color-text-input-placeholder-value);
 }

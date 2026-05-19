@@ -44,13 +44,13 @@
 
 @layer components {
   .dashboard-panel-settings-drawer {
-    --color-text-input-bg: var(--color-dashboard-settings-control-bg);
+    --color-text-input-bg-value: var(--color-dashboard-settings-control-bg);
     --color-wysiwyg-editor-editor-bg-value: var(--color-dashboard-settings-control-bg);
     --color-wysiwyg-editor-toolbar-bg-value: var(--color-dashboard-settings-control-header-bg);
   }
 
   .theme-dark .dashboard-panel-settings-drawer {
-    --color-text-input-bg: var(--color-base-panel-dark-bright);
+    --color-text-input-bg-value: var(--color-base-panel-dark-bright);
     --color-wysiwyg-editor-editor-bg-value: var(--color-base-panel-dark-bright);
     --color-wysiwyg-editor-toolbar-bg-value: var(--color-base-surface-panel-dark-tint);
   }

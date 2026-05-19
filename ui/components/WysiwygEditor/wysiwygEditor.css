@@ -9,6 +9,7 @@
         --color-wysiwyg-editor-border-value: var(--color-base-border-warm-medium);
         --color-wysiwyg-editor-divider-value: var(--color-base-border-warm-subtle);
         --color-wysiwyg-editor-focus-border-value: var(--color-base-ink);
+        --color-wysiwyg-editor-label-value: var(--color-base-text-warm-soft);
         --color-wysiwyg-editor-text-value: var(--text);
         --color-wysiwyg-editor-text-muted-value: var(--color-base-text-warm-soft);
         --color-wysiwyg-editor-button-bg-hover-value: var(--color-base-paper-surface);
@@ -24,6 +25,7 @@
         --color-wysiwyg-editor-border-value: var(--color-base-border-cool-strong);
         --color-wysiwyg-editor-divider-value: var(--color-base-border-cool-subtle);
         --color-wysiwyg-editor-focus-border-value: var(--color-base-white-soft);
+        --color-wysiwyg-editor-label-value: var(--color-base-white-dim);
         --color-wysiwyg-editor-text-value: var(--text);
         --color-wysiwyg-editor-text-muted-value: var(--color-base-white-dim);
         --color-wysiwyg-editor-button-bg-hover-value: var(--color-base-panel-dark-bright);
@@ -39,6 +41,7 @@
         --color-wysiwyg-editor-border-value: var(--color-base-border-warm-medium);
         --color-wysiwyg-editor-divider-value: var(--color-base-border-warm-subtle);
         --color-wysiwyg-editor-focus-border-value: var(--color-base-ink);
+        --color-wysiwyg-editor-label-value: var(--color-base-text-warm-soft);
         --color-wysiwyg-editor-text-value: var(--text);
         --color-wysiwyg-editor-text-muted-value: var(--color-base-text-warm-soft);
         --color-wysiwyg-editor-button-bg-hover-value: var(--color-base-paper-surface);
@@ -54,6 +57,7 @@
         --color-wysiwyg-editor-border-value: var(--color-base-border-cool-strong);
         --color-wysiwyg-editor-divider-value: var(--color-base-border-cool-subtle);
         --color-wysiwyg-editor-focus-border-value: var(--color-base-white-soft);
+        --color-wysiwyg-editor-label-value: var(--color-base-white-dim);
         --color-wysiwyg-editor-text-value: var(--text);
         --color-wysiwyg-editor-text-muted-value: var(--color-base-white-dim);
         --color-wysiwyg-editor-button-bg-hover-value: var(--color-base-panel-dark-bright);
@@ -69,6 +73,7 @@
     --color-wysiwyg-editor-border: var(--color-wysiwyg-editor-border-value);
     --color-wysiwyg-editor-divider: var(--color-wysiwyg-editor-divider-value);
     --color-wysiwyg-editor-focus-border: var(--color-wysiwyg-editor-focus-border-value);
+    --color-wysiwyg-editor-label: var(--color-wysiwyg-editor-label-value);
     --color-wysiwyg-editor-text: var(--color-wysiwyg-editor-text-value);
     --color-wysiwyg-editor-text-muted: var(--color-wysiwyg-editor-text-muted-value);
     --color-wysiwyg-editor-button-bg-hover: var(--color-wysiwyg-editor-button-bg-hover-value);

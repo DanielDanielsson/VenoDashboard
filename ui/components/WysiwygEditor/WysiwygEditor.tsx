@@ -1213,7 +1213,7 @@ export function WysiwygEditor({
 
   return (
     <div className={twMerge('grid gap-3', twStyles)}>
-      <span className="ui_micro_label text-text-soft">{label}</span>
+      <span className="ui_micro_label text-wysiwyg-editor-label">{label}</span>
       <div className="grid-drag-cancel overflow-hidden rounded-[4px] border border-wysiwyg-editor-border bg-wysiwyg-editor-editor-bg">
         <div className="flex flex-wrap items-center gap-2 border-b border-wysiwyg-editor-divider bg-wysiwyg-editor-toolbar-bg px-4 py-3">
           <div ref={blockTypeMenuRef} className="relative">

@@ -178,6 +178,7 @@ describe('WysiwygEditor', () => {
   test('renders a compact toolbar with a plain block type dropdown and icon mark buttons', () => {
     render(<WysiwygEditor value={createWysiwygDocument('')} onChange={vi.fn()} />);
 
+    expect(screen.getByText('Text content')).toHaveClass('ui_micro_label', 'text-wysiwyg-editor-label');
     expect(screen.getByRole('button', { name: 'Text block type: Paragraph' })).toHaveTextContent('Paragraph');
     expect(screen.getByRole('button', { name: 'Text block type: Paragraph' })).toHaveClass('cursor-pointer');
     expect(screen.queryByRole('button', { name: 'Paragraph' })).not.toBeInTheDocument();
