@@ -5,6 +5,11 @@
     --color-dashboard-panel-menu-text: var(--color-base-ink);
     --color-dashboard-panel-menu-text-muted: var(--color-base-ink-muted);
     --color-dashboard-panel-menu-hover-bg: var(--color-base-surface-panel-light-muted);
+    --color-dashboard-settings-drawer-bg: var(--bg);
+    --color-dashboard-settings-drawer-header-bg: var(--color-base-paper-strong);
+    --color-dashboard-settings-drawer-border: var(--border);
+    --color-dashboard-settings-control-bg: var(--color-base-surface-panel-light);
+    --color-dashboard-settings-control-header-bg: var(--color-base-surface-panel-light-muted);
     --shadow-dashboard-panel-menu: var(--color-base-shadow-warm-lg);
   }
 
@@ -14,6 +19,11 @@
     --color-dashboard-panel-menu-text: var(--color-base-white-soft);
     --color-dashboard-panel-menu-text-muted: var(--color-base-white-muted);
     --color-dashboard-panel-menu-hover-bg: var(--color-base-panel-dark-bright);
+    --color-dashboard-settings-drawer-bg: var(--bg);
+    --color-dashboard-settings-drawer-header-bg: var(--color-base-night-strong);
+    --color-dashboard-settings-drawer-border: var(--border);
+    --color-dashboard-settings-control-bg: var(--color-base-panel-dark-bright);
+    --color-dashboard-settings-control-header-bg: var(--color-base-surface-panel-dark-tint);
     --shadow-dashboard-panel-menu: var(--color-base-shadow-dark-lg);
   }
 }
@@ -24,10 +34,36 @@
   --color-dashboard-panel-menu-text: var(--color-dashboard-panel-menu-text);
   --color-dashboard-panel-menu-text-muted: var(--color-dashboard-panel-menu-text-muted);
   --color-dashboard-panel-menu-hover-bg: var(--color-dashboard-panel-menu-hover-bg);
+  --color-dashboard-settings-drawer-bg: var(--color-dashboard-settings-drawer-bg);
+  --color-dashboard-settings-drawer-header-bg: var(--color-dashboard-settings-drawer-header-bg);
+  --color-dashboard-settings-drawer-border: var(--color-dashboard-settings-drawer-border);
+  --color-dashboard-settings-control-bg: var(--color-dashboard-settings-control-bg);
+  --color-dashboard-settings-control-header-bg: var(--color-dashboard-settings-control-header-bg);
   --shadow-dashboard-panel-menu: var(--shadow-dashboard-panel-menu);
 }
 
 @layer components {
+  .dashboard-panel-settings-drawer {
+    --color-text-input-bg: var(--color-dashboard-settings-control-bg);
+    --color-wysiwyg-editor-editor-bg-value: var(--color-dashboard-settings-control-bg);
+    --color-wysiwyg-editor-toolbar-bg-value: var(--color-dashboard-settings-control-header-bg);
+  }
+
+  .theme-dark .dashboard-panel-settings-drawer {
+    --color-text-input-bg: var(--color-base-panel-dark-bright);
+    --color-wysiwyg-editor-editor-bg-value: var(--color-base-panel-dark-bright);
+    --color-wysiwyg-editor-toolbar-bg-value: var(--color-base-surface-panel-dark-tint);
+  }
+
+  .theme-dark .dashboard-panel-settings-drawer .bg-text-input-bg,
+  .theme-dark .dashboard-panel-settings-drawer .bg-wysiwyg-editor-editor-bg {
+    background: var(--color-base-panel-dark-bright) !important;
+  }
+
+  .theme-dark .dashboard-panel-settings-drawer .bg-wysiwyg-editor-toolbar-bg {
+    background: var(--color-base-surface-panel-dark-tint) !important;
+  }
+
   .dashboard-panel-settings-scroll-region {
     scrollbar-width: none;
   }

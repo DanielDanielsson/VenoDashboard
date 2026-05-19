@@ -1162,9 +1162,9 @@ export function DashboardGrid({
             <aside
               aria-label={`Panel settings for ${editedPanel.title}`}
               role="complementary"
-              className="fixed right-0 top-0 z-50 flex h-screen w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden border-l border-border bg-bg p-6 shadow-2xl"
+              className="dashboard-panel-settings-drawer fixed right-0 top-0 z-50 flex h-screen w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden border-l border-dashboard-settings-drawer-border bg-dashboard-settings-drawer-bg shadow-2xl"
             >
-              <div className="flex shrink-0 items-start justify-between gap-4">
+              <div className="dashboard-panel-settings-drawer-header flex shrink-0 items-start justify-between gap-4 border-b border-dashboard-settings-drawer-border bg-dashboard-settings-drawer-header-bg px-6 py-5">
                 <h2 className="panel_title text-text">{editedPanel.title} settings</h2>
                 <div className="flex items-center gap-2">
                   <button
@@ -1186,7 +1186,7 @@ export function DashboardGrid({
               </div>
               <div
                 data-testid="dashboard-panel-settings-scroll-region"
-                className="dashboard-panel-settings-scroll-region mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto pr-1"
+                className="dashboard-panel-settings-scroll-region flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6"
               >
                 <div className="flex-1">
                   {editedPanelRegistration && editedPanelSettings !== undefined ? (

@@ -558,6 +558,11 @@ describe('DashboardGrid', () => {
     const header = drawer.firstElementChild;
 
     expect(saveButton).toBeDisabled();
+    expect(drawer).toHaveClass('dashboard-panel-settings-drawer');
+    expect(drawer).toHaveClass('bg-dashboard-settings-drawer-bg');
+    expect(header).toHaveClass('dashboard-panel-settings-drawer-header');
+    expect(header).toHaveClass('bg-dashboard-settings-drawer-header-bg');
+    expect(header).toHaveClass('border-dashboard-settings-drawer-border');
     expect(header).toContainElement(saveButton);
     expect(header).toContainElement(closeButton);
 
