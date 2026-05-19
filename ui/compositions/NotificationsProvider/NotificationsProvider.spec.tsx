@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fireEvent, render, screen, waitFor, waitForElementToBeRemoved, within } from '@testing-library/react';
 import { act } from '@testing-library/react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -110,6 +112,29 @@ describe('NotificationsProvider', () => {
 
     expect(screen.getByText('Profile updated')).toBeInTheDocument();
     expect(screen.getByText('Changes are now visible across the dashboard.')).toBeInTheDocument();
+  });
+
+  test('anchors notifications to the bottom right and stacks new items upward', () => {
+    render(
+      <NotificationsProvider>
+        <TriggerDuplicateNotifications />
+      </NotificationsProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show duplicates' }));
+
+    const viewport = screen.getByRole('region', { name: 'Notifications' });
+    expect(viewport).toHaveClass('right-4');
+    expect(viewport).toHaveClass('bottom-4');
+    expect(viewport).toHaveClass('flex-col-reverse');
+    expect(viewport).not.toHaveClass('top-4');
+  });
+
+  test('uses the Tailwind z-index token namespace for the notification layer', () => {
+    const zIndexesCss = readFileSync(resolve(process.cwd(), 'src/styles/config/z-indexes.css'), 'utf8');
+
+    expect(zIndexesCss).toContain('--z-index-notifications:');
+    expect(zIndexesCss).not.toContain('--z-notifications:');
   });
 
   test('renders notifications with their helper-specific variants', () => {
