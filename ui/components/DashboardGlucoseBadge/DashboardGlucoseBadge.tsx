@@ -38,6 +38,8 @@ interface ReadingState {
   previous: ChartPoint | LatestReading | null;
 }
 
+let cachedReadingState: ReadingState | null = null;
+
 function normalizeStreamPayload(raw: string): LatestReading | null {
   try {
     const parsed = JSON.parse(raw) as StreamEnvelope | LatestReading;
@@ -141,7 +143,7 @@ export function DashboardGlucoseBadge({
   pollIntervalMs = 60_000,
   showDetails = false,
 }: DashboardGlucoseBadgeProps) {
-  const [readingState, setReadingState] = useState<ReadingState | null>(null);
+  const [readingState, setReadingState] = useState<ReadingState | null>(() => cachedReadingState);
 
   useEffect(() => {
     let mounted = true;
@@ -156,9 +158,11 @@ export function DashboardGlucoseBadge({
         if (mounted && json.latest) {
           const latest = json.latest;
           const previous = pickPreviousReading(latest, json.items);
-          setReadingState((current) =>
-            updateReadingStateWithLatest(current, latest, previous),
-          );
+          setReadingState((current) => {
+            const next = updateReadingStateWithLatest(current, latest, previous);
+            cachedReadingState = next;
+            return next;
+          });
         }
       } catch {
         // Silent fail
@@ -166,9 +170,11 @@ export function DashboardGlucoseBadge({
     }
 
     function publishLatest(reading: LatestReading) {
-      setReadingState((current) =>
-        updateReadingStateWithLatest(current, reading),
-      );
+      setReadingState((current) => {
+        const next = updateReadingStateWithLatest(current, reading);
+        cachedReadingState = next;
+        return next;
+      });
       window.dispatchEvent(
         new CustomEvent('pulse-glucose-latest', { detail: reading }),
       );
@@ -220,9 +226,11 @@ export function DashboardGlucoseBadge({
     function handleEvent(e: Event) {
       const detail = (e as CustomEvent).detail;
       if (detail && mounted) {
-        setReadingState((current) =>
-          updateReadingStateWithLatest(current, detail),
-        );
+        setReadingState((current) => {
+          const next = updateReadingStateWithLatest(current, detail);
+          cachedReadingState = next;
+          return next;
+        });
       }
     }
 

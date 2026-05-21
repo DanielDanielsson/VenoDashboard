@@ -238,6 +238,22 @@ describe('DashboardGlucoseBadge', () => {
     });
   });
 
+  test('keeps the last reading visible across remounts', async () => {
+    const { unmount } = render(<DashboardGlucoseBadge />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('glucose-indicator')).toBeInTheDocument();
+    });
+
+    unmount();
+    render(<DashboardGlucoseBadge />);
+
+    expect(screen.getByTestId('glucose-indicator')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('glucose-indicator')).toBeInTheDocument();
+    });
+  });
+
   test('only renders enabled metadata labels', async () => {
     render(
       <DashboardGlucoseBadge
