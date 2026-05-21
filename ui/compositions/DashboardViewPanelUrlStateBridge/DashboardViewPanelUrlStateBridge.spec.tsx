@@ -34,6 +34,7 @@ vi.mock('react-grid-layout', () => ({
   },
   useContainerWidth: () => ({
     containerRef: { current: null },
+    measureWidth: vi.fn(),
     mounted: gridLayoutMock.mounted,
     width: gridLayoutMock.width,
   }),
@@ -147,6 +148,162 @@ describe('DashboardViewPanelUrlStateBridge', () => {
     expect(pushStateSpy).toHaveBeenCalledWith(null, '', '/dashboard?viewPanel=panel-current-glucose');
     expect(screen.getByText('Current glucose panel')).toBeInTheDocument();
     expect(screen.queryByText('Connections panel')).not.toBeInTheDocument();
+  });
+
+  test('opens the requested panel edit mode from an editPanel link', () => {
+    usePathnameMock.mockReturnValue('/dashboard');
+    useSearchParamsMock.mockReturnValue(new URLSearchParams('editPanel=panel-current-glucose'));
+
+    render(
+      <NotificationsProvider>
+        <DashboardViewPanelUrlStateBridge
+          allowedPanelIds={['panel-current-glucose', 'panel-connections']}
+        >
+          {({ viewedPanelId, onViewedPanelChange, editedPanelId, onEditedPanelChange }) => (
+            <DashboardGrid
+              layout={createLayout()}
+              viewedPanelId={viewedPanelId}
+              onViewedPanelChange={onViewedPanelChange}
+              editedPanelId={editedPanelId}
+              onEditedPanelChange={onEditedPanelChange}
+            >
+              <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+                Current glucose panel
+              </DashboardGridPanel>
+              <DashboardGridPanel key="panel-connections" panelId="panel-connections" title="Connections">
+                Connections panel
+              </DashboardGridPanel>
+            </DashboardGrid>
+          )}
+        </DashboardViewPanelUrlStateBridge>
+      </NotificationsProvider>,
+    );
+
+    expect(screen.getByText('Current glucose panel')).toBeInTheDocument();
+    expect(screen.queryByText('Connections panel')).not.toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Panel settings for Current Glucose' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'to dashboard' })).toBeInTheDocument();
+  });
+
+  test('removes editPanel from the url when e is pressed again', () => {
+    usePathnameMock.mockReturnValue('/dashboard');
+    useSearchParamsMock.mockReturnValue(new URLSearchParams('editPanel=panel-current-glucose'));
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+
+    render(
+      <NotificationsProvider>
+        <DashboardViewPanelUrlStateBridge
+          allowedPanelIds={['panel-current-glucose', 'panel-connections']}
+        >
+          {({ viewedPanelId, onViewedPanelChange, editedPanelId, onEditedPanelChange }) => (
+            <DashboardGrid
+              layout={createLayout()}
+              viewedPanelId={viewedPanelId}
+              onViewedPanelChange={onViewedPanelChange}
+              editedPanelId={editedPanelId}
+              onEditedPanelChange={onEditedPanelChange}
+            >
+              <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+                Current glucose panel
+              </DashboardGridPanel>
+              <DashboardGridPanel key="panel-connections" panelId="panel-connections" title="Connections">
+                Connections panel
+              </DashboardGridPanel>
+            </DashboardGrid>
+          )}
+        </DashboardViewPanelUrlStateBridge>
+      </NotificationsProvider>,
+    );
+
+    fireEvent.keyDown(window, { key: 'e' });
+
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/dashboard');
+    expect(screen.getByText('Current glucose panel')).toBeInTheDocument();
+    expect(screen.getByText('Connections panel')).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Panel settings for Current Glucose' })).not.toBeInTheDocument();
+  });
+
+  test('switches editPanel to viewPanel with v and back to editPanel with e', () => {
+    usePathnameMock.mockReturnValue('/dashboard');
+    useSearchParamsMock.mockReturnValue(new URLSearchParams('editPanel=panel-current-glucose'));
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+
+    render(
+      <NotificationsProvider>
+        <DashboardViewPanelUrlStateBridge
+          allowedPanelIds={['panel-current-glucose', 'panel-connections']}
+        >
+          {({ viewedPanelId, onViewedPanelChange, editedPanelId, onEditedPanelChange }) => (
+            <DashboardGrid
+              layout={createLayout()}
+              viewedPanelId={viewedPanelId}
+              onViewedPanelChange={onViewedPanelChange}
+              editedPanelId={editedPanelId}
+              onEditedPanelChange={onEditedPanelChange}
+            >
+              <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+                Current glucose panel
+              </DashboardGridPanel>
+              <DashboardGridPanel key="panel-connections" panelId="panel-connections" title="Connections">
+                Connections panel
+              </DashboardGridPanel>
+            </DashboardGrid>
+          )}
+        </DashboardViewPanelUrlStateBridge>
+      </NotificationsProvider>,
+    );
+
+    fireEvent.keyDown(window, { key: 'v' });
+
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/dashboard?viewPanel=panel-current-glucose');
+    expect(screen.getByText('Current glucose panel')).toBeInTheDocument();
+    expect(screen.queryByText('Connections panel')).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Panel settings for Current Glucose' })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'e' });
+
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/dashboard?editPanel=panel-current-glucose');
+    expect(screen.getByRole('complementary', { name: 'Panel settings for Current Glucose' })).toBeInTheDocument();
+    expect(screen.queryByText('Connections panel')).not.toBeInTheDocument();
+  });
+
+  test('pushes editPanel into the url when panel edit is opened from the menu', () => {
+    usePathnameMock.mockReturnValue('/dashboard');
+    useSearchParamsMock.mockReturnValue(new URLSearchParams());
+    const pushStateSpy = vi.spyOn(window.history, 'pushState');
+
+    render(
+      <NotificationsProvider>
+        <DashboardViewPanelUrlStateBridge
+          allowedPanelIds={['panel-current-glucose', 'panel-connections']}
+        >
+          {({ viewedPanelId, onViewedPanelChange, editedPanelId, onEditedPanelChange }) => (
+            <DashboardGrid
+              layout={createLayout()}
+              viewedPanelId={viewedPanelId}
+              onViewedPanelChange={onViewedPanelChange}
+              editedPanelId={editedPanelId}
+              onEditedPanelChange={onEditedPanelChange}
+            >
+              <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
+                Current glucose panel
+              </DashboardGridPanel>
+              <DashboardGridPanel key="panel-connections" panelId="panel-connections" title="Connections">
+                Connections panel
+              </DashboardGridPanel>
+            </DashboardGrid>
+          )}
+        </DashboardViewPanelUrlStateBridge>
+      </NotificationsProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel actions for Current Glucose' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+
+    expect(pushStateSpy).toHaveBeenCalledWith(null, '', '/dashboard?editPanel=panel-current-glucose');
+    expect(screen.getByText('Current glucose panel')).toBeInTheDocument();
+    expect(screen.queryByText('Connections panel')).not.toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Panel settings for Current Glucose' })).toBeInTheDocument();
   });
 
   test('removes viewPanel from the url when solo mode is closed', () => {

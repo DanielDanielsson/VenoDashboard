@@ -39,6 +39,7 @@ vi.mock('react-grid-layout', () => ({
   },
   useContainerWidth: () => ({
     containerRef: { current: null },
+    measureWidth: vi.fn(),
     mounted: gridLayoutMock.mounted,
     width: gridLayoutMock.width,
   }),

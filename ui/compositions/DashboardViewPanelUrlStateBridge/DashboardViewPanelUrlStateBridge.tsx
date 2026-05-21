@@ -13,6 +13,8 @@ interface DashboardViewPanelUrlStateBridgeProps {
   children: (input: {
     viewedPanelId: string | null;
     onViewedPanelChange: (panelId: string | null, navigationMode?: 'push' | 'replace') => void;
+    editedPanelId: string | null;
+    onEditedPanelChange: (panelId: string | null, navigationMode?: 'push' | 'replace') => void;
   }) => ReactNode;
 }
 
@@ -28,6 +30,7 @@ export function DashboardViewPanelUrlStateBridge({
   const lastInvalidSearchRef = useRef<string | null>(null);
   const { notifyInvalidDashboardUrl } = useDashboardNotifications({ dashboardUid });
   const nextViewedPanelId = searchParams.get('viewPanel');
+  const nextEditedPanelId = searchParams.get('editPanel');
   const resolvedViewedPanelId = nextViewedPanelId
     ? allowedPanelIds.includes(nextViewedPanelId)
       ? nextViewedPanelId
@@ -36,48 +39,118 @@ export function DashboardViewPanelUrlStateBridge({
   const viewedPanelId = resolvedViewedPanelId && allowedPanelIds.includes(resolvedViewedPanelId)
     ? resolvedViewedPanelId
     : null;
-  const [localViewedPanelId, setLocalViewedPanelId] = useState<string | null>(viewedPanelId);
+  const resolvedEditedPanelId = nextEditedPanelId
+    ? allowedPanelIds.includes(nextEditedPanelId)
+      ? nextEditedPanelId
+      : panelIdAliases[nextEditedPanelId] ?? null
+    : null;
+  const editedPanelId = resolvedEditedPanelId && allowedPanelIds.includes(resolvedEditedPanelId)
+    ? resolvedEditedPanelId
+    : null;
+  const [localViewedPanelId, setLocalViewedPanelId] = useState<string | null>(editedPanelId ? null : viewedPanelId);
+  const [localEditedPanelId, setLocalEditedPanelId] = useState<string | null>(editedPanelId);
 
   useEffect(() => {
-    setLocalViewedPanelId(viewedPanelId);
-  }, [viewedPanelId]);
+    setLocalEditedPanelId(editedPanelId);
+  }, [editedPanelId]);
 
   useEffect(() => {
-    if (!nextViewedPanelId) {
+    setLocalViewedPanelId(editedPanelId ? null : viewedPanelId);
+  }, [editedPanelId, viewedPanelId]);
+
+  useEffect(() => {
+    if (!nextViewedPanelId && !nextEditedPanelId) {
       lastInvalidSearchRef.current = null;
       return;
     }
 
     const currentSearch = searchParams.toString();
     const nextParams = new URLSearchParams(currentSearch);
+    let didChangeParams = false;
+    let didRejectParams = false;
+
+    if (nextEditedPanelId) {
+      if (editedPanelId) {
+        if (nextEditedPanelId !== editedPanelId) {
+          nextParams.set('editPanel', editedPanelId);
+          didChangeParams = true;
+        }
+
+        if (nextParams.has('viewPanel')) {
+          nextParams.delete('viewPanel');
+          didChangeParams = true;
+        }
+
+        if (didChangeParams) {
+          const nextSearch = nextParams.toString();
+          const nextHref = nextSearch ? `${pathname}?${nextSearch}` : pathname;
+          window.history.replaceState(null, '', nextHref);
+        }
+
+        lastInvalidSearchRef.current = null;
+        return;
+      }
+
+      nextParams.delete('editPanel');
+      didChangeParams = true;
+      didRejectParams = true;
+    }
 
     if (viewedPanelId) {
       if (nextViewedPanelId !== viewedPanelId) {
         nextParams.set('viewPanel', viewedPanelId);
+        didChangeParams = true;
+      }
+
+      if (didChangeParams) {
         const nextSearch = nextParams.toString();
         const nextHref = nextSearch ? `${pathname}?${nextSearch}` : pathname;
         window.history.replaceState(null, '', nextHref);
+      }
+
+      if (didRejectParams && dashboardTitle && lastInvalidSearchRef.current !== currentSearch) {
+        notifyInvalidDashboardUrl(dashboardTitle);
+        lastInvalidSearchRef.current = currentSearch;
+        return;
       }
 
       lastInvalidSearchRef.current = null;
       return;
     }
 
-    nextParams.delete('viewPanel');
-    const nextSearch = nextParams.toString();
-    const nextHref = nextSearch ? `${pathname}?${nextSearch}` : pathname;
+    if (nextViewedPanelId) {
+      nextParams.delete('viewPanel');
+      didChangeParams = true;
+      didRejectParams = true;
+    }
 
-    window.history.replaceState(null, '', nextHref);
+    if (didChangeParams) {
+      const nextSearch = nextParams.toString();
+      const nextHref = nextSearch ? `${pathname}?${nextSearch}` : pathname;
 
-    if (dashboardTitle && lastInvalidSearchRef.current !== currentSearch) {
+      window.history.replaceState(null, '', nextHref);
+    }
+
+    if (didRejectParams && dashboardTitle && lastInvalidSearchRef.current !== currentSearch) {
       notifyInvalidDashboardUrl(dashboardTitle);
       lastInvalidSearchRef.current = currentSearch;
     }
-  }, [dashboardTitle, nextViewedPanelId, notifyInvalidDashboardUrl, pathname, searchParams, viewedPanelId]);
+  }, [
+    dashboardTitle,
+    editedPanelId,
+    nextEditedPanelId,
+    nextViewedPanelId,
+    notifyInvalidDashboardUrl,
+    pathname,
+    searchParams,
+    viewedPanelId,
+  ]);
 
   function onViewedPanelChange(panelId: string | null, navigationMode: 'push' | 'replace' = 'replace') {
     const nextParams = new URLSearchParams(searchParams.toString());
+    setLocalEditedPanelId(null);
     setLocalViewedPanelId(panelId);
+    nextParams.delete('editPanel');
 
     if (panelId) {
       nextParams.set('viewPanel', panelId);
@@ -96,5 +169,33 @@ export function DashboardViewPanelUrlStateBridge({
     window.history.replaceState(null, '', nextHref);
   }
 
-  return children({ viewedPanelId: localViewedPanelId, onViewedPanelChange });
+  function onEditedPanelChange(panelId: string | null, navigationMode: 'push' | 'replace' = 'replace') {
+    const nextParams = new URLSearchParams(searchParams.toString());
+    setLocalViewedPanelId(null);
+    setLocalEditedPanelId(panelId);
+    nextParams.delete('viewPanel');
+
+    if (panelId) {
+      nextParams.set('editPanel', panelId);
+    } else {
+      nextParams.delete('editPanel');
+    }
+
+    const nextSearch = nextParams.toString();
+    const nextHref = nextSearch ? `${pathname}?${nextSearch}` : pathname;
+
+    if (navigationMode === 'push') {
+      window.history.pushState(null, '', nextHref);
+      return;
+    }
+
+    window.history.replaceState(null, '', nextHref);
+  }
+
+  return children({
+    viewedPanelId: localEditedPanelId ?? localViewedPanelId,
+    onViewedPanelChange,
+    editedPanelId: localEditedPanelId,
+    onEditedPanelChange,
+  });
 }

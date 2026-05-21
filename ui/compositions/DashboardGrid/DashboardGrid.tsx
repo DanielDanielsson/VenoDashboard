@@ -1,6 +1,6 @@
 'use client';
 
-import { Children, cloneElement, createContext, isValidElement, useContext, useRef, type ReactElement, type ReactNode } from 'react';
+import { Children, cloneElement, createContext, isValidElement, useContext, useLayoutEffect, useRef, type ReactElement, type ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ReactGridLayout, { useContainerWidth, type Layout } from 'react-grid-layout';
@@ -48,6 +48,8 @@ interface DashboardGridProps {
   isOwner?: boolean;
   viewedPanelId?: string | null;
   onViewedPanelChange?: (panelId: string | null, navigationMode?: 'push' | 'replace') => void;
+  editedPanelId?: string | null;
+  onEditedPanelChange?: (panelId: string | null, navigationMode?: 'push' | 'replace') => void;
   settingsRegistry?: DashboardPanelSettingsRegistry;
   initialElements?: Record<string, PanelKind>;
   renderPanel?: (panelId: string, panel: PanelKind) => ReactNode;
@@ -410,6 +412,8 @@ export function DashboardGrid({
   isOwner = false,
   viewedPanelId: controlledViewedPanelId,
   onViewedPanelChange,
+  editedPanelId: controlledEditedPanelId,
+  onEditedPanelChange,
   settingsRegistry = {},
   initialElements = EMPTY_PANEL_ELEMENTS,
   renderPanel,
@@ -457,10 +461,10 @@ export function DashboardGrid({
     | { type: 'navigate'; href: string }
     | null
   >(null);
-  const { containerRef, mounted, width } = useContainerWidth({ measureBeforeMount: true });
+  const { containerRef, measureWidth, mounted, width } = useContainerWidth({ measureBeforeMount: true });
   const isDraggable = mounted && width > 768;
-  const isLayoutEditingEnabled = isEditMode && isDraggable;
   const viewedPanelId = controlledViewedPanelId ?? uncontrolledViewedPanelId;
+  const isLayoutEditingEnabled = isEditMode && isDraggable && !viewedPanelId;
   const availablePanelCatalogEntries = useMemo(() => {
     if (!dashboardType || !isOwner) {
       return [];
@@ -523,8 +527,17 @@ export function DashboardGrid({
   }, [runtimeLayout, soloPanelMaxRows, viewedPanelId]);
 
   const handleGridViewportRef = useCallback((node: HTMLDivElement | null) => {
+    containerRef.current = node;
     setGridViewportElement(node);
-  }, []);
+  }, [containerRef]);
+
+  useLayoutEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
+    measureWidth();
+  }, [editedPanel, measureWidth, mounted]);
 
   useEffect(() => {
     const nextLayout = cloneReactGridLayoutItems(initialLayout);
@@ -775,6 +788,7 @@ export function DashboardGrid({
     });
     if (editedPanel?.panelId === panelId) {
       setEditedPanel(null);
+      commitEditedPanelChange(null, 'replace');
     }
     if (viewedPanelId === panelId) {
       commitViewedPanelChange(null, 'replace');
@@ -788,6 +802,52 @@ export function DashboardGrid({
 
     onViewedPanelChange?.(panelId, navigationMode);
   }, [controlledViewedPanelId, onViewedPanelChange]);
+
+  const commitEditedPanelChange = useCallback((panelId: string | null, navigationMode: 'push' | 'replace' = 'replace') => {
+    if (onEditedPanelChange) {
+      onEditedPanelChange(panelId, navigationMode);
+      return;
+    }
+
+    commitViewedPanelChange(panelId, navigationMode);
+  }, [commitViewedPanelChange, onEditedPanelChange]);
+
+  const getPanelTitle = useCallback((panelId: string): string => {
+    const panel = runtimeElements[panelId];
+    if (panel?.spec.title) {
+      return panel.spec.title;
+    }
+
+    for (const child of Children.toArray(children)) {
+      if (getChildPanelId(child) !== panelId || !isValidElement(child)) {
+        continue;
+      }
+
+      const title = (child.props as { title?: unknown }).title;
+      if (typeof title === 'string' && title.length > 0) {
+        return title;
+      }
+    }
+
+    return panelId;
+  }, [children, runtimeElements]);
+
+  const enterPanelEditMode = useCallback((
+    panel: { panelId: string; title: string },
+    navigationMode: 'push' | 'replace' = 'push',
+  ) => {
+    setEditedPanel(panel);
+    setIsAddPanelDrawerOpen(false);
+    setIsEditMode(true);
+    commitEditedPanelChange(panel.panelId, navigationMode);
+  }, [commitEditedPanelChange]);
+
+  const exitPanelEditMode = useCallback((navigationMode: 'push' | 'replace' = 'replace') => {
+    setEditedPanel(null);
+    setIsEditMode(false);
+    setIsAddPanelDrawerOpen(false);
+    commitEditedPanelChange(null, navigationMode);
+  }, [commitEditedPanelChange]);
 
   const handleViewedPanelChange = useCallback((panelId: string | null, navigationMode: 'push' | 'replace' = 'replace') => {
     if (panelId) {
@@ -804,16 +864,59 @@ export function DashboardGrid({
       setIsEditMode(false);
     }
 
+    if (!panelId && editedPanel) {
+      if (shouldGuardUnsavedDashboardChanges) {
+        setPendingDiscardAction({ type: 'exit-edit-mode' });
+        return;
+      }
+
+      if (hasUnsavedDashboardChanges) {
+        resetRuntimeDashboardState();
+      }
+
+      exitPanelEditMode('replace');
+      return;
+    }
+
     commitViewedPanelChange(panelId, navigationMode);
   }, [
     commitViewedPanelChange,
+    editedPanel,
+    exitPanelEditMode,
     hasUnsavedDashboardChanges,
     isEditMode,
     resetRuntimeDashboardState,
     shouldGuardUnsavedDashboardChanges,
   ]);
 
-  function handleExitEditMode() {
+  useEffect(() => {
+    if (controlledEditedPanelId === undefined) {
+      return;
+    }
+
+    if (!controlledEditedPanelId) {
+      if (editedPanel) {
+        setEditedPanel(null);
+        setIsEditMode(false);
+        setIsAddPanelDrawerOpen(false);
+      }
+      return;
+    }
+
+    const nextTitle = getPanelTitle(controlledEditedPanelId);
+    if (editedPanel?.panelId === controlledEditedPanelId && editedPanel.title === nextTitle && isEditMode) {
+      return;
+    }
+
+    setEditedPanel({
+      panelId: controlledEditedPanelId,
+      title: nextTitle,
+    });
+    setIsAddPanelDrawerOpen(false);
+    setIsEditMode(true);
+  }, [controlledEditedPanelId, editedPanel, getPanelTitle, isEditMode]);
+
+  const handleExitEditMode = useCallback(() => {
     if (shouldGuardUnsavedDashboardChanges) {
       setPendingDiscardAction({ type: 'exit-edit-mode' });
       return;
@@ -824,8 +927,18 @@ export function DashboardGrid({
     }
 
     setIsEditMode(false);
+    if (editedPanel) {
+      commitEditedPanelChange(null, 'replace');
+    }
+    setEditedPanel(null);
     setIsAddPanelDrawerOpen(false);
-  }
+  }, [
+    commitEditedPanelChange,
+    editedPanel,
+    hasUnsavedDashboardChanges,
+    resetRuntimeDashboardState,
+    shouldGuardUnsavedDashboardChanges,
+  ]);
 
   function handleDiscardChanges() {
     const nextAction = pendingDiscardAction;
@@ -838,6 +951,10 @@ export function DashboardGrid({
     }
 
     if (nextAction.type === 'exit-edit-mode') {
+      if (editedPanel) {
+        commitEditedPanelChange(null, 'replace');
+      }
+      setEditedPanel(null);
       setIsEditMode(false);
       return;
     }
@@ -908,12 +1025,31 @@ export function DashboardGrid({
         return;
       }
 
-      if (event.key.toLowerCase() !== 'v') {
+      const key = event.key.toLowerCase();
+      if (key !== 'v' && key !== 'e') {
         return;
       }
 
       const activePanelId = hoveredPanelId ?? getHoveredDashboardPanelId(gridViewportElement) ?? viewedPanelId;
       if (!activePanelId) {
+        return;
+      }
+
+      if (key === 'e') {
+        if (editedPanel?.panelId === activePanelId) {
+          handleExitEditMode();
+          return;
+        }
+
+        enterPanelEditMode({
+          panelId: activePanelId,
+          title: getPanelTitle(activePanelId),
+        }, viewedPanelId === activePanelId ? 'replace' : 'push');
+        return;
+      }
+
+      if (editedPanel) {
+        handleViewedPanelChange(activePanelId, viewedPanelId === activePanelId ? 'replace' : 'push');
         return;
       }
 
@@ -927,7 +1063,16 @@ export function DashboardGrid({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gridViewportElement, handleViewedPanelChange, hoveredPanelId, viewedPanelId]);
+  }, [
+    enterPanelEditMode,
+    editedPanel,
+    getPanelTitle,
+    gridViewportElement,
+    handleExitEditMode,
+    handleViewedPanelChange,
+    hoveredPanelId,
+    viewedPanelId,
+  ]);
 
   useEffect(() => {
     if (!viewedPanelId || !mounted) {
@@ -1043,7 +1188,7 @@ export function DashboardGrid({
           <span>to dashboard</span>
         </Button>
       ) : null}
-      {isEditMode ? (
+      {viewedPanelId ? null : isEditMode ? (
         <>
           <div className="flex items-center gap-2">
             {isOwner ? (
@@ -1102,15 +1247,73 @@ export function DashboardGrid({
     </div>
   );
   const shouldRenderInternalControls = !editControlsPortalId;
+  const panelSettingsDrawer = editedPanel ? (
+    <aside
+      aria-label={`Panel settings for ${editedPanel.title}`}
+      role="complementary"
+      className="dashboard-panel-settings-drawer fixed right-0 top-0 z-50 flex h-screen w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden border-l border-dashboard-settings-drawer-border bg-dashboard-settings-drawer-bg shadow-2xl"
+    >
+      <div className="dashboard-panel-settings-drawer-header flex shrink-0 items-start justify-between gap-4 border-b border-dashboard-settings-drawer-border bg-dashboard-settings-drawer-header-bg px-6 py-5">
+        <h2 className="panel_title text-text">{editedPanel.title} settings</h2>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="ui_caption rounded-[4px] border border-border px-3 py-1 text-text-soft disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!canAttemptSaveDashboard}
+            onClick={handleSaveDashboard}
+          >
+            {isSavingDashboard ? 'Saving' : 'Save'}
+          </button>
+          <button
+            type="button"
+            className="ui_caption rounded-[4px] border border-border px-2 py-1 text-text-soft"
+            onClick={() => exitPanelEditMode('replace')}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+      <div
+        data-testid="dashboard-panel-settings-scroll-region"
+        className="dashboard-panel-settings-scroll-region flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6"
+      >
+        <div className="flex-1">
+          {editedPanelRegistration && editedPanelSettings !== undefined ? (
+            editedPanelRegistration.render({
+              settings: editedPanelSettings,
+              updateSettings: (updater) => {
+                settingsContextValue.updateSettings(
+                  editedPanel.panelId,
+                  editedPanelRegistration.defaultSettings,
+                  updater,
+                );
+              },
+              updateLayout: (updater) => {
+                updatePanelLayout(editedPanel.panelId, updater);
+              },
+              resizeLayoutToAspectRatio: (options) => {
+                resizePanelLayoutToAspectRatio(editedPanel.panelId, options);
+              },
+              isOwner,
+            })
+          ) : (
+            <p className="body_text text-text-soft">No settings available yet.</p>
+          )}
+        </div>
+        {!isOwner ? (
+          <p className="body_text mt-6 border-t border-border pt-4 text-text-soft">
+            Admin sign in is required to save dashboard settings.
+          </p>
+        ) : null}
+      </div>
+    </aside>
+  ) : null;
 
   return (
     <DashboardGridActionsContext.Provider
       value={{
         viewPanel: (panelId) => handleViewedPanelChange(panelId, 'push'),
-        editPanel: (panel) => {
-          setEditedPanel(panel);
-          setIsEditMode(true);
-        },
+        editPanel: (panel) => enterPanelEditMode(panel, 'push'),
         removePanel: handleRemovePanel,
         setHoveredPanel: setHoveredPanelId,
         hoveredPanelId,
@@ -1121,111 +1324,53 @@ export function DashboardGrid({
       }}
     >
       <DashboardPanelSettingsContext.Provider value={settingsContextValue}>
-        <div ref={containerRef} className="w-full">
+        <div className={['w-full', editedPanel ? 'lg:pr-[25rem]' : ''].filter(Boolean).join(' ')}>
           {editControlsPortalTarget ? createPortal(dashboardEditControls, editControlsPortalTarget) : null}
+          {panelSettingsDrawer && typeof document !== 'undefined' ? createPortal(panelSettingsDrawer, document.body) : null}
           {shouldRenderInternalControls ? (
             <div className="mb-4 flex items-start justify-start gap-4">
               {dashboardEditControls}
             </div>
           ) : null}
-          <div ref={handleGridViewportRef}>
-            {mounted ? (
-              <ReactGridLayout
-                autoSize
-                className={[
-                  'dashboard-grid',
-                  isEditMode ? 'dashboard-grid--editing' : '',
-                  moveAnimationsEnabled && isEditMode && !viewedPanelId ? 'react-grid-layout--enable-move-animations' : '',
-                ].filter(Boolean).join(' ')}
-                dragConfig={{
-                  enabled: isLayoutEditingEnabled,
-                  handle: '.dashboard-panel-drag-handle',
-                  cancel: '.grid-drag-cancel,button,input,select,textarea,a',
-                }}
-                gridConfig={gridConfig}
-                layout={visibleLayout}
-                resizeConfig={{ enabled: isLayoutEditingEnabled }}
-                width={width}
-                onLayoutChange={(nextLayout) => {
-                  if (!isEditMode) {
-                    return;
-                  }
+          <div className="min-h-0 w-full">
+            <div ref={handleGridViewportRef} className="min-w-0">
+              {mounted ? (
+                <ReactGridLayout
+                  autoSize
+                  className={[
+                    'dashboard-grid',
+                    isEditMode ? 'dashboard-grid--editing' : '',
+                    moveAnimationsEnabled && isEditMode && !viewedPanelId ? 'react-grid-layout--enable-move-animations' : '',
+                  ].filter(Boolean).join(' ')}
+                  dragConfig={{
+                    enabled: isLayoutEditingEnabled,
+                    handle: '.dashboard-panel-drag-handle',
+                    cancel: '.grid-drag-cancel,button,input,select,textarea,a',
+                  }}
+                  gridConfig={gridConfig}
+                  layout={visibleLayout}
+                  resizeConfig={{ enabled: isLayoutEditingEnabled }}
+                  width={width}
+                  onLayoutChange={(nextLayout) => {
+                    if (!isLayoutEditingEnabled) {
+                      return;
+                    }
 
-                  setRuntimeLayout(cloneReactGridLayoutItems(nextLayout));
-                }}
-              >
-                {visibleChildren}
-              </ReactGridLayout>
-            ) : null}
+                    setRuntimeLayout(cloneReactGridLayoutItems(nextLayout));
+                  }}
+                >
+                  {visibleChildren}
+                </ReactGridLayout>
+              ) : null}
+            </div>
           </div>
-          {editedPanel ? (
-            <aside
-              aria-label={`Panel settings for ${editedPanel.title}`}
-              role="complementary"
-              className="dashboard-panel-settings-drawer fixed right-0 top-0 z-50 flex h-screen w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden border-l border-dashboard-settings-drawer-border bg-dashboard-settings-drawer-bg shadow-2xl"
-            >
-              <div className="dashboard-panel-settings-drawer-header flex shrink-0 items-start justify-between gap-4 border-b border-dashboard-settings-drawer-border bg-dashboard-settings-drawer-header-bg px-6 py-5">
-                <h2 className="panel_title text-text">{editedPanel.title} settings</h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="ui_caption rounded-[4px] border border-border px-3 py-1 text-text-soft disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={!canAttemptSaveDashboard}
-                    onClick={handleSaveDashboard}
-                  >
-                    {isSavingDashboard ? 'Saving' : 'Save'}
-                  </button>
-                  <button
-                    type="button"
-                    className="ui_caption rounded-[4px] border border-border px-2 py-1 text-text-soft"
-                    onClick={() => setEditedPanel(null)}
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-              <div
-                data-testid="dashboard-panel-settings-scroll-region"
-                className="dashboard-panel-settings-scroll-region flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6"
-              >
-                <div className="flex-1">
-                  {editedPanelRegistration && editedPanelSettings !== undefined ? (
-                    editedPanelRegistration.render({
-                      settings: editedPanelSettings,
-                      updateSettings: (updater) => {
-                        settingsContextValue.updateSettings(
-                          editedPanel.panelId,
-                          editedPanelRegistration.defaultSettings,
-                          updater,
-                        );
-                      },
-                      updateLayout: (updater) => {
-                        updatePanelLayout(editedPanel.panelId, updater);
-                      },
-                      resizeLayoutToAspectRatio: (options) => {
-                        resizePanelLayoutToAspectRatio(editedPanel.panelId, options);
-                      },
-                      isOwner,
-                    })
-                  ) : (
-                    <p className="body_text text-text-soft">No settings available yet.</p>
-                  )}
-                </div>
-                {!isOwner ? (
-                  <p className="body_text mt-6 border-t border-border pt-4 text-text-soft">
-                    Admin sign in is required to save dashboard settings.
-                  </p>
-                ) : null}
-              </div>
-            </aside>
-          ) : null}
           {isAddPanelDrawerOpen ? (
             <aside
               aria-label="Add panel"
               role="complementary"
-              className="fixed right-0 top-0 z-50 flex h-screen w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden border-l border-border bg-bg p-6 shadow-2xl"
+              className="dashboard-panel-settings-drawer fixed right-0 top-0 z-50 flex h-screen w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden border-l border-dashboard-settings-drawer-border bg-dashboard-settings-drawer-bg shadow-2xl"
             >
-              <div className="flex shrink-0 items-start justify-between gap-4">
+              <div className="dashboard-panel-settings-drawer-header flex shrink-0 items-start justify-between gap-4 border-b border-dashboard-settings-drawer-border bg-dashboard-settings-drawer-header-bg px-6 py-5">
                 <h2 className="panel_title text-text">Add panel</h2>
                 <button
                   type="button"
@@ -1235,18 +1380,23 @@ export function DashboardGrid({
                   Close
                 </button>
               </div>
-              <div className="dashboard-panel-settings-scroll-region mt-6 grid min-h-0 flex-1 gap-2 overflow-y-auto pr-1">
+              <div
+                data-testid="dashboard-add-panel-scroll-region"
+                className="dashboard-panel-settings-scroll-region flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6"
+              >
                 {availablePanelCatalogEntries.length > 0 ? (
-                  availablePanelCatalogEntries.map((entry) => (
-                    <button
-                      key={entry.group}
-                      type="button"
-                      className="ui_caption rounded-[4px] border border-border px-3 py-2 text-left text-text-soft transition-colors hover:bg-surface-muted hover:text-text"
-                      onClick={() => handleAddPanel(entry)}
-                    >
-                      {entry.title}
-                    </button>
-                  ))
+                  <div className="grid auto-rows-max content-start gap-2">
+                    {availablePanelCatalogEntries.map((entry) => (
+                      <button
+                        key={entry.group}
+                        type="button"
+                        className="ui_caption rounded-[4px] border border-border px-3 py-2 text-left text-text-soft transition-colors hover:bg-surface-muted hover:text-text"
+                        onClick={() => handleAddPanel(entry)}
+                      >
+                        {entry.title}
+                      </button>
+                    ))}
+                  </div>
                 ) : (
                   <p className="body_text text-text-soft">No compatible panels available.</p>
                 )}

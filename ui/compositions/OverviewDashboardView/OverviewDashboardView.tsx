@@ -45,7 +45,7 @@ export function OverviewDashboardView({
         allowedPanelIds={Object.keys(dashboard.spec.elements)}
         panelIdAliases={getDashboardViewPanelAliases(dashboard)}
       >
-        {({ viewedPanelId, onViewedPanelChange }) => (
+        {({ viewedPanelId, onViewedPanelChange, editedPanelId, onEditedPanelChange }) => (
           <DashboardDefinitionRenderer
             dashboard={dashboard}
             dashboardType="live"
@@ -54,6 +54,8 @@ export function OverviewDashboardView({
             isOwner={context.isOwner}
             viewedPanelId={viewedPanelId}
             onViewedPanelChange={onViewedPanelChange}
+            editedPanelId={editedPanelId}
+            onEditedPanelChange={onEditedPanelChange}
             settingsRegistry={settingsRegistry}
             timeInRangeDefaultLayout="overview"
             context={context}

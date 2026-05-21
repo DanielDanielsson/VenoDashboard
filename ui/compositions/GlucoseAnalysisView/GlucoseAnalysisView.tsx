@@ -1218,7 +1218,7 @@ export function GlucoseAnalysisView({
         allowedPanelIds={Object.keys(dashboardDefinition.spec.elements)}
         panelIdAliases={getDashboardViewPanelAliases(dashboardDefinition)}
       >
-        {({ viewedPanelId, onViewedPanelChange }) => (
+        {({ viewedPanelId, onViewedPanelChange, editedPanelId, onEditedPanelChange }) => (
         <DashboardDefinitionRenderer
           dashboard={dashboardDefinition}
           dashboardType="timeRange"
@@ -1227,6 +1227,8 @@ export function GlucoseAnalysisView({
         isOwner={isOwner}
         viewedPanelId={viewedPanelId}
         onViewedPanelChange={onViewedPanelChange}
+        editedPanelId={editedPanelId}
+        onEditedPanelChange={onEditedPanelChange}
         settingsRegistry={settingsRegistry}
         timeSettings={dashboardTimeSettings}
         onDiscardTimeSettings={(timeSettings) => setAutoRefresh(timeSettings.autoRefresh)}

@@ -119,7 +119,7 @@ function DashboardGridPanelActions({
             }}
           >
             <span>Edit</span>
-            <span aria-hidden="true" className="h-5 min-w-5" />
+            <KeyboardKey aria-label="Keyboard shortcut E">E</KeyboardKey>
           </Button>
           {isOwner && isEditMode ? (
             <Button
