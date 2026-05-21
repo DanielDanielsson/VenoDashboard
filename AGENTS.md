@@ -136,28 +136,39 @@ Panel view and URL state rules:
 2. statistics supports `from`, `to`, and `timezone` URL parameters
 3. unsupported or invalid dashboard URL parameters should be normalized and reported through `useDashboardNotifications`
 4. overview rejects unsupported time range parameters through `DashboardUrlStateBridge`
-5. solo panel view is controlled by the `viewPanel` URL parameter through `DashboardViewPanelUrlStateBridge`
-6. `viewPanel` values should use stable panel keys like `panel-time-in-range`
-7. legacy numeric panel ids are aliases only and should normalize to stable panel keys
-8. changing time range must preserve any active `viewPanel` parameter
-9. selecting a new time range should update the URL first, then let URL driven state update the dashboard data
-10. do not add separate page level solo view state when `DashboardGrid` and `DashboardViewPanelUrlStateBridge` can own it
+5. focused panel view is controlled by `viewPanel` through `DashboardViewPanelUrlStateBridge`
+6. focused panel edit is controlled by `editPanel` through `DashboardViewPanelUrlStateBridge`
+7. `viewPanel` and `editPanel` values should use stable panel keys like `panel-time-in-range`
+8. `editPanel` takes precedence over `viewPanel` when both are present, and URL normalization should remove the inactive parameter
+9. legacy numeric panel ids are aliases only and should normalize to stable panel keys
+10. changing time range must preserve any active `viewPanel` or `editPanel` parameter
+11. selecting a new time range should update the URL first, then let URL driven state update the dashboard data
+12. do not add separate page level focused panel state when `DashboardGrid` and `DashboardViewPanelUrlStateBridge` can own it
+13. `DashboardDefinitionRenderer` and `DashboardGridRuntime` must pass both viewed and edited panel state through to `DashboardGrid`
 
 Panel interaction rules:
 
 1. panel action buttons are always mounted but hidden until panel hover or menu open
 2. the three dot menu opens without requiring dashboard edit mode
 3. clicking outside an open panel menu should close it
-4. selecting `Edit` from a panel menu must enter dashboard edit mode and open the shared settings drawer
+4. selecting `Edit` from a panel menu must enter focused panel edit mode, update `editPanel`, and open the shared settings drawer
 5. selecting `View` from a panel menu must enter solo panel view and update `viewPanel`
-6. hovering a panel and pressing `V` toggles solo panel view
-7. keyboard shortcuts must be ignored inside inputs, textareas, selects, and editable content
-8. solo view should keep the selected panel when time range changes
-9. solo view should render the `to dashboard` back action in the same toolbar row as `Edit`
-10. solo view should avoid page scroll by sizing the grid panel to the remaining viewport height
-11. grid move animations should only run while editing layout, not while entering or leaving solo view
-12. panel menus should use the same visual language as `DashboardTimeRangePicker`
-13. keyboard shortcut hints should use `ui/components/KeyboardKey/KeyboardKey.tsx`
+6. focused panel edit mode also enters focused panel view so the edited panel uses the available dashboard area
+7. hovering a panel and pressing `V` enters view mode for that panel
+8. pressing `V` while already viewing that same panel exits focused panel view
+9. pressing `V` while editing a panel switches that panel from `editPanel` to `viewPanel`
+10. hovering a panel and pressing `E` enters focused panel edit mode for that panel
+11. pressing `E` while already editing that same panel exits focused panel edit mode
+12. pressing `E` while viewing a panel switches that panel from `viewPanel` to `editPanel`
+13. keyboard shortcuts must be ignored inside inputs, textareas, selects, and editable content
+14. focused panel view and edit should keep the selected panel when time range changes
+15. focused panel modes should render only the `to dashboard` back action in the dashboard header toolbar, not dashboard level edit, save, close, add, or delete controls
+16. panel settings save and close controls belong in the right side settings drawer
+17. focused panel view should avoid page scroll by sizing the grid panel to the remaining viewport height
+18. grid move animations should only run while editing layout, not while entering or leaving focused panel view or edit mode
+19. panel menus should use the same visual language as `DashboardTimeRangePicker`
+20. keyboard shortcut hints should use `ui/components/KeyboardKey/KeyboardKey.tsx`
+21. view and edit mode transitions should avoid visible remount flashes. Cache or preserve panel display state when a panel fetches data on mount
 
 ## Multiple Dashboards
 

@@ -194,24 +194,36 @@ Text panel rules:
 
 ## URL And Interaction Rules
 
-Solo panel view:
+Focused panel view and edit:
 
-1. `viewPanel` is the URL parameter
-2. values should use stable panel keys like `panel-time-in-range`
-3. legacy numeric ids are aliases only
-4. `DashboardViewPanelUrlStateBridge` owns validation, aliases, normalization, and URL updates
-5. changing the time range must preserve any active `viewPanel`
+1. `viewPanel` is the URL parameter for focused panel view
+2. `editPanel` is the URL parameter for focused panel edit
+3. values should use stable panel keys like `panel-time-in-range`
+4. legacy numeric ids are aliases only
+5. `DashboardViewPanelUrlStateBridge` owns validation, aliases, normalization, local state, and URL updates
+6. `editPanel` takes precedence over `viewPanel` when both are present
+7. changing the time range must preserve any active `viewPanel` or `editPanel`
+8. `DashboardDefinitionRenderer` and `DashboardGridRuntime` must pass both viewed and edited panel state through to `DashboardGrid`
 
-Panel menu rules:
+Panel menu and keyboard rules:
 
 1. action buttons are mounted by `DashboardGridPanel`
 2. actions are hidden until panel hover or menu open
 3. the three dot menu works outside edit mode
-4. `Edit` enters dashboard edit mode and opens the shared settings drawer
-5. `View` enters solo panel view and updates `viewPanel`
-6. hovering a panel and pressing `V` toggles solo view
-7. keyboard shortcuts are ignored inside inputs, textareas, selects, and editable content
-8. solo view renders the `to dashboard` action in the same toolbar row as `Edit`
+4. `Edit` enters focused panel edit mode, updates `editPanel`, and opens the shared settings drawer
+5. `View` enters focused panel view and updates `viewPanel`
+6. focused panel edit also enters focused panel view so the edited panel uses the available dashboard area
+7. hovering a panel and pressing `V` enters view mode for that panel
+8. pressing `V` while already viewing that same panel exits focused panel view
+9. pressing `V` while editing a panel switches that panel from `editPanel` to `viewPanel`
+10. hovering a panel and pressing `E` enters focused panel edit mode for that panel
+11. pressing `E` while already editing that same panel exits focused panel edit mode
+12. pressing `E` while viewing a panel switches that panel from `viewPanel` to `editPanel`
+13. keyboard shortcuts are ignored inside inputs, textareas, selects, and editable content
+14. focused panel modes render only the `to dashboard` action in the dashboard header toolbar
+15. dashboard level edit, save, close, add, and delete controls are hidden in focused panel modes
+16. panel settings save and close controls belong in the right side settings drawer
+17. panel transitions should avoid visible remount flashes. Cache or preserve panel display state when a panel fetches data on mount
 
 ## Layout Rules
 
@@ -221,7 +233,7 @@ Panel menu rules:
 4. `DashboardGridPanel` is only for dashboard grid panels
 5. dialogs, popovers, hover cards, and other floating layers stay outside dashboard grid structure
 6. grid move animations should only run while editing layout
-7. solo view should size the selected panel to the remaining viewport height and avoid page scroll
+7. focused panel view should size the selected panel to the remaining viewport height and avoid page scroll
 8. do not assume grid width and grid height use the same unit
 9. do not swap grid width and grid height to rotate a panel shape
 10. use pixel aware aspect ratio resizing for setting driven shape changes
