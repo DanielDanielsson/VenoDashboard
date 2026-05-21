@@ -209,7 +209,7 @@ describe('DashboardGridRuntime', () => {
 
     const drawer = screen.getByRole('complementary', { name: 'Panel settings for Current Glucose' });
     fireEvent.click(within(drawer).getByRole('button', { name: 'Gradient' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save dashboard' }));
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
