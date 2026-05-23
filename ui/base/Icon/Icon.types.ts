@@ -16,14 +16,22 @@ export type IconName =
   | 'info'
   | 'edit'
   | 'chevron-left'
+  | 'chevron-down'
+  | 'chevron-up'
+  | 'sidebar-expand'
+  | 'sidebar-collapse'
   | 'close'
   | 'settings'
   | 'key'
   | 'glucose'
   | 'server'
+  | 'github'
   | 'desktop'
   | 'smartphone'
   | 'lightbulb'
+  | 'dashboard-grid'
+  | 'veno-wordmark'
+  | 'veno-glucose-indicator'
   | 'veno-logo';
 
 export type IconProps = Stylable & {
