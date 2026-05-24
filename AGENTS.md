@@ -23,6 +23,18 @@ Do not treat this repo as the source of truth for glucose ingestion or storage. 
 5. `src/styles/config` is the canonical home for theme and font utilities.
 6. `.agents/skills` contains repo-local skills that apply only to `VenoDashboard`
 
+## Composition And Component File Structure
+
+When a composition or component file starts accumulating unrelated module level concerns, split those concerns into nearby sibling files before adding more bulk to the main component file.
+
+Preferred folder pattern:
+
+1. `types.ts` owns exported types, interfaces, and prop shapes
+2. `const.ts` owns module level constants and static data
+3. `utils.ts` owns pure helpers and browser storage subscription helpers
+
+Keep the main composition file focused on rendering, hooks, and component flow.
+
 ## Local Agent Context
 
 This repo is intended to be usable on its own.
