@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { twMerge } from 'tailwind-merge';
 import { Button } from '@ui/base/Button';
+import { Icon } from '@ui/base/Icon';
 import {
   DASHBOARD_QUICK_RANGES,
   TIME_RANGE_SAFETY_CAP_DAYS,
@@ -155,41 +156,6 @@ function toSelection(raw: RawTimeRangeInput, timeZone: string, label?: string): 
 
 function windowEndsInFuture(window: HistoryWindow, now = new Date()): boolean {
   return new Date(window.to).getTime() > now.getTime();
-}
-
-function CalendarIcon() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="M8 3v4M16 3v4M4 10h16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ClockIcon() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="M12 7v5l3 2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ChevronDownIcon() {
-  return (
-    <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M5 7.5 10 12l5-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function SearchMinusIcon() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="M7.5 10.5h6M15.5 15.5 21 21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
 }
 
 export function DashboardTimeRangePicker({
@@ -459,9 +425,9 @@ export function DashboardTimeRangePicker({
           twStyles="ui_caption flex h-9 min-w-[11rem] items-center gap-2 px-3 text-left text-dashboard-time-picker-text transition-colors hover:bg-dashboard-time-picker-bg-hover"
           onClick={() => setIsOpen((open) => !open)}
         >
-          <ClockIcon />
+          <Icon icon="clock" twStyles="h-4 w-4" />
           <span className="min-w-0 flex-1 truncate">{label}</span>
-          <ChevronDownIcon />
+          <Icon icon="chevron-down" twStyles="h-3.5 w-3.5" />
         </Button>
         <Button
           ariaLabel="Move time range forwards"
@@ -477,7 +443,7 @@ export function DashboardTimeRangePicker({
           onClick={zoomOut}
           disabled={!currentWindow}
         >
-          <SearchMinusIcon />
+          <Icon icon="zoom-out" twStyles="h-4 w-4" />
         </Button>
       </div>
 
@@ -513,7 +479,7 @@ export function DashboardTimeRangePicker({
                       twStyles="grid w-10 place-items-center border-l border-dashboard-time-picker-border text-dashboard-time-picker-text-muted"
                       onClick={handleCalendarOpen}
                     >
-                      <CalendarIcon />
+                      <Icon icon="calendar" twStyles="h-4 w-4" />
                     </Button>
                   </div>
                 </label>
@@ -535,7 +501,7 @@ export function DashboardTimeRangePicker({
                       twStyles="grid w-10 place-items-center border-l border-dashboard-time-picker-border text-dashboard-time-picker-text-muted"
                       onClick={handleCalendarOpen}
                     >
-                      <CalendarIcon />
+                      <Icon icon="calendar" twStyles="h-4 w-4" />
                     </Button>
                   </div>
                 </label>

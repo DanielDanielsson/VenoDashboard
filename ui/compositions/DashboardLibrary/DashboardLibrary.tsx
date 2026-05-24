@@ -3,6 +3,7 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@ui/base/Button';
+import { Icon } from '@ui/base/Icon';
 import { Link } from '@ui/base/Link';
 import { DropdownMenu, type DropdownMenuOption } from '@ui/components/DropdownMenu';
 import { useNotifications } from '@ui/compositions/NotificationsProvider';
@@ -288,10 +289,11 @@ function DashboardPinButton({
     <Button
       ariaLabel={`${dashboard.isPinned ? 'Unpin' : 'Pin'} ${dashboard.title}`}
       disabled={isSaving}
-      twStyles="ui_button_text rounded-[5px] border border-border px-3 py-2 text-text-soft transition-colors hover:border-text-soft hover:text-text"
+      title={`${dashboard.isPinned ? 'Unpin' : 'Pin'} ${dashboard.title}`}
+      twStyles="grid h-10 w-10 place-items-center rounded-[5px] border border-border text-text-soft transition-colors hover:border-text-soft hover:text-text"
       onClick={() => savePinnedState(!dashboard.isPinned)}
     >
-      {dashboard.isPinned ? 'Unpin' : 'Pin'}
+      <Icon icon={dashboard.isPinned ? 'bookmark-filled' : 'bookmark'} twStyles="h-5 w-5" />
     </Button>
   );
 }

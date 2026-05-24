@@ -109,6 +109,10 @@ describe('DashboardLibrary', () => {
     });
 
     expect(screen.getByRole('button', { name: 'Unpin Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Unpin Overview' }).querySelector('use')).toHaveAttribute(
+      'href',
+      '/static_assets/iconSprite.svg#bookmark-filled',
+    );
     expect(refresh).toHaveBeenCalledTimes(1);
     let notifications = screen.getByRole('region', { name: 'Notifications' });
     expect(within(notifications).getByText('Dashboard pinned').closest('[data-variant="success"]')).toBeInTheDocument();
@@ -126,6 +130,10 @@ describe('DashboardLibrary', () => {
     });
 
     expect(screen.getByRole('button', { name: 'Pin Statistics' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pin Statistics' }).querySelector('use')).toHaveAttribute(
+      'href',
+      '/static_assets/iconSprite.svg#bookmark',
+    );
     expect(refresh).toHaveBeenCalledTimes(2);
     notifications = screen.getByRole('region', { name: 'Notifications' });
     expect(within(notifications).getByText('Dashboard unpinned').closest('[data-variant="success"]')).toBeInTheDocument();

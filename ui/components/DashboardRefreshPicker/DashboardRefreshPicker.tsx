@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { Button } from '@ui/base/Button';
+import { Icon } from '@ui/base/Icon';
 import type { HistoryWindow } from '@/lib/glucose/history-cache';
 import {
   DASHBOARD_REFRESH_AUTO,
@@ -15,21 +16,6 @@ interface DashboardRefreshPickerProps {
   currentWindow: HistoryWindow | null;
   onChange: (value: string) => void;
   onRefresh: () => void | Promise<void>;
-}
-
-function RefreshIcon(): ReactElement {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M20 12a8 8 0 0 1-13.657 5.657M4 12A8 8 0 0 1 17.657 6.343M17 3v4h4M7 21v-4H3"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-      />
-    </svg>
-  );
 }
 
 function refreshLabel(value: string): string {
@@ -125,7 +111,7 @@ export function DashboardRefreshPicker({
         twStyles="grid h-9 w-9 place-items-center border-r border-dashboard-time-picker-border text-dashboard-time-picker-text-muted transition-colors hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text"
         onClick={() => void runRefresh()}
       >
-        <RefreshIcon />
+        <Icon icon="refresh" twStyles="h-4 w-4" />
       </Button>
       <label className="relative flex h-9 items-center">
         <span className="sr-only">Dashboard refresh interval</span>
@@ -144,7 +130,7 @@ export function DashboardRefreshPicker({
           ))}
         </select>
         <span className="pointer-events-none absolute right-2 text-dashboard-time-picker-text-muted" aria-hidden="true">
-          ▾
+          <Icon icon="chevron-down" twStyles="h-3.5 w-3.5" />
         </span>
       </label>
     </div>
