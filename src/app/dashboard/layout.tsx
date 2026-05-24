@@ -12,6 +12,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
     getOwnerSession(),
     loadDashboardLibrary(),
   ]);
+  const homeDashboard = library.dashboards.find((dashboard) => dashboard.isHome);
   const pinnedDashboards = library.dashboards
     .filter((dashboard) => dashboard.isPinned)
     .map((dashboard) => ({
@@ -24,7 +25,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
     <div className="min-h-screen bg-bg">
       <MobileDesktopNotice />
       <div className="hidden md:block">
-        <SideBarNavigation isOwner={Boolean(session)} pinnedDashboards={pinnedDashboards} currentUser={sidebarUser} />
+        <SideBarNavigation isOwner={Boolean(session)} pinnedDashboards={pinnedDashboards} homeDashboardUid={homeDashboard?.uid} currentUser={sidebarUser} />
         <main className="px-4 pb-20 pt-dashboard-top transition-[margin-left] duration-200 md:ml-[var(--dashboard-sidebar-width,270px)] md:pb-8">
           <DynamicFavicon />
           {session ? <DashboardNotificationsBridge /> : null}

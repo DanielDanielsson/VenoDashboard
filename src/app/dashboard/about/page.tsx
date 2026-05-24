@@ -8,7 +8,7 @@ export default function AboutPage() {
   return (
     <div className="section-stack">
       <header
-        className="flex flex-col justify-center"
+        className="flex flex-col"
         style={{ minHeight: 'calc(var(--spacing-dashboard-content-top) - var(--spacing-dashboard-top) - 1.25rem)' }}
       >
         <div className="mx-auto w-full max-w-2xl">
