@@ -11,11 +11,9 @@
   --color-base-night: #11161f;
   --color-base-night-strong: #171d26;
   --color-base-panel-dark-bright: #1e2530;
-  --color-base-panel-dark-warm: color-mix(
-    in srgb,
-    var(--color-base-panel-dark-bright) 82%,
-    var(--color-base-paper) 18%
-  );
+  --color-base-panel-dark-warm: color-mix(in srgb,
+      var(--color-base-panel-dark-bright) 82%,
+      var(--color-base-paper) 18%);
   --color-base-night-overlay: rgb(10 15 25 / 0.88);
   --color-base-night-elevated: rgb(8 12 20 / 0.96);
   --color-base-night-surface: rgb(15 23 40 / 0.5);
