@@ -5,21 +5,13 @@ import {
   ownerSessionCookieValue,
   validateOwnerCredentials
 } from '@/lib/auth';
+import { normalizeAuthCallbackUrl } from '@/lib/auth-callback-url';
 import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 
 interface LoginPayload {
   callbackUrl?: string;
   username?: string;
   password?: string;
-}
-
-function safeCallbackUrl(request: NextRequest, value: string | undefined): string {
-  if (!value || !value.startsWith('/')) {
-    return '/dashboard';
-  }
-
-  const url = new URL(value, request.url);
-  return `${url.pathname}${url.search}`;
 }
 
 export async function POST(request: NextRequest) {
@@ -33,7 +25,7 @@ export async function POST(request: NextRequest) {
   }
 
   const payload = (await request.json().catch(() => ({}))) as LoginPayload;
-  const callbackUrl = safeCallbackUrl(request, payload.callbackUrl);
+  const callbackUrl = normalizeAuthCallbackUrl(payload.callbackUrl);
   const username = payload.username?.trim() || '';
   const password = payload.password || '';
 

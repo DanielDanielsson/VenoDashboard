@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { getLoginCloseUrl } from '@/lib/auth-callback-url';
 import { SecondaryButton } from '../SecondaryButton';
 
 interface SignInButtonProps {
@@ -9,7 +9,7 @@ interface SignInButtonProps {
 }
 
 export function SignInButton({ callbackUrl = '/dashboard' }: SignInButtonProps) {
-  const router = useRouter();
+  const closeUrl = getLoginCloseUrl(callbackUrl);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -43,14 +43,13 @@ export function SignInButton({ callbackUrl = '/dashboard' }: SignInButtonProps) 
 
   return (
     <div className="panel relative max-w-sm w-full mx-4 rounded-[4px] p-6">
-      <button
-        type="button"
-        onClick={() => router.push('/dashboard')}
+      <a
+        href={closeUrl}
         className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-[4px] text-text-dim transition-colors hover:text-text"
         aria-label="Close"
       >
         ✕
-      </button>
+      </a>
       <p className="ui_micro_label text-text-soft">Admin access</p>
       <h1 className="section_title mt-3 text-text">Sign in to manage PulseGlucose.</h1>
       <p className="ui_helper_text mt-2 text-text-dim">

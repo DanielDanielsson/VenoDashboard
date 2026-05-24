@@ -3,15 +3,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { SignInButton } from './SignInButton';
 
-const push = vi.fn();
-
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push }),
-}));
-
 describe('SignInButton', () => {
   beforeEach(() => {
-    push.mockReset();
     vi.stubGlobal('fetch', vi.fn());
   });
 
@@ -19,6 +12,18 @@ describe('SignInButton', () => {
     render(<SignInButton />);
 
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled();
+  });
+
+  test('closes to a public dashboard when opened from a protected admin page', () => {
+    render(<SignInButton callbackUrl="/dashboard/settings" />);
+
+    expect(screen.getByRole('link', { name: 'Close' })).toHaveAttribute('href', '/dashboards/overview');
+  });
+
+  test('closes to the requested public dashboard route', () => {
+    render(<SignInButton callbackUrl="/dashboards/statistics?range=3d" />);
+
+    expect(screen.getByRole('link', { name: 'Close' })).toHaveAttribute('href', '/dashboards/statistics?range=3d');
   });
 
   test('submits credentials and redirects on success', async () => {
