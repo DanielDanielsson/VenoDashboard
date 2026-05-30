@@ -17,6 +17,7 @@ export interface SidebarSecondaryLink {
 export interface PinnedDashboardNavigationItem {
   uid: string;
   title: string;
+  icon?: IconName | null;
 }
 
 export interface SidebarUser {

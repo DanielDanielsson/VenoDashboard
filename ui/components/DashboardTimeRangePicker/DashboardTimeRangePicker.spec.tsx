@@ -57,6 +57,35 @@ describe('DashboardTimeRangePicker', () => {
     });
   });
 
+  test('renders preset only mode for dashboard metadata defaults', () => {
+    const onChange = vi.fn();
+
+    render(
+      <DashboardTimeRangePicker
+        selection={{ kind: 'preset', range: '3d' }}
+        currentWindow={null}
+        timeZone="UTC"
+        presetOnly
+        onChange={onChange}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Move time range backwards' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Zoom out time range' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Time range selected/i }));
+
+    expect(screen.queryByText('Absolute time range')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Search quick ranges')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '7 days' }));
+
+    expect(onChange).toHaveBeenCalledWith({
+      kind: 'preset',
+      range: '7d'
+    });
+  });
+
   test('disables quick ranges above the safety cap', () => {
     render(
       <DashboardTimeRangePicker

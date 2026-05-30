@@ -161,7 +161,7 @@ export const SideBarNavigation = ({
                           : 'grid grid-cols-[20px_minmax(0,1fr)] items-center gap-3 px-3',
                       )}
                     >
-                      <Icon icon="dashboard-grid" twStyles="h-5 w-5" />
+                      <Icon icon={dashboard.icon ?? 'dashboard-grid'} twStyles="h-5 w-5" />
                       <span className={labelClassName}>{dashboard.title}</span>
                     </Link>
                   </li>
@@ -269,5 +269,4 @@ export const SideBarNavigation = ({
     </nav>
   );
 };
-
 

@@ -17,12 +17,17 @@ describe('SecondaryButton', () => {
     fireEvent.click(button);
 
     expect(button).toHaveClass('bg-secondary-button-active-bg');
+    expect(button).toHaveClass('enabled:hover:bg-secondary-button-active-bg-hover');
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
   test('renders inactive styling by default', () => {
     render(<SecondaryButton>Inactive</SecondaryButton>);
 
-    expect(screen.getByRole('button', { name: 'Inactive' })).toHaveClass('bg-secondary-button-inactive-bg');
+    const button = screen.getByRole('button', { name: 'Inactive' });
+
+    expect(button).toHaveClass('bg-secondary-button-inactive-bg');
+    expect(button).toHaveClass('text-secondary-button-inactive-text');
+    expect(button).toHaveClass('enabled:hover:bg-secondary-button-inactive-bg-hover');
   });
 });

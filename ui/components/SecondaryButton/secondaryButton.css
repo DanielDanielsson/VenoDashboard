@@ -6,36 +6,60 @@
         --color-secondary-button-active-bg: var(--color-base-ink);
         --color-secondary-button-active-border: var(--color-base-ink);
         --color-secondary-button-active-text: var(--color-base-paper);
+        --color-secondary-button-active-bg-hover: var(--color-base-night-strong);
+        --color-secondary-button-active-border-hover: var(--color-base-night-strong);
+        --color-secondary-button-active-text-hover: var(--color-base-paper);
         --color-secondary-button-inactive-bg: transparent;
         --color-secondary-button-inactive-border: var(--color-base-border-warm-input);
-        --color-secondary-button-inactive-text: var(--color-base-text-warm-nav);
+        --color-secondary-button-inactive-text: var(--color-base-ink);
+        --color-secondary-button-inactive-bg-hover: var(--color-base-paper-strong);
+        --color-secondary-button-inactive-border-hover: var(--color-base-ink-muted);
+        --color-secondary-button-inactive-text-hover: var(--color-base-ink);
     }
 
     .theme-dark {
         --color-secondary-button-active-bg: var(--color-base-white-soft);
         --color-secondary-button-active-border: var(--color-base-white-soft);
         --color-secondary-button-active-text: var(--color-base-night);
+        --color-secondary-button-active-bg-hover: var(--color-base-white);
+        --color-secondary-button-active-border-hover: var(--color-base-white);
+        --color-secondary-button-active-text-hover: var(--color-base-night);
         --color-secondary-button-inactive-bg: transparent;
         --color-secondary-button-inactive-border: var(--color-base-border-cool-input);
-        --color-secondary-button-inactive-text: var(--color-base-ink-soft-strong);
+        --color-secondary-button-inactive-text: var(--color-base-white-soft);
+        --color-secondary-button-inactive-bg-hover: var(--color-base-panel-dark-bright);
+        --color-secondary-button-inactive-border-hover: var(--color-base-white-muted);
+        --color-secondary-button-inactive-text-hover: var(--color-base-white-soft);
     }
 
     .theme-secondary-button-light {
         --color-secondary-button-active-bg: var(--color-base-ink);
         --color-secondary-button-active-border: var(--color-base-ink);
         --color-secondary-button-active-text: var(--color-base-paper);
+        --color-secondary-button-active-bg-hover: var(--color-base-night-strong);
+        --color-secondary-button-active-border-hover: var(--color-base-night-strong);
+        --color-secondary-button-active-text-hover: var(--color-base-paper);
         --color-secondary-button-inactive-bg: transparent;
         --color-secondary-button-inactive-border: var(--color-base-border-warm-input);
-        --color-secondary-button-inactive-text: var(--color-base-text-warm-nav);
+        --color-secondary-button-inactive-text: var(--color-base-ink);
+        --color-secondary-button-inactive-bg-hover: var(--color-base-paper-strong);
+        --color-secondary-button-inactive-border-hover: var(--color-base-ink-muted);
+        --color-secondary-button-inactive-text-hover: var(--color-base-ink);
     }
 
     .theme-secondary-button-dark {
         --color-secondary-button-active-bg: var(--color-base-white-soft);
         --color-secondary-button-active-border: var(--color-base-white-soft);
         --color-secondary-button-active-text: var(--color-base-night);
+        --color-secondary-button-active-bg-hover: var(--color-base-white);
+        --color-secondary-button-active-border-hover: var(--color-base-white);
+        --color-secondary-button-active-text-hover: var(--color-base-night);
         --color-secondary-button-inactive-bg: transparent;
         --color-secondary-button-inactive-border: var(--color-base-border-cool-input);
-        --color-secondary-button-inactive-text: var(--color-base-ink-soft-strong);
+        --color-secondary-button-inactive-text: var(--color-base-white-soft);
+        --color-secondary-button-inactive-bg-hover: var(--color-base-panel-dark-bright);
+        --color-secondary-button-inactive-border-hover: var(--color-base-white-muted);
+        --color-secondary-button-inactive-text-hover: var(--color-base-white-soft);
     }
 }
 
@@ -43,7 +67,13 @@
     --color-secondary-button-active-bg: var(--color-secondary-button-active-bg);
     --color-secondary-button-active-border: var(--color-secondary-button-active-border);
     --color-secondary-button-active-text: var(--color-secondary-button-active-text);
+    --color-secondary-button-active-bg-hover: var(--color-secondary-button-active-bg-hover);
+    --color-secondary-button-active-border-hover: var(--color-secondary-button-active-border-hover);
+    --color-secondary-button-active-text-hover: var(--color-secondary-button-active-text-hover);
     --color-secondary-button-inactive-bg: var(--color-secondary-button-inactive-bg);
     --color-secondary-button-inactive-border: var(--color-secondary-button-inactive-border);
     --color-secondary-button-inactive-text: var(--color-secondary-button-inactive-text);
+    --color-secondary-button-inactive-bg-hover: var(--color-secondary-button-inactive-bg-hover);
+    --color-secondary-button-inactive-border-hover: var(--color-secondary-button-inactive-border-hover);
+    --color-secondary-button-inactive-text-hover: var(--color-secondary-button-inactive-text-hover);
 }

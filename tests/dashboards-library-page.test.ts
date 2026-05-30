@@ -6,6 +6,8 @@ import { NotificationsProvider } from '@ui/compositions/NotificationsProvider';
 
 const getOwnerSession = vi.fn();
 const loadDashboardLibrary = vi.fn();
+const push = vi.fn();
+const refresh = vi.fn();
 
 vi.mock('@/lib/auth', () => ({
   getOwnerSession,
@@ -15,11 +17,22 @@ vi.mock('@/lib/dashboard/library', () => ({
   loadDashboardLibrary,
 }));
 
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/dashboards',
+  useRouter: () => ({
+    push,
+    refresh,
+  }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 describe('dashboards library page', () => {
   beforeEach(() => {
     vi.resetModules();
     getOwnerSession.mockReset();
     loadDashboardLibrary.mockReset();
+    push.mockReset();
+    refresh.mockReset();
     getOwnerSession.mockResolvedValue(null);
     loadDashboardLibrary.mockResolvedValue({
       dashboards: [

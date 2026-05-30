@@ -23,6 +23,7 @@ interface DashboardTimeRangePickerProps {
   currentWindow: HistoryWindow | null;
   timeZone: string;
   onChange: (selection: HistorySelection) => void;
+  presetOnly?: boolean;
   toolbarControls?: ReactNode;
 }
 
@@ -163,6 +164,7 @@ export function DashboardTimeRangePicker({
   currentWindow,
   timeZone,
   onChange,
+  presetOnly = false,
   toolbarControls
 }: DashboardTimeRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -179,7 +181,7 @@ export function DashboardTimeRangePicker({
   const label = labelForSelection(selection, timeZone);
   const activePreset = selection.kind === 'preset' ? selection.range : null;
   const nextForwardWindow = currentWindow ? shiftTimeWindow(currentWindow, 1) : null;
-  const canMoveForward = Boolean(nextForwardWindow && !windowEndsInFuture(nextForwardWindow));
+  const canMoveForward = !presetOnly && Boolean(nextForwardWindow && !windowEndsInFuture(nextForwardWindow));
 
   const quickRanges = useMemo(() => {
     const now = new Date();
@@ -226,6 +228,10 @@ export function DashboardTimeRangePicker({
   }, [isOpen, selection, timeZone]);
 
   function applyRawRange(raw: RawTimeRangeInput, display?: string) {
+    if (presetOnly) {
+      return;
+    }
+
     const resolved = resolveRawTimeRange(raw, { timeZone, display });
 
     if (!resolved) {
@@ -255,6 +261,10 @@ export function DashboardTimeRangePicker({
   }
 
   function applyWindow(window: HistoryWindow, display?: string) {
+    if (presetOnly) {
+      return;
+    }
+
     const raw = {
       from: window.from,
       to: window.to
@@ -412,14 +422,16 @@ export function DashboardTimeRangePicker({
         className="inline-flex overflow-hidden rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-bg text-dashboard-time-picker-text shadow-sm"
         data-testid="dashboard-time-range-picker-toolbar"
       >
-        <Button
-          ariaLabel="Move time range backwards"
-          twStyles="grid h-9 w-9 place-items-center border-r border-dashboard-time-picker-border text-dashboard-time-picker-text-muted transition-colors hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text"
-          onClick={() => moveWindow(-1)}
-          disabled={!currentWindow}
-        >
-          <span aria-hidden="true">«</span>
-        </Button>
+        {!presetOnly ? (
+          <Button
+            ariaLabel="Move time range backwards"
+            twStyles="grid h-9 w-9 place-items-center border-r border-dashboard-time-picker-border text-dashboard-time-picker-text-muted transition-colors hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text"
+            onClick={() => moveWindow(-1)}
+            disabled={!currentWindow}
+          >
+            <span aria-hidden="true">«</span>
+          </Button>
+        ) : null}
         <Button
           ariaLabel={`Time range selected: ${label}`}
           twStyles="ui_caption flex h-9 min-w-[11rem] items-center gap-2 px-3 text-left text-dashboard-time-picker-text transition-colors hover:bg-dashboard-time-picker-bg-hover"
@@ -429,32 +441,45 @@ export function DashboardTimeRangePicker({
           <span className="min-w-0 flex-1 truncate">{label}</span>
           <Icon icon="chevron-down" twStyles="h-3.5 w-3.5" />
         </Button>
-        <Button
-          ariaLabel="Move time range forwards"
-          twStyles="grid h-9 w-9 place-items-center border-l border-dashboard-time-picker-border text-dashboard-time-picker-text-muted transition-colors hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text"
-          onClick={() => moveWindow(1)}
-          disabled={!canMoveForward}
-        >
-          <span aria-hidden="true">»</span>
-        </Button>
-        <Button
-          ariaLabel="Zoom out time range"
-          twStyles="grid h-9 w-9 place-items-center border-l border-dashboard-time-picker-border text-dashboard-time-picker-text-muted transition-colors hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text"
-          onClick={zoomOut}
-          disabled={!currentWindow}
-        >
-          <Icon icon="zoom-out" twStyles="h-4 w-4" />
-        </Button>
+        {!presetOnly ? (
+          <>
+            <Button
+              ariaLabel="Move time range forwards"
+              twStyles="grid h-9 w-9 place-items-center border-l border-dashboard-time-picker-border text-dashboard-time-picker-text-muted transition-colors hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text"
+              onClick={() => moveWindow(1)}
+              disabled={!canMoveForward}
+            >
+              <span aria-hidden="true">»</span>
+            </Button>
+            <Button
+              ariaLabel="Zoom out time range"
+              twStyles="grid h-9 w-9 place-items-center border-l border-dashboard-time-picker-border text-dashboard-time-picker-text-muted transition-colors hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text"
+              onClick={zoomOut}
+              disabled={!currentWindow}
+            >
+              <Icon icon="zoom-out" twStyles="h-4 w-4" />
+            </Button>
+          </>
+        ) : null}
       </div>
 
       {toolbarControls}
 
       {isOpen && (
         <section
-          className="absolute left-0 top-[calc(100%+0.5rem)] z-30 h-[min(31rem,calc(100vh-8rem))] w-[min(calc(100vw-2rem),42rem)] overflow-hidden rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-panel-bg text-dashboard-time-picker-text shadow-dashboard-time-picker-panel max-lg:w-[min(calc(100vw-2rem),31rem)]"
+          className={twMerge(
+            'absolute left-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-panel-bg text-dashboard-time-picker-text shadow-dashboard-time-picker-panel',
+            presetOnly
+              ? 'w-[min(calc(100vw-2rem),20rem)]'
+              : 'h-[min(31rem,calc(100vh-8rem))] w-[min(calc(100vw-2rem),42rem)] max-lg:w-[min(calc(100vw-2rem),31rem)]',
+          )}
           data-testid="dashboard-time-range-picker-panel"
         >
-          <div className="grid h-full min-h-0 grid-cols-1 overflow-hidden md:grid-cols-[1fr_15rem]">
+          <div className={twMerge(
+            'grid min-h-0 grid-cols-1 overflow-hidden',
+            presetOnly ? '' : 'h-full md:grid-cols-[1fr_15rem]',
+          )}>
+            {!presetOnly ? (
             <div className="grid min-h-0 content-start gap-4 overflow-auto border-b border-dashboard-time-picker-border-soft p-3 md:border-b-0 md:border-r">
               <div className="grid gap-3">
                 <div className="flex items-center justify-between gap-4">
@@ -574,8 +599,12 @@ export function DashboardTimeRangePicker({
                 </div>
               )}
             </div>
+            ) : null}
 
-            <div className="grid min-h-0 grid-rows-[auto_auto_1fr] overflow-hidden">
+            <div className={twMerge(
+              'grid min-h-0 overflow-hidden',
+              presetOnly ? '' : 'grid-rows-[auto_auto_1fr]',
+            )}>
               <div className="border-b border-dashboard-time-picker-border-soft p-2">
                 <div className="flex flex-wrap gap-1">
                   {GLUCOSE_TIME_RANGES.map((range) => (
@@ -594,40 +623,44 @@ export function DashboardTimeRangePicker({
                   ))}
                 </div>
               </div>
-              <div className="border-b border-dashboard-time-picker-border-soft p-2">
-                <input
-                  className="ui_caption w-full rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-panel-muted px-2 py-2 text-dashboard-time-picker-text outline-none"
-                  placeholder="Search quick ranges"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-              </div>
-              <div className="overflow-auto p-1">
-                {filteredQuickRanges.map((option) => {
-                  const disabled = !option.resolved || option.resolved.exceedsSafetyCap;
-                  return (
-                    <Button
-                      key={`${option.from}-${option.to}-${option.display}`}
-                      disabled={disabled}
-                      title={disabled ? `Limited to ${TIME_RANGE_SAFETY_CAP_DAYS} days` : undefined}
-                      twStyles={twMerge(
-                        'ui_caption flex w-full items-center justify-between rounded-[4px] px-2 py-1.5 text-left transition-colors',
-                        disabled
-                          ? 'cursor-not-allowed text-dashboard-time-picker-text-muted opacity-45'
-                          : 'text-dashboard-time-picker-text-muted hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text'
-                      )}
-                      onClick={() => {
-                        if (!disabled) {
-                          applyRawRange({ from: option.from, to: option.to }, option.display);
-                        }
-                      }}
-                    >
-                      <span>{option.display}</span>
-                      {disabled && <span className="ml-2 text-dashboard-time-picker-warning">90d</span>}
-                    </Button>
-                  );
-                })}
-              </div>
+              {!presetOnly ? (
+                <>
+                  <div className="border-b border-dashboard-time-picker-border-soft p-2">
+                    <input
+                      className="ui_caption w-full rounded-[4px] border border-dashboard-time-picker-border bg-dashboard-time-picker-panel-muted px-2 py-2 text-dashboard-time-picker-text outline-none"
+                      placeholder="Search quick ranges"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                    />
+                  </div>
+                  <div className="overflow-auto p-1">
+                    {filteredQuickRanges.map((option) => {
+                      const disabled = !option.resolved || option.resolved.exceedsSafetyCap;
+                      return (
+                        <Button
+                          key={`${option.from}-${option.to}-${option.display}`}
+                          disabled={disabled}
+                          title={disabled ? `Limited to ${TIME_RANGE_SAFETY_CAP_DAYS} days` : undefined}
+                          twStyles={twMerge(
+                            'ui_caption flex w-full items-center justify-between rounded-[4px] px-2 py-1.5 text-left transition-colors',
+                            disabled
+                              ? 'cursor-not-allowed text-dashboard-time-picker-text-muted opacity-45'
+                              : 'text-dashboard-time-picker-text-muted hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text'
+                          )}
+                          onClick={() => {
+                            if (!disabled) {
+                              applyRawRange({ from: option.from, to: option.to }, option.display);
+                            }
+                          }}
+                        >
+                          <span>{option.display}</span>
+                          {disabled && <span className="ml-2 text-dashboard-time-picker-warning">90d</span>}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
         </section>

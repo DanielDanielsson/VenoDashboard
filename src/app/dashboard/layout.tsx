@@ -18,6 +18,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
     .map((dashboard) => ({
       uid: dashboard.uid,
       title: dashboard.title,
+      icon: dashboard.icon,
     }));
   const sidebarUser = await loadSidebarUser(session);
 

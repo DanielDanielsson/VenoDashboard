@@ -26,7 +26,7 @@ describe('SideBarNavigation', () => {
       <SideBarNavigation
         isOwner={false}
         pinnedDashboards={[
-          { uid: 'statistics', title: 'Statistics' },
+          { uid: 'statistics', title: 'Statistics', icon: 'activity' },
           { uid: 'overview', title: 'Overview' },
         ]}
       />,
@@ -42,6 +42,8 @@ describe('SideBarNavigation', () => {
       ['Statistics', '/dashboards/statistics'],
       ['Overview', '/dashboards/overview'],
     ]);
+    expect(links[0].querySelector('use')).toHaveAttribute('href', '/static_assets/iconSprite.svg#activity');
+    expect(links[1].querySelector('use')).toHaveAttribute('href', '/static_assets/iconSprite.svg#dashboard-grid');
     expect(screen.getByRole('button', { name: 'Collapse dashboards list' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: 'Collapse dashboards list' }).querySelector('use')).toHaveAttribute(
       'href',
