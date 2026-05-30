@@ -9,7 +9,7 @@ interface DashboardViewPanelUrlStateBridgeProps {
   allowedPanelIds: string[];
   panelIdAliases?: Record<string, string>;
   dashboardTitle?: string;
-  dashboardUid?: string;
+  dashboardUid: string;
   children: (input: {
     viewedPanelId: string | null;
     onViewedPanelChange: (panelId: string | null, navigationMode?: 'push' | 'replace') => void;
@@ -22,7 +22,7 @@ export function DashboardViewPanelUrlStateBridge({
   allowedPanelIds,
   panelIdAliases = {},
   dashboardTitle,
-  dashboardUid = 'overview',
+  dashboardUid,
   children,
 }: DashboardViewPanelUrlStateBridgeProps) {
   const pathname = usePathname();

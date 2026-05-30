@@ -6,7 +6,7 @@ import { useDashboardNotifications } from '@ui/compositions/DashboardDefinitionR
 
 interface DashboardUrlStateBridgeProps {
   dashboardTitle: string;
-  dashboardUid?: string;
+  dashboardUid: string;
   rejectTimeRange?: boolean;
 }
 
@@ -20,7 +20,7 @@ function hasTimeRangeParams(searchParams: URLSearchParams): boolean {
 
 export function DashboardUrlStateBridge({
   dashboardTitle,
-  dashboardUid = 'overview',
+  dashboardUid,
   rejectTimeRange = false,
 }: DashboardUrlStateBridgeProps) {
   const pathname = usePathname();

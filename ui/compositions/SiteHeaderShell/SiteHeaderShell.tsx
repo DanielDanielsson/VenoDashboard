@@ -9,7 +9,6 @@ const TOP_RESET_THRESHOLD = 24;
 
 export function SiteHeaderShell({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = usePathname();
-  const isGlucosePage = pathname === '/dashboards/statistics' || pathname === '/dashboard/statistics';
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollYRef = useRef(0);
   const toggleAnchorYRef = useRef(0);
@@ -29,10 +28,6 @@ export function SiteHeaderShell({ children }: Readonly<{ children: React.ReactNo
     lastScrollYRef.current = initialScrollY;
     toggleAnchorYRef.current = initialScrollY;
     syncVisibility(true);
-
-    if (isGlucosePage) {
-      return;
-    }
 
     function handleScroll() {
       const currentScrollY = window.scrollY;
@@ -68,12 +63,12 @@ export function SiteHeaderShell({ children }: Readonly<{ children: React.ReactNo
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [isGlucosePage, pathname]);
+  }, [pathname]);
 
   return (
     <div
       className="site-header-shell"
-      data-header-mode={isGlucosePage ? 'static' : 'smart'}
+      data-header-mode="smart"
       data-header-visible={isVisible ? 'true' : 'false'}
     >
       {children}

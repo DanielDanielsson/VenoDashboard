@@ -14,15 +14,7 @@ describe('SiteHeaderShell', () => {
     vi.clearAllMocks();
   });
 
-  test('keeps the header static on the canonical statistics dashboard route', () => {
-    usePathname.mockReturnValue('/dashboards/statistics');
-
-    render(<SiteHeaderShell>Navigation</SiteHeaderShell>);
-
-    expect(screen.getByText('Navigation')).toHaveAttribute('data-header-mode', 'static');
-  });
-
-  test('keeps smart scrolling on non statistics dashboard routes', () => {
+  test('keeps smart scrolling on dashboard routes', () => {
     usePathname.mockReturnValue('/dashboards');
 
     render(<SiteHeaderShell>Navigation</SiteHeaderShell>);

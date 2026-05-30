@@ -87,7 +87,7 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
   const dashboardLinkRightClass = isOwner ? DASHBOARD_LIBRARY_LINK_RIGHT.owner : DASHBOARD_LIBRARY_LINK_RIGHT.public;
 
   const homeDashboardUid = useMemo(
-    () => items.find((dashboard) => dashboard.isHome)?.uid ?? items[0]?.uid ?? 'overview',
+    () => items.find((dashboard) => dashboard.isHome)?.uid ?? items[0]?.uid ?? '',
     [items],
   );
   const pinnedDashboardUids = useMemo(

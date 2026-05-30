@@ -17,13 +17,13 @@ describe('SignInButton', () => {
   test('closes to a public dashboard when opened from a protected admin page', () => {
     render(<SignInButton callbackUrl="/dashboard/settings" />);
 
-    expect(screen.getByRole('link', { name: 'Close' })).toHaveAttribute('href', '/dashboards/overview');
+    expect(screen.getByRole('link', { name: 'Close' })).toHaveAttribute('href', '/dashboards');
   });
 
   test('closes to the requested public dashboard route', () => {
-    render(<SignInButton callbackUrl="/dashboards/statistics?range=3d" />);
+    render(<SignInButton callbackUrl="/dashboards/training?range=3d" />);
 
-    expect(screen.getByRole('link', { name: 'Close' })).toHaveAttribute('href', '/dashboards/statistics?range=3d');
+    expect(screen.getByRole('link', { name: 'Close' })).toHaveAttribute('href', '/dashboards/training?range=3d');
   });
 
   test('submits credentials and redirects on success', async () => {

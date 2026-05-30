@@ -140,7 +140,7 @@ export function DashboardMetadataSettings({
   }
 
   async function deleteDashboard() {
-    if (!isOwner || dashboard.isHome) {
+    if (!isOwner) {
       return;
     }
 
@@ -323,7 +323,7 @@ export function DashboardMetadataSettings({
               </SecondaryButton>
               <SecondaryButton
                 aria-label={`Delete ${dashboard.title}`}
-                disabled={dashboard.isHome || isDeleting}
+                disabled={isDeleting}
                 twStyles="inline-flex items-center gap-2 border-error/40 text-error"
                 onClick={deleteDashboard}
               >

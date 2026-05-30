@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { loadDashboardPreferences } from '@/lib/dashboard/preferences';
 
 interface DashboardStatisticsPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -24,9 +25,10 @@ function serializeSearchParams(input: Record<string, string | string[] | undefin
 }
 
 export default async function DashboardStatisticsPage({ searchParams }: DashboardStatisticsPageProps = {}) {
+  const preferences = await loadDashboardPreferences();
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const serializedSearchParams = serializeSearchParams(resolvedSearchParams);
   const suffix = serializedSearchParams ? `?${serializedSearchParams}` : '';
 
-  redirect(`/dashboards/statistics${suffix}`);
+  redirect(`/dashboards/${encodeURIComponent(preferences.homeDashboardUid)}${suffix}`);
 }

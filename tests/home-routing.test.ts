@@ -41,7 +41,12 @@ describe('home dashboard routing', () => {
     expect(redirect).toHaveBeenCalledWith('/dashboards/statistics');
   });
 
-  test('redirects the legacy statistics route to the canonical dashboards route with query params', async () => {
+  test('redirects the legacy statistics route to the selected home dashboard with query params', async () => {
+    loadDashboardPreferences.mockResolvedValueOnce({
+      homeDashboardUid: 'training',
+      pinnedDashboardUids: [],
+      source: 'api',
+    });
     const { default: DashboardStatisticsPage } = await import('@/app/dashboard/statistics/page');
 
     await DashboardStatisticsPage({
@@ -52,6 +57,7 @@ describe('home dashboard routing', () => {
       }),
     });
 
-    expect(redirect).toHaveBeenCalledWith('/dashboards/statistics?from=now-3d&to=now&timezone=browser');
+    expect(redirect).toHaveBeenCalledWith('/dashboards/training?from=now-3d&to=now&timezone=browser');
+    expect(loadDashboardPreferences).toHaveBeenCalled();
   });
 });

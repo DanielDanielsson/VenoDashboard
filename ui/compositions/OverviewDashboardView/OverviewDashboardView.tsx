@@ -37,6 +37,7 @@ export function OverviewDashboardView({
     <>
       <DashboardUrlStateBridge
         dashboardTitle={dashboard.spec.title}
+        dashboardUid={dashboard.spec.uid}
         rejectTimeRange
       />
       <DashboardViewPanelUrlStateBridge

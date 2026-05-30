@@ -22,7 +22,7 @@ describe('DashboardUrlStateBridge', () => {
 
     render(
       <NotificationsProvider>
-        <DashboardUrlStateBridge dashboardTitle="Overview" rejectTimeRange />
+        <DashboardUrlStateBridge dashboardTitle="Overview" dashboardUid="night-view" rejectTimeRange />
       </NotificationsProvider>,
     );
 
@@ -41,7 +41,7 @@ describe('DashboardUrlStateBridge', () => {
 
     render(
       <NotificationsProvider>
-        <DashboardUrlStateBridge dashboardTitle="Overview" rejectTimeRange />
+        <DashboardUrlStateBridge dashboardTitle="Overview" dashboardUid="night-view" rejectTimeRange />
       </NotificationsProvider>,
     );
 

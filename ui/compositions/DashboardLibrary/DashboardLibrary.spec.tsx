@@ -397,13 +397,13 @@ describe('DashboardLibrary', () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  test('admin users can delete non home dashboards and cannot delete the home dashboard', async () => {
+  test('admin users can delete API backed dashboards from metadata settings', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        dashboardUid: 'statistics',
+        dashboardUid: 'overview',
         preferences: {
-          homeDashboardUid: 'overview',
+          homeDashboardUid: 'statistics',
           pinnedDashboardUids: [],
         },
       }),
@@ -418,24 +418,19 @@ describe('DashboardLibrary', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open Overview settings' }));
-
-    expect(screen.getByRole('button', { name: 'Delete Overview' })).toBeDisabled();
-    expect(screen.queryByText('Home dashboard cannot be deleted')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete Overview' }).querySelector('use')).toHaveAttribute(
       'href',
       '/static_assets/iconSprite.svg#trash',
     );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Open Statistics settings' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Delete Statistics' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Overview' }));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/dashboard/dashboards/statistics', expect.objectContaining({
+      expect(fetchMock).toHaveBeenCalledWith('/api/dashboard/dashboards/overview', expect.objectContaining({
         method: 'DELETE',
       }));
     });
 
-    expect(screen.queryByRole('link', { name: 'Open Statistics dashboard' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open Overview dashboard' })).not.toBeInTheDocument();
     expect(refresh).toHaveBeenCalled();
     const notifications = screen.getByRole('region', { name: 'Notifications' });
     expect(within(notifications).getByText('Dashboard deleted').closest('[data-variant="success"]')).toBeInTheDocument();

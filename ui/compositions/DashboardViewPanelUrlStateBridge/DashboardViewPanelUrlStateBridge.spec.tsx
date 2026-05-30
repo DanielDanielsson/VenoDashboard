@@ -85,6 +85,7 @@ describe('DashboardViewPanelUrlStateBridge', () => {
     render(
       <NotificationsProvider>
         <DashboardViewPanelUrlStateBridge
+          dashboardUid="night-view"
           allowedPanelIds={['panel-current-glucose', 'panel-connections']}
         >
           {({ viewedPanelId, onViewedPanelChange }) => (
@@ -121,6 +122,7 @@ describe('DashboardViewPanelUrlStateBridge', () => {
     render(
       <NotificationsProvider>
         <DashboardViewPanelUrlStateBridge
+          dashboardUid="night-view"
           allowedPanelIds={['panel-current-glucose', 'panel-connections']}
         >
           {({ viewedPanelId, onViewedPanelChange }) => (
@@ -157,6 +159,7 @@ describe('DashboardViewPanelUrlStateBridge', () => {
     render(
       <NotificationsProvider>
         <DashboardViewPanelUrlStateBridge
+          dashboardUid="night-view"
           allowedPanelIds={['panel-current-glucose', 'panel-connections']}
         >
           {({ viewedPanelId, onViewedPanelChange, editedPanelId, onEditedPanelChange }) => (
@@ -193,6 +196,7 @@ describe('DashboardViewPanelUrlStateBridge', () => {
     render(
       <NotificationsProvider>
         <DashboardViewPanelUrlStateBridge
+          dashboardUid="night-view"
           allowedPanelIds={['panel-current-glucose', 'panel-connections']}
         >
           {({ viewedPanelId, onViewedPanelChange, editedPanelId, onEditedPanelChange }) => (
@@ -231,6 +235,7 @@ describe('DashboardViewPanelUrlStateBridge', () => {
     render(
       <NotificationsProvider>
         <DashboardViewPanelUrlStateBridge
+          dashboardUid="night-view"
           allowedPanelIds={['panel-current-glucose', 'panel-connections']}
         >
           {({ viewedPanelId, onViewedPanelChange, editedPanelId, onEditedPanelChange }) => (
@@ -275,6 +280,7 @@ describe('DashboardViewPanelUrlStateBridge', () => {
     render(
       <NotificationsProvider>
         <DashboardViewPanelUrlStateBridge
+          dashboardUid="night-view"
           allowedPanelIds={['panel-current-glucose', 'panel-connections']}
         >
           {({ viewedPanelId, onViewedPanelChange, editedPanelId, onEditedPanelChange }) => (
@@ -314,6 +320,7 @@ describe('DashboardViewPanelUrlStateBridge', () => {
     render(
       <NotificationsProvider>
         <DashboardViewPanelUrlStateBridge
+          dashboardUid="night-view"
           allowedPanelIds={['panel-current-glucose', 'panel-connections']}
         >
           {({ viewedPanelId, onViewedPanelChange }) => (
@@ -387,6 +394,7 @@ describe('DashboardViewPanelUrlStateBridge', () => {
     render(
       <NotificationsProvider>
         <DashboardViewPanelUrlStateBridge
+          dashboardUid="night-view"
           allowedPanelIds={['panel-current-glucose', 'panel-time-in-range', 'panel-connections']}
           panelIdAliases={{
             '1': 'panel-current-glucose',

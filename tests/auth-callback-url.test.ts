@@ -28,7 +28,7 @@ describe('auth callback urls', () => {
   });
 
   test('keeps public dashboard destinations when closing the overlay', () => {
-    expect(getLoginCloseUrl('/dashboards/statistics?range=3d')).toBe('/dashboards/statistics?range=3d');
-    expect(getLoginCloseUrl('/dashboard/statistics?range=3d')).toBe('/dashboards/statistics?range=3d');
+    expect(getLoginCloseUrl('/dashboards/training?range=3d')).toBe('/dashboards/training?range=3d');
+    expect(getLoginCloseUrl('/dashboard/statistics?range=3d')).toBe(PUBLIC_DASHBOARD_FALLBACK_URL);
   });
 });

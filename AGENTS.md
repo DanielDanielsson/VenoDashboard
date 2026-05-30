@@ -81,18 +81,15 @@ Use the dashboard JSON, registry, and renderer structure that already exists.
 Core files:
 
 1. `src/lib/dashboard/schema.ts`
-2. `src/lib/dashboard/registry.ts`
-3. `src/lib/dashboard/definitions/overview.json`
-4. `src/lib/dashboard/definitions/statistics.json`
-5. `src/lib/dashboard/panel-registry.ts`
-6. `src/lib/dashboard/url-state.ts`
-7. `src/lib/dashboard/view-panel.ts`
-8. `ui/compositions/DashboardDefinitionRenderer/DashboardDefinitionRenderer.tsx`
-9. `ui/compositions/DashboardGrid/DashboardGrid.tsx`
-10. `ui/compositions/DashboardGrid/DashboardGridPanel.tsx`
-11. `ui/compositions/DashboardUrlStateBridge/DashboardUrlStateBridge.tsx`
-12. `ui/compositions/DashboardViewPanelUrlStateBridge/DashboardViewPanelUrlStateBridge.tsx`
-13. `src/lib/dashboard/settings.ts`
+2. `src/lib/dashboard/panel-registry.ts`
+3. `src/lib/dashboard/url-state.ts`
+4. `src/lib/dashboard/view-panel.ts`
+5. `ui/compositions/DashboardDefinitionRenderer/DashboardDefinitionRenderer.tsx`
+6. `ui/compositions/DashboardGrid/DashboardGrid.tsx`
+7. `ui/compositions/DashboardGrid/DashboardGridPanel.tsx`
+8. `ui/compositions/DashboardUrlStateBridge/DashboardUrlStateBridge.tsx`
+9. `ui/compositions/DashboardViewPanelUrlStateBridge/DashboardViewPanelUrlStateBridge.tsx`
+10. `src/lib/dashboard/settings.ts`
 
 Important structure rules:
 
@@ -106,13 +103,14 @@ Important structure rules:
 8. only dashboard grid panels should use `DashboardGridPanel`
 9. popovers, dialogs, and other floating layers must stay separate from dashboard grid panel structure
 
-Current dashboard split:
+Current dashboard rendering split:
 
-1. overview uses `ui/compositions/DashboardDefinitionRenderer/overviewPanelRegistry.tsx`
-2. statistics builds its registry inside `ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView.tsx`
-3. overview page chrome is centralized in `ui/compositions/OverviewDashboardView/OverviewDashboardView.tsx`
+1. live dashboards render through `ui/compositions/OverviewDashboardView/OverviewDashboardView.tsx`
+2. live panels use `ui/compositions/DashboardDefinitionRenderer/LiveDashboardRegistry.tsx`
+3. time range dashboards render through `ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView.tsx`
+4. time range panels use `ui/compositions/GlucoseAnalysisView/TimeRangeDashboardRegistry.tsx`
 
-Current statistics panels include:
+Current time range panels include:
 
 1. average glucose
 2. time in range
@@ -147,10 +145,10 @@ Naming rules:
 
 Panel view and URL state rules:
 
-1. statistics time range URL parsing and serialization live in `src/lib/dashboard/url-state.ts`
-2. statistics supports `from`, `to`, and `timezone` URL parameters
+1. time range URL parsing and serialization live in `src/lib/dashboard/url-state.ts`
+2. time range dashboards support `from`, `to`, and `timezone` URL parameters
 3. unsupported or invalid dashboard URL parameters should be normalized and reported through `useDashboardNotifications`
-4. overview rejects unsupported time range parameters through `DashboardUrlStateBridge`
+4. live dashboards reject unsupported time range parameters through `DashboardUrlStateBridge`
 5. focused panel view is controlled by `viewPanel` through `DashboardViewPanelUrlStateBridge`
 6. focused panel edit is controlled by `editPanel` through `DashboardViewPanelUrlStateBridge`
 7. `viewPanel` and `editPanel` values should use stable panel keys like `panel-time-in-range`
@@ -171,25 +169,24 @@ Panel interaction rules:
 
 ## Multiple Dashboards
 
-The app now supports user created dashboards, pinned dashboards, and a configurable home dashboard.
+The app supports API created dashboards, pinned dashboards, and a configurable home dashboard.
 
 Canonical routes and files:
 
 1. `/dashboards` is the dashboard library page.
 2. `/dashboards/[dashboardUid]` is the canonical route for viewing a dashboard.
-3. `/dashboards/overview` is the built in live overview dashboard.
-4. `/dashboards/statistics` is the built in time range statistics dashboard.
-5. `/dashboard` and `/dashboard/statistics` are compatibility paths only. Do not add new dashboard behavior there.
-6. `src/app/dashboards/layout.tsx` and `src/app/dashboard/layout.tsx` both load `loadDashboardLibrary()` and pass pinned dashboards into `SideBarNavigation`.
-7. `ui/compositions/SideBarNavigation/SideBarNavigation.tsx` owns the left navigation dashboards accordion.
-8. `ui/compositions/DashboardLibrary/DashboardLibrary.tsx` owns dashboard create, pin, unpin, and the library row settings accordion.
-9. `src/lib/dashboard/library.ts` merges the dashboard list with dashboard preferences.
-10. `src/lib/dashboard/preferences.ts` loads home and pinned dashboard preferences.
-11. `src/lib/dashboard/resources.ts` loads a dashboard resource, applies API metadata over persisted layout settings, and redirects renamed dashboard aliases.
-12. `src/lib/dashboard/metadata.ts` owns dashboard metadata description types and plain text extraction.
-13. `src/lib/dashboard/panel-catalog.ts` is the source of truth for add panel options, default panel definitions, default layout, and dashboard type compatibility.
-14. `ui/compositions/DashboardLibrary/DashboardMetadataSettings.tsx` owns dashboard name and description editing inside the library accordion.
-15. `ui/compositions/DashboardLibrary/utils.ts` owns metadata draft normalization, semantic dirty checks, description serialization, and optimistic save result merging.
+3. `/dashboard` and `/dashboard/statistics` are compatibility paths only. Do not add new dashboard behavior there.
+4. dashboard ids such as `overview` or `statistics` are API data, not frontend special cases.
+5. `src/app/dashboards/layout.tsx` and `src/app/dashboard/layout.tsx` both load `loadDashboardLibrary()` and pass pinned dashboards into `SideBarNavigation`.
+6. `ui/compositions/SideBarNavigation/SideBarNavigation.tsx` owns the left navigation dashboards accordion.
+7. `ui/compositions/DashboardLibrary/DashboardLibrary.tsx` owns dashboard create, pin, unpin, and the library row settings accordion.
+8. `src/lib/dashboard/library.ts` merges the dashboard list with dashboard preferences.
+9. `src/lib/dashboard/preferences.ts` loads home and pinned dashboard preferences.
+10. `src/lib/dashboard/resources.ts` loads a dashboard resource, applies API metadata over persisted layout settings, and redirects renamed dashboard aliases.
+11. `src/lib/dashboard/metadata.ts` owns dashboard metadata description types and plain text extraction.
+12. `src/lib/dashboard/panel-catalog.ts` is the source of truth for add panel options, default panel definitions, default layout, and dashboard type compatibility.
+13. `ui/compositions/DashboardLibrary/DashboardMetadataSettings.tsx` owns dashboard name and description editing inside the library accordion.
+14. `ui/compositions/DashboardLibrary/utils.ts` owns metadata draft normalization, semantic dirty checks, description serialization, and optimistic save result merging.
 
 Dashboard type rules:
 
@@ -241,8 +238,8 @@ Pinned and home dashboard rules:
 1. public visitors can view dashboards and pinned navigation links
 2. only admins can create, delete, pin, unpin, or set home dashboards
 3. after a successful pin, unpin, or home preference save, call `router.refresh()` so server layouts reload the left navigation
-4. the home dashboard must not be deletable
-5. do not show inline explanatory text such as `Home dashboard cannot be deleted`; use disabled controls and notification feedback for mutation outcomes
+4. dashboard deletion is API owned, and the frontend must not hardcode undeletable dashboard ids
+5. do not show inline explanatory text for mutation restrictions; use disabled controls and notification feedback for mutation outcomes
 6. pinned dashboards should appear under the Dashboards accordion in the left navigation
 
 Mutation feedback rules:

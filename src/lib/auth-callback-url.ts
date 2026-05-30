@@ -1,5 +1,5 @@
 export const DEFAULT_AUTH_CALLBACK_URL = '/dashboard';
-export const PUBLIC_DASHBOARD_FALLBACK_URL = '/dashboards/overview';
+export const PUBLIC_DASHBOARD_FALLBACK_URL = '/dashboards';
 
 const LOCAL_URL_ORIGIN = 'https://app.veno.local';
 
@@ -40,7 +40,7 @@ export function getLoginCloseUrl(callbackUrl: string | undefined): string {
   const url = new URL(normalizedUrl, LOCAL_URL_ORIGIN);
 
   if (url.pathname === '/dashboard/statistics') {
-    return `/dashboards/statistics${url.search}${url.hash}`;
+    return PUBLIC_DASHBOARD_FALLBACK_URL;
   }
 
   if (
