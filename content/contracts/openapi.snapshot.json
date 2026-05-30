@@ -4,7 +4,7 @@
     "title": "VenoAPI",
     "version": "1.0.0",
     "description": "Machine readable OpenAPI contract for VenoAPI consumer and operational endpoints.",
-    "x-generatedAt": "2026-05-24T08:10:27.315Z"
+    "x-generatedAt": "2026-05-30T10:22:29.115Z"
   },
   "servers": [
     {
@@ -2365,6 +2365,9 @@
                     {
                       "uid": "overview",
                       "title": "Overview",
+                      "description": null,
+                      "icon": "dashboard-grid",
+                      "defaultTimeRange": null,
                       "type": "live",
                       "version": 1,
                       "dashboard": {
@@ -2398,6 +2401,9 @@
                     {
                       "uid": "statistics",
                       "title": "Statistics",
+                      "description": null,
+                      "icon": "dashboard-grid",
+                      "defaultTimeRange": null,
                       "type": "timeRange",
                       "version": 1,
                       "dashboard": {
@@ -2467,6 +2473,9 @@
                   "dashboard": {
                     "uid": "overview",
                     "title": "Overview",
+                    "description": null,
+                    "icon": "dashboard-grid",
+                    "defaultTimeRange": null,
                     "type": "live",
                     "version": 1,
                     "dashboard": {
@@ -2523,7 +2532,7 @@
       "get": {
         "operationId": "public-dashboard-preferences-get",
         "summary": "Read dashboard preferences",
-        "description": "Returns public dashboard navigation preferences, including home and pinned dashboard uids.",
+        "description": "Returns public dashboard navigation preferences, including home, pinned, and dashboard order uids.",
         "tags": [
           "Dashboards"
         ],
@@ -2537,6 +2546,10 @@
                   "preferences": {
                     "homeDashboardUid": "overview",
                     "pinnedDashboardUids": [
+                      "overview",
+                      "statistics"
+                    ],
+                    "dashboardOrderUids": [
                       "overview",
                       "statistics"
                     ]
@@ -2586,6 +2599,9 @@
                   "dashboard": {
                     "uid": "night-view",
                     "title": "Night view",
+                    "description": null,
+                    "icon": "dashboard-grid",
+                    "defaultTimeRange": null,
                     "type": "live",
                     "version": 1,
                     "dashboard": {
@@ -2640,9 +2656,9 @@
     },
     "/api/admin/dashboards/{dashboardUid}": {
       "patch": {
-        "operationId": "admin-dashboards-rename",
-        "summary": "Rename dashboard",
-        "description": "Updates dashboard title while keeping uid and type unchanged.",
+        "operationId": "admin-dashboards-update-metadata",
+        "summary": "Update dashboard metadata",
+        "description": "Updates dashboard title, description, icon, and default time range. Persisted dashboard uid changes when the title changes.",
         "tags": [
           "Dashboards"
         ],
@@ -2656,7 +2672,7 @@
             "name": "dashboardUid",
             "in": "path",
             "required": true,
-            "description": "Dashboard uid to rename.",
+            "description": "Dashboard uid to update.",
             "schema": {
               "type": "string",
               "example": "night-view"
@@ -2670,6 +2686,9 @@
               "example": {
                 "dashboard": {
                   "title": "Night view",
+                  "description": null,
+                  "icon": "dashboard-grid",
+                  "defaultTimeRange": null,
                   "expectedVersion": 1
                 }
               }
@@ -2682,9 +2701,13 @@
             "content": {
               "application/json": {
                 "example": {
+                  "previousUid": "evening-view",
                   "dashboard": {
                     "uid": "night-view",
                     "title": "Night view",
+                    "description": null,
+                    "icon": "dashboard-grid",
+                    "defaultTimeRange": null,
                     "type": "live",
                     "version": 2,
                     "dashboard": {
@@ -2714,6 +2737,17 @@
                         }
                       }
                     }
+                  },
+                  "preferences": {
+                    "homeDashboardUid": "overview",
+                    "pinnedDashboardUids": [
+                      "overview",
+                      "statistics"
+                    ],
+                    "dashboardOrderUids": [
+                      "overview",
+                      "statistics"
+                    ]
                   }
                 }
               }
@@ -2785,6 +2819,10 @@
                     "pinnedDashboardUids": [
                       "overview",
                       "statistics"
+                    ],
+                    "dashboardOrderUids": [
+                      "overview",
+                      "statistics"
                     ]
                   }
                 }
@@ -2847,6 +2885,10 @@
                     "pinnedDashboardUids": [
                       "overview",
                       "statistics"
+                    ],
+                    "dashboardOrderUids": [
+                      "overview",
+                      "statistics"
                     ]
                   }
                 }
@@ -2860,7 +2902,7 @@
       "put": {
         "operationId": "admin-dashboard-preferences-put",
         "summary": "Save dashboard preferences",
-        "description": "Persists home dashboard and pinned dashboard order.",
+        "description": "Persists home dashboard, pinned dashboard order, and full dashboard list order.",
         "tags": [
           "Dashboards"
         ],
@@ -2880,6 +2922,10 @@
                   "pinnedDashboardUids": [
                     "overview",
                     "statistics"
+                  ],
+                  "dashboardOrderUids": [
+                    "overview",
+                    "statistics"
                   ]
                 }
               }
@@ -2895,6 +2941,10 @@
                   "preferences": {
                     "homeDashboardUid": "overview",
                     "pinnedDashboardUids": [
+                      "overview",
+                      "statistics"
+                    ],
+                    "dashboardOrderUids": [
                       "overview",
                       "statistics"
                     ]

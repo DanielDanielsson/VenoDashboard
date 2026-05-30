@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-05-24T08:10:27.314Z",
+  "generatedAt": "2026-05-30T10:22:29.119Z",
   "baseUrl": "https://api.veno.local",
   "scope": "mixed",
   "endpoints": [
@@ -467,10 +467,10 @@
       ]
     },
     {
-      "id": "admin-dashboards-rename",
+      "id": "admin-dashboards-update-metadata",
       "method": "PATCH",
       "path": "/api/admin/dashboards/{dashboardUid}",
-      "summary": "Rename dashboard",
+      "summary": "Update dashboard metadata",
       "auth": "admin",
       "source": "mixed",
       "tags": [
