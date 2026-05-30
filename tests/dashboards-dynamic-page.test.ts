@@ -36,16 +36,19 @@ const GlucoseAnalysisView = vi.fn(
   ({
     dashboardDefinition,
     dashboardVersion,
+    initialSelection,
     isOwner,
   }: {
     dashboardDefinition?: { spec: { title: string; uid: string } };
     dashboardVersion?: number | null;
+    initialSelection?: { kind: string; range?: string };
     isOwner: boolean;
   }) => createElement(
     'div',
     null,
     createElement('span', null, `analysis:${dashboardDefinition?.spec.title ?? 'none'}`),
     createElement('span', null, `analysisVersion:${String(dashboardVersion ?? 'none')}`),
+    createElement('span', null, `analysisSelection:${initialSelection?.kind === 'preset' ? initialSelection.range : 'custom'}`),
     createElement('span', null, `analysisOwner:${String(isOwner)}`),
   ),
 );
@@ -67,6 +70,14 @@ vi.mock('@/lib/auth', () => ({
 }));
 
 vi.mock('@/lib/dashboard/resources', () => ({
+  DashboardResourceRedirectError: class DashboardResourceRedirectError extends Error {
+    dashboardUid: string;
+
+    constructor(dashboardUid: string) {
+      super('Dashboard moved.');
+      this.dashboardUid = dashboardUid;
+    }
+  },
   loadDashboardResource,
 }));
 
@@ -162,6 +173,16 @@ describe('dynamic dashboard page', () => {
     loadDashboardResource.mockResolvedValue({
       type: 'live',
       version: 1,
+      description: {
+        version: 1,
+        blocks: [
+          {
+            id: 'block-1',
+            type: 'paragraph',
+            spans: [{ text: 'Night dashboard description' }],
+          },
+        ],
+      },
       source: 'api',
       dashboard: {
         schemaVersion: 'veno.dashboard.v1',
@@ -196,7 +217,11 @@ describe('dynamic dashboard page', () => {
 
     expect(loadDashboardResource).toHaveBeenCalledWith('night-view');
     expect(screen.getByRole('heading', { name: 'Night view' })).toBeInTheDocument();
-    expect(screen.getByText('Live dashboard')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Edit Night view settings' })).toHaveAttribute(
+      'href',
+      '/dashboards?settings=night-view',
+    );
+    expect(screen.getByText('Night dashboard description')).toBeInTheDocument();
     expect(screen.getByText('overview:Night view')).toBeInTheDocument();
     expect(screen.getByText('overviewVersion:1')).toBeInTheDocument();
     expect(screen.getByText('overviewOwner:true')).toBeInTheDocument();
@@ -258,6 +283,17 @@ describe('dynamic dashboard page', () => {
     loadDashboardResource.mockResolvedValue({
       type: 'timeRange',
       version: 5,
+      defaultTimeRange: '7d',
+      description: {
+        version: 1,
+        blocks: [
+          {
+            id: 'block-1',
+            type: 'paragraph',
+            spans: [{ text: 'Training dashboard description' }],
+          },
+        ],
+      },
       source: 'api',
       dashboard: {
         schemaVersion: 'veno.dashboard.v1',
@@ -290,10 +326,11 @@ describe('dynamic dashboard page', () => {
       }),
     ));
 
-    expect(open).toHaveBeenCalledWith({ range: '3d' });
-    expect(screen.getByText('Time range dashboard')).toBeInTheDocument();
+    expect(open).toHaveBeenCalledWith({ range: '7d' });
+    expect(screen.getByText('Training dashboard description')).toBeInTheDocument();
     expect(screen.getByText('analysis:Training review')).toBeInTheDocument();
     expect(screen.getByText('analysisVersion:5')).toBeInTheDocument();
+    expect(screen.getByText('analysisSelection:7d')).toBeInTheDocument();
     expect(screen.getByText('analysisOwner:true')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit dashboard' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete dashboard' })).not.toBeInTheDocument();

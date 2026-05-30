@@ -290,12 +290,11 @@ export function GlucoseAnalysisView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-  const [selection, setSelection] = useState<HistorySelection>(
-    initialSelection ?? {
-      kind: 'preset',
-      range: '3d'
-    },
+  const defaultSelection = useMemo(
+    () => initialSelection ?? getDefaultStatisticsSelection(),
+    [initialSelection],
   );
+  const [selection, setSelection] = useState<HistorySelection>(defaultSelection);
   const [timeZoneMode, setTimeZoneMode] = useState<StatisticsDashboardTimeZoneMode | null>(
     initialTimeZone === 'UTC' ? 'utc' : null,
   );
@@ -371,7 +370,11 @@ export function GlucoseAnalysisView({
     }
   );
 
-  const sourceData = sourceDataResponse ?? (sourceKey === getHistoryRangeKey('3d') ? initialSnapshot : undefined);
+  const sourceData = sourceDataResponse ?? (
+    selection.kind === 'preset' && sourceKey === getHistoryRangeKey(selection.range)
+      ? initialSnapshot
+      : undefined
+  );
   const targetWindow = getSelectionTargetWindow(selection, sourceData);
   const dashboardTimeSettings = useMemo(
     () => ({
@@ -474,7 +477,7 @@ export function GlucoseAnalysisView({
     const currentSearch = searchParams.toString();
 
     if (!parsed.hasTimeParams) {
-      const fallbackSelection = getDefaultStatisticsSelection();
+      const fallbackSelection = defaultSelection;
 
       lastInvalidSearchRef.current = null;
       setSelection((current) => (
@@ -487,7 +490,7 @@ export function GlucoseAnalysisView({
     }
 
     if (parsed.invalid) {
-      const fallbackSelection = getDefaultStatisticsSelection();
+      const fallbackSelection = defaultSelection;
       const fallbackSearch = serializeStatisticsDashboardUrlState({
         selection: fallbackSelection,
         timeZoneMode: 'browser',
@@ -522,6 +525,7 @@ export function GlucoseAnalysisView({
   }, [
     browserTimeZone,
     dashboardDefinition.spec.title,
+    defaultSelection,
     notifyInvalidDashboardUrl,
     pathname,
     router,

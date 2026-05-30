@@ -10,7 +10,7 @@ test('dashboard renders', async ({ page }) => {
 test('statistics page renders', async ({ page }) => {
   await page.goto('/dashboards/statistics');
   await expect(page.getByRole('heading', { name: /Statistics/i })).toBeVisible();
-  await expect(page.getByText(/Deep dive into your glucose data/i)).toBeVisible();
+  await expect(page.getByLabel(/Time range selected:/)).toBeVisible();
 });
 
 function isTransparentColor(value: string) {

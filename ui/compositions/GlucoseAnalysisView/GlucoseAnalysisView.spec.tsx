@@ -821,6 +821,17 @@ describe('GlucoseAnalysisView', () => {
     expect(screen.getByRole('button', { name: 'Time range selected: Last 3 days' })).toBeInTheDocument();
   });
 
+  test('uses the dashboard default time range when the URL has no time parameters', () => {
+    renderWithProviders(
+      <GlucoseAnalysisView
+        isOwner={false}
+        initialSelection={{ kind: 'preset', range: '7d' }}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Time range selected: Last 7 days' })).toBeInTheDocument();
+  });
+
   test('renders a second time range dashboard definition with compatible catalog panels', () => {
     const dashboardDefinition = structuredClone(createStatisticsDashboardDefinition());
     dashboardDefinition.spec.uid = 'training-review';

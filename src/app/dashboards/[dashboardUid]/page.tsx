@@ -1,5 +1,5 @@
-import { notFound } from 'next/navigation';
-import { DashboardTitleEditor } from '@ui/compositions/DashboardTitleEditor/DashboardTitleEditor';
+import { notFound, redirect } from 'next/navigation';
+import { DashboardPageHeader } from '@ui/compositions/DashboardPageHeader/DashboardPageHeader';
 import { GlucoseAnalysisView } from '@ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView';
 import type { LiveDashboardContext } from '@ui/compositions/DashboardDefinitionRenderer';
 import { OverviewDashboardView } from '@ui/compositions/OverviewDashboardView/OverviewDashboardView';
@@ -9,9 +9,11 @@ import {
   getLatestHealthStepBucketEnd,
   getLatestTandemActivityAt,
 } from '@/lib/dashboard/connection-map';
-import { loadDashboardResource } from '@/lib/dashboard/resources';
+import { getDashboardDescriptionText } from '@/lib/dashboard/metadata';
+import { DashboardResourceRedirectError, loadDashboardResource } from '@/lib/dashboard/resources';
 import { parseStatisticsDashboardUrlState } from '@/lib/dashboard/url-state';
 import { dashboardGlucoseWorkspace } from '@/lib/glucose/dashboard-workspace';
+import type { HistorySelection } from '@/lib/glucose/history-cache';
 import {
   fetchAdminHealthSteps,
   fetchApiStatus,
@@ -21,11 +23,6 @@ import {
   fetchTandemBasalHistory,
   fetchTandemEventHistory,
 } from '@/lib/pulse-api/glucose';
-
-const DASHBOARD_TYPE_LABEL = {
-  live: 'Live dashboard',
-  timeRange: 'Time range dashboard',
-};
 
 interface DashboardPageProps {
   params: Promise<{
@@ -78,25 +75,38 @@ async function loadLiveDashboardContext(isOwner: boolean): Promise<LiveDashboard
 export default async function DashboardPage({ params, searchParams }: DashboardPageProps) {
   const { dashboardUid } = await params;
   const session = await getOwnerSession();
-  const dashboardState = await loadDashboardResource(dashboardUid).catch(() => null);
+  const dashboardState = await loadDashboardResource(dashboardUid).catch((error: unknown) => {
+    if (error instanceof DashboardResourceRedirectError) {
+      redirect(`/dashboards/${error.dashboardUid}`);
+    }
+
+    return null;
+  });
 
   if (!dashboardState) {
     notFound();
   }
 
   const dashboard = dashboardState.dashboard;
+  const dashboardDescription = getDashboardDescriptionText(dashboardState.description);
   const isOwner = Boolean(session);
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const initialUrlState = parseStatisticsDashboardUrlState(resolvedSearchParams);
+  const initialSelection: HistorySelection | undefined = dashboardState.type === 'timeRange'
+    ? initialUrlState.initialSelection ?? {
+      kind: 'preset',
+      range: dashboardState.defaultTimeRange ?? '3d',
+    }
+    : undefined;
   let initialSnapshot;
   let liveDashboardContext: LiveDashboardContext | null = null;
 
   if (dashboardState.type === 'timeRange') {
     try {
       const workspaceSession = await dashboardGlucoseWorkspace.open(
-        initialUrlState.initialSelection?.kind === 'custom'
-          ? { window: initialUrlState.initialSelection.window }
-          : { range: initialUrlState.initialSelection?.range ?? '3d' },
+        initialSelection?.kind === 'custom'
+          ? { window: initialSelection.window }
+          : { range: initialSelection?.range ?? '3d' },
       );
       initialSnapshot = workspaceSession.snapshot;
     } catch {
@@ -108,23 +118,11 @@ export default async function DashboardPage({ params, searchParams }: DashboardP
 
   return (
     <div className="section-stack">
-      <header
-        className="flex flex-col"
-        style={{ minHeight: 'calc(var(--spacing-dashboard-content-top) - var(--spacing-dashboard-top) - 1.25rem)' }}
-      >
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <DashboardTitleEditor
-              dashboardUid={dashboard.spec.uid}
-              initialTitle={dashboard.spec.title}
-              dashboardVersion={dashboardState.version}
-              isOwner={isOwner}
-              showActions={false}
-            />
-            <p className="page_subtitle mt-1 text-text-dim">{DASHBOARD_TYPE_LABEL[dashboardState.type]}</p>
-          </div>
-        </div>
-      </header>
+      <DashboardPageHeader
+        dashboardUid={dashboard.spec.uid}
+        title={dashboard.spec.title}
+        description={dashboardDescription}
+      />
 
       {dashboardState.type === 'timeRange' ? (
         <GlucoseAnalysisView
@@ -132,7 +130,7 @@ export default async function DashboardPage({ params, searchParams }: DashboardP
           initialSnapshot={initialSnapshot}
           dashboardDefinition={dashboard}
           dashboardVersion={dashboardState.version}
-          initialSelection={initialUrlState.initialSelection}
+          initialSelection={initialSelection}
           initialTimeZone={initialUrlState.initialTimeZone}
           allowDashboardDelete
         />
