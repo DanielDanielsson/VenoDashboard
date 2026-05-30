@@ -1,15 +1,43 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
-test('dashboard renders', async ({ page }) => {
+test('dashboard library renders API backed dashboards', async ({ page }) => {
   await page.goto('/dashboards');
-  await expect(page.getByRole('link', { name: 'Open Overview dashboard' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Open Statistics dashboard' })).toBeVisible();
+
+  const dashboardLinks = page.getByRole('link', { name: /Open .+ dashboard/ });
+  await expect(dashboardLinks.first()).toBeVisible();
+  expect(await dashboardLinks.count()).toBeGreaterThan(0);
 });
 
-test('statistics page renders', async ({ page }) => {
-  await page.goto('/dashboards/statistics');
-  await expect(page.getByRole('heading', { name: /Statistics/i })).toBeVisible();
+async function openFirstTimeRangeDashboard(page: Page, skipReason: string): Promise<string | null> {
+  await page.goto('/dashboards');
+  const row = page.getByRole('listitem').filter({
+    has: page.getByText(/^Time range$/i),
+  }).first();
+
+  if (await row.count() === 0) {
+    test.skip(true, skipReason);
+    return null;
+  }
+
+  const link = row.getByRole('link', { name: /Open .+ dashboard/ }).first();
+  const label = await link.getAttribute('aria-label');
+  const title = label?.match(/^Open (.+) dashboard$/)?.[1] ?? '';
+
+  await link.click();
+  return title;
+}
+
+test('time range dashboard page renders', async ({ page }) => {
+  const dashboardTitle = await openFirstTimeRangeDashboard(
+    page,
+    'The dashboard library did not render a time range dashboard.',
+  );
+  if (!dashboardTitle) {
+    return;
+  }
+
+  await expect(page.getByRole('heading', { name: dashboardTitle })).toBeVisible();
   await expect(page.getByLabel(/Time range selected:/)).toBeVisible();
 });
 
@@ -47,12 +75,18 @@ async function openTimeRangePicker(page: Page) {
   };
 }
 
-test('statistics time range picker resolves theme colors after theme changes', async ({ page }) => {
+test('time range picker resolves theme colors after theme changes', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('pulse-theme', 'dark');
   });
 
-  await page.goto('/dashboards/statistics');
+  const dashboardTitle = await openFirstTimeRangeDashboard(
+    page,
+    'The dashboard library did not render a time range dashboard.',
+  );
+  if (!dashboardTitle) {
+    return;
+  }
 
   const darkPicker = await openTimeRangePicker(page);
   await expectResolvedThemeSurface(darkPicker.toolbar);

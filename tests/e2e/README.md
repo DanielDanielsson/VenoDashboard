@@ -19,7 +19,8 @@ It only runs when all of these are true:
 
 1. `OWNER_LOGIN_PASSWORD` is available to Playwright, either from the shell or `.env.local`.
 2. The dashboard app can log in successfully.
-3. `PUT /api/dashboard/settings/dashboards/statistics` returns `200` through the local dashboard route.
+3. The API exposes at least one dashboard containing the Time in Range and Glucose Timeline panels.
+4. `PUT /api/dashboard/settings/dashboards/{dashboardUid}` returns `200` through the local dashboard route.
 
 If the local VenoAPI only exposes the dashboard settings contract and not the live persistence route yet, the admin persistence test is skipped instead of being faked.
 

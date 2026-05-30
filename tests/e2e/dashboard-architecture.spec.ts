@@ -1,43 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
-function readLocalEnvValue(key: string): string | undefined {
-  const directValue = process.env[key]?.trim();
-  if (directValue) {
-    return directValue;
-  }
-
-  const envPath = join(process.cwd(), '.env.local');
-  if (!existsSync(envPath)) {
-    return undefined;
-  }
-
-  const lines = readFileSync(envPath, 'utf8').split(/\r?\n/);
-  let resolvedValue: string | undefined;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) {
-      continue;
-    }
-
-    const separatorIndex = trimmed.indexOf('=');
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const currentKey = trimmed.slice(0, separatorIndex).trim();
-    if (currentKey !== key) {
-      continue;
-    }
-
-    const rawValue = trimmed.slice(separatorIndex + 1).trim();
-    resolvedValue = rawValue.replace(/^['"]|['"]$/g, '');
-  }
-
-  return resolvedValue;
-}
+import {
+  fetchDashboardRecords,
+  findDashboardWithPanelGroups,
+  getDashboardHref,
+  readLocalEnvValue,
+  type DashboardRecord,
+} from './dashboard-fixtures';
 
 const ownerUsername = readLocalEnvValue('OWNER_LOGIN_USERNAME') || 'admin';
 const ownerPassword = readLocalEnvValue('OWNER_LOGIN_PASSWORD');
@@ -64,12 +32,14 @@ async function openPanelSettings(page: Page, title: string) {
   return drawer;
 }
 
-async function signInAsOwner(page: Page) {
-  await page.goto('/login?callbackUrl=/dashboards/statistics');
+async function signInAsOwner(page: Page, dashboard: DashboardRecord) {
+  const dashboardHref = getDashboardHref(dashboard);
+
+  await page.goto(`/login?callbackUrl=${encodeURIComponent(dashboardHref)}`);
   await page.getByLabel('Username').fill(ownerUsername);
   await page.getByLabel('Password').fill(ownerPassword ?? '');
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/dashboards\/statistics$/);
+  await expect(page).toHaveURL(new RegExp(`${escapeRegExp(dashboardHref)}$`));
 }
 
 async function setTimeInRangeLayout(page: Page, label: 'Overview' | 'Statistics') {
@@ -78,10 +48,19 @@ async function setTimeInRangeLayout(page: Page, label: 'Overview' | 'Statistics'
   return drawer;
 }
 
-test('statistics dashboard supports panel view, edit, and public local preview', async ({ page }) => {
-  await page.goto('/dashboards/statistics');
+test('time range dashboard supports panel view, edit, and public local preview', async ({ page, request }) => {
+  const dashboard = findDashboardWithPanelGroups(await fetchDashboardRecords(request), [
+    'veno.time-in-range',
+    'veno.glucose-timeline',
+  ]);
+  if (!dashboard) {
+    test.skip(true, 'The dashboard API did not return a time range dashboard with the architecture panels.');
+    return;
+  }
 
-  await expect(page.getByRole('heading', { name: 'Statistics' })).toBeVisible();
+  await page.goto(getDashboardHref(dashboard));
+
+  await expect(page.getByRole('heading', { name: dashboard.title })).toBeVisible();
   await expect(page.locator('h2').filter({ hasText: /^Time in Range$/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Glucose Timeline' })).toBeVisible();
   const timeInRangeActions = page.getByRole('button', { name: 'Open panel actions for Time in Range' });
@@ -116,14 +95,24 @@ test('statistics dashboard supports panel view, edit, and public local preview',
 test('admin can save panel settings when the backend dashboard settings path is available', async ({ page }) => {
   test.skip(!ownerPassword, 'OWNER_LOGIN_PASSWORD is required for the admin persistence flow.');
 
-  await signInAsOwner(page);
+  const dashboard = findDashboardWithPanelGroups(await fetchDashboardRecords(page.request), [
+    'veno.time-in-range',
+    'veno.glucose-timeline',
+  ]);
+  if (!dashboard) {
+    test.skip(true, 'The dashboard API did not return a time range dashboard with the architecture panels.');
+    return;
+  }
+
+  await signInAsOwner(page, dashboard);
 
   const hadOverviewLayout = await page.locator('h2').filter({ hasText: /^Time In Range$/ }).count();
   const originalLayout = hadOverviewLayout ? 'overview' : 'statistics';
   const restoreLabel = hadOverviewLayout ? 'Overview' : 'Statistics';
   const targetLabel = hadOverviewLayout ? 'Statistics' : 'Overview';
 
-  const probeResponse = await page.request.put('/api/dashboard/settings/dashboards/statistics', {
+  const settingsPath = `/api/dashboard/settings/dashboards/${encodeURIComponent(dashboard.uid)}`;
+  const probeResponse = await page.request.put(settingsPath, {
     data: {
       expectedVersion: null,
       panelSettings: {
@@ -144,7 +133,7 @@ test('admin can save panel settings when the backend dashboard settings path is 
     await expect(drawer.getByRole('button', { name: 'Save' })).toBeEnabled();
 
     const saveResponsePromise = page.waitForResponse((response) => (
-      response.url().includes('/api/dashboard/settings/dashboards/statistics') &&
+      response.url().includes(settingsPath) &&
       response.request().method() === 'PUT'
     ));
 
@@ -169,7 +158,7 @@ test('admin can save panel settings when the backend dashboard settings path is 
 
     const drawer = await setTimeInRangeLayout(page, restoreLabel);
     const restoreResponsePromise = page.waitForResponse((response) => (
-      response.url().includes('/api/dashboard/settings/dashboards/statistics') &&
+      response.url().includes(settingsPath) &&
       response.request().method() === 'PUT'
     ));
 
