@@ -53,6 +53,7 @@ describe('dashboard library loading', () => {
       preferences: {
         homeDashboardUid: 'statistics',
         pinnedDashboardUids: ['statistics'],
+        dashboardOrderUids: [],
       },
     });
 
@@ -77,12 +78,60 @@ describe('dashboard library loading', () => {
     ]);
   });
 
+  test('sorts dashboards by the saved dashboard order when present', async () => {
+    mocks.fetchDashboardList.mockResolvedValue({
+      dashboards: [
+        {
+          uid: 'overview',
+          title: 'Overview',
+          type: 'live',
+          version: 1,
+          updatedAt: '2026-04-01T00:00:00.000Z',
+          dashboard: { kind: 'Dashboard', spec: { uid: 'overview', title: 'Overview', elements: {}, layout: { kind: 'GridLayout', spec: { items: [] } } } },
+        },
+        {
+          uid: 'training',
+          title: 'Training',
+          type: 'timeRange',
+          version: 1,
+          updatedAt: '2026-04-20T00:00:00.000Z',
+          dashboard: { kind: 'Dashboard', spec: { uid: 'training', title: 'Training', elements: {}, layout: { kind: 'GridLayout', spec: { items: [] } } } },
+        },
+        {
+          uid: 'statistics',
+          title: 'Statistics',
+          type: 'timeRange',
+          version: 1,
+          updatedAt: '2026-04-10T00:00:00.000Z',
+          dashboard: { kind: 'Dashboard', spec: { uid: 'statistics', title: 'Statistics', elements: {}, layout: { kind: 'GridLayout', spec: { items: [] } } } },
+        },
+      ],
+    });
+    mocks.fetchDashboardPreferences.mockResolvedValue({
+      preferences: {
+        homeDashboardUid: 'statistics',
+        pinnedDashboardUids: ['statistics'],
+        dashboardOrderUids: ['training', 'overview', 'statistics'],
+      },
+    });
+
+    const { loadDashboardLibrary } = await import('@/lib/dashboard/library');
+    const library = await loadDashboardLibrary();
+
+    expect(library.dashboards.map((dashboard) => dashboard.uid)).toEqual([
+      'training',
+      'overview',
+      'statistics',
+    ]);
+  });
+
   test('rejects when the dashboard list cannot be loaded', async () => {
     mocks.fetchDashboardList.mockRejectedValue(new Error('fetch failed'));
     mocks.fetchDashboardPreferences.mockResolvedValue({
       preferences: {
         homeDashboardUid: 'statistics',
         pinnedDashboardUids: [],
+        dashboardOrderUids: [],
       },
     });
 

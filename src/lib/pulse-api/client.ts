@@ -247,6 +247,7 @@ export interface DashboardListResponse {
 export interface DashboardPreferencesRecord {
   homeDashboardUid: string;
   pinnedDashboardUids: string[];
+  dashboardOrderUids: string[];
 }
 
 export interface DashboardPreferencesResponse {

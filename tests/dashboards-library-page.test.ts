@@ -2,7 +2,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createElement } from 'react';
-import { NotificationsProvider } from '@ui/compositions/NotificationsProvider';
 
 const getOwnerSession = vi.fn();
 const loadDashboardLibrary = vi.fn();
@@ -60,6 +59,7 @@ describe('dashboards library page', () => {
 
   test('renders public dashboard links without admin controls', async () => {
     const { default: DashboardsPage } = await import('@/app/dashboards/page');
+    const { NotificationsProvider } = await import('@ui/compositions/NotificationsProvider');
 
     render(createElement(NotificationsProvider, null, await DashboardsPage()));
 

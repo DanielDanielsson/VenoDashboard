@@ -1,7 +1,21 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MouseEvent, type SetStateAction } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type DragEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+  type CSSProperties,
+  type SetStateAction,
+} from 'react';
+import { flushSync } from 'react-dom';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { twMerge } from 'tailwind-merge';
 import { Button } from '@ui/base/Button';
 import { Icon } from '@ui/base/Icon';
 import { Link } from '@ui/base/Link';
@@ -11,6 +25,13 @@ import { useNotifications } from '@ui/compositions/NotificationsProvider';
 import { getDashboardDescriptionText } from '@/lib/dashboard/metadata';
 import type { DashboardLibraryItem } from '@/lib/dashboard/library';
 import { DashboardMetadataSettings } from './DashboardMetadataSettings';
+import {
+  getDashboardPreferencePayload,
+  moveDashboardItem,
+  orderDashboardItems,
+  reorderDashboardItems,
+  type DashboardDropPosition,
+} from './utils';
 
 const DASHBOARD_TYPE_LABEL: Record<DashboardLibraryItem['type'], string> = {
   live: 'Live',
@@ -34,7 +55,7 @@ const DASHBOARD_TYPE_OPTIONS = [
 }[];
 
 const DASHBOARD_LIBRARY_COLUMNS = {
-  owner: 'md:grid-cols-2',
+  owner: 'grid-cols-[2.25rem_minmax(0,1fr)] md:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)]',
   public: 'md:grid-cols-2',
 };
 
@@ -48,15 +69,38 @@ const DASHBOARD_LIBRARY_LINK_RIGHT = {
   public: 'right-[5.25rem]',
 };
 
+const DASHBOARD_ORDER_UPDATED_EVENT = 'veno:dashboard-order-updated';
+
 type PendingDirtyAction =
   | { type: 'collapse' }
   | { type: 'expand'; dashboardUid: string }
   | { type: 'navigate'; href: string };
 
+interface DashboardDropTarget {
+  dashboardUid: string;
+  position: DashboardDropPosition;
+}
+
 interface DashboardLibraryProps {
   dashboards: DashboardLibraryItem[];
   isOwner: boolean;
 }
+
+type DashboardRowStyle = CSSProperties & {
+  viewTransitionName?: string;
+  viewTransitionClass?: string;
+};
+
+interface DashboardRowMotion {
+  offset: number;
+  phase: 'offset' | 'animate';
+}
+
+type DashboardRowRefs = Map<string, HTMLLIElement>;
+type DashboardRowMeasurements = Map<string, {
+  height: number;
+  top: number;
+}>;
 
 async function readErrorMessage(response: Response, fallback: string): Promise<string> {
   try {
@@ -67,8 +111,168 @@ async function readErrorMessage(response: Response, fallback: string): Promise<s
   }
 }
 
+function dispatchDashboardOrderUpdated(items: DashboardLibraryItem[]) {
+  window.dispatchEvent(new CustomEvent(DASHBOARD_ORDER_UPDATED_EVENT, {
+    detail: {
+      dashboardOrderUids: items.map((item) => item.uid),
+    },
+  }));
+}
+
+function getDashboardRowViewTransitionName(dashboardUid: string): string {
+  return `dashboard-library-row-${dashboardUid.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+}
+
+function readDashboardRowMeasurements(rowRefs: DashboardRowRefs): DashboardRowMeasurements {
+  return new Map(
+    Array.from(rowRefs.entries()).map(([dashboardUid, row]) => [
+      dashboardUid,
+      {
+        height: row.getBoundingClientRect().height,
+        top: row.getBoundingClientRect().top,
+      },
+    ]),
+  );
+}
+
+function getDashboardListGap(rowRefs: DashboardRowRefs): number {
+  const firstRow = rowRefs.values().next().value;
+  const rowGap = firstRow?.parentElement
+    ? getComputedStyle(firstRow.parentElement).rowGap
+    : '0';
+
+  const parsedGap = Number.parseFloat(rowGap);
+  return Number.isNaN(parsedGap) ? 0 : parsedGap;
+}
+
+function parseDurationMs(value: string): number {
+  const trimmed = value.trim();
+
+  if (trimmed.endsWith('ms')) {
+    return Number.parseFloat(trimmed);
+  }
+
+  if (trimmed.endsWith('s')) {
+    return Number.parseFloat(trimmed) * 1000;
+  }
+
+  return 1000;
+}
+
+function getDashboardRowMotionChanges(
+  rowRefs: DashboardRowRefs,
+  nextDashboardUids: string[],
+): Record<string, DashboardRowMotion> {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    return {};
+  }
+
+  const measurements = readDashboardRowMeasurements(rowRefs);
+  const firstTop = Math.min(...Array.from(measurements.values()).map((measurement) => measurement.top));
+  if (!Number.isFinite(firstTop)) {
+    return {};
+  }
+  const rowGap = getDashboardListGap(rowRefs);
+  const movedRows: Record<string, DashboardRowMotion> = {};
+  let nextTop = firstTop;
+
+  nextDashboardUids.forEach((dashboardUid) => {
+    const measurement = measurements.get(dashboardUid);
+    if (!measurement) {
+      return;
+    }
+
+    const offset = measurement.top - nextTop;
+    if (Math.abs(offset) < 1) {
+      nextTop += measurement.height + rowGap;
+      return;
+    }
+
+    movedRows[dashboardUid] = {
+      offset,
+      phase: 'offset',
+    };
+    nextTop += measurement.height + rowGap;
+  });
+
+  return movedRows;
+}
+
+function getDashboardRowStyle(
+  dashboardUid: string,
+  motion?: DashboardRowMotion,
+): DashboardRowStyle {
+  const motionStyle: CSSProperties = motion
+    ? {
+        transform: motion.phase === 'offset' ? `translateY(${motion.offset}px)` : 'translateY(0)',
+        transition: motion.phase === 'offset'
+          ? 'none'
+          : 'transform var(--duration-dashboard-order) ease-out',
+        zIndex: 1,
+      }
+    : {};
+
+  return {
+    ...motionStyle,
+    viewTransitionName: getDashboardRowViewTransitionName(dashboardUid),
+    viewTransitionClass: 'dashboard-library-row-transition',
+  };
+}
+
+function runDashboardOrderTransition(
+  updateOrder: () => void,
+  rowRefs: DashboardRowRefs,
+  nextDashboardUids: string[],
+  setRowMotion: Dispatch<SetStateAction<Record<string, DashboardRowMotion>>>,
+  rowMotionFrameRef: { current: number | null },
+  rowMotionTimeoutRef: { current: number | null },
+) {
+  const nextMotion = getDashboardRowMotionChanges(rowRefs, nextDashboardUids);
+  const scrollLeft = window.scrollX;
+  const scrollTop = window.scrollY;
+  const shouldRestoreScroll = scrollLeft !== 0 || scrollTop !== 0;
+  flushSync(updateOrder);
+  if (shouldRestoreScroll) {
+    window.scrollTo(scrollLeft, scrollTop);
+    window.requestAnimationFrame(() => window.scrollTo(scrollLeft, scrollTop));
+  }
+
+  if (Object.keys(nextMotion).length === 0) {
+    return;
+  }
+
+  if (rowMotionFrameRef.current !== null) {
+    window.cancelAnimationFrame(rowMotionFrameRef.current);
+  }
+  if (rowMotionTimeoutRef.current !== null) {
+    window.clearTimeout(rowMotionTimeoutRef.current);
+  }
+
+  flushSync(() => setRowMotion(nextMotion));
+
+  rowMotionFrameRef.current = window.requestAnimationFrame(() => {
+    setRowMotion((currentMotion) => Object.fromEntries(
+      Object.entries(currentMotion).map(([dashboardUid, motion]) => [
+        dashboardUid,
+        { ...motion, phase: 'animate' },
+      ]),
+    ));
+  });
+
+  const duration = parseDurationMs(
+    getComputedStyle(document.documentElement).getPropertyValue('--duration-dashboard-order'),
+  );
+
+  rowMotionTimeoutRef.current = window.setTimeout(() => {
+    setRowMotion({});
+    rowMotionFrameRef.current = null;
+    rowMotionTimeoutRef.current = null;
+  }, duration + 50);
+}
+
 export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps) {
   const router = useRouter();
+  const { notifyError } = useNotifications();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [items, setItems] = useState(dashboards);
@@ -80,8 +284,17 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
   const [dirtyDashboardUid, setDirtyDashboardUid] = useState<string | null>(null);
   const [pendingDirtyAction, setPendingDirtyAction] = useState<PendingDirtyAction | null>(null);
   const [pendingHomeDashboard, setPendingHomeDashboard] = useState<DashboardLibraryItem | null>(null);
+  const [draggedDashboardUid, setDraggedDashboardUid] = useState<string | null>(null);
+  const [settledDashboardUid, setSettledDashboardUid] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<DashboardDropTarget | null>(null);
+  const [rowMotion, setRowMotion] = useState<Record<string, DashboardRowMotion>>({});
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
   const dashboardRowRefs = useRef(new Map<string, HTMLLIElement>());
+  const draggedDashboardUidRef = useRef<string | null>(null);
+  const rowMotionFrameRef = useRef<number | null>(null);
+  const rowMotionTimeoutRef = useRef<number | null>(null);
   const scrolledSettingsUidRef = useRef<string | null>(null);
+  const initialSettingsDashboardUidRef = useRef<string | null>(searchParams.get(DASHBOARD_SETTINGS_PARAM));
   const dashboardLibraryColumns = isOwner ? DASHBOARD_LIBRARY_COLUMNS.owner : DASHBOARD_LIBRARY_COLUMNS.public;
   const dashboardLibraryDetailColumns = isOwner ? DASHBOARD_LIBRARY_DETAIL_COLUMNS.owner : DASHBOARD_LIBRARY_DETAIL_COLUMNS.public;
   const dashboardLinkRightClass = isOwner ? DASHBOARD_LIBRARY_LINK_RIGHT.owner : DASHBOARD_LIBRARY_LINK_RIGHT.public;
@@ -94,6 +307,70 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
     () => items.filter((dashboard) => dashboard.isPinned).map((dashboard) => dashboard.uid),
     [items],
   );
+  const dashboardOrderUids = useMemo(
+    () => items.map((dashboard) => dashboard.uid),
+    [items],
+  );
+
+  useEffect(() => () => {
+    if (rowMotionFrameRef.current !== null) {
+      window.cancelAnimationFrame(rowMotionFrameRef.current);
+    }
+    if (rowMotionTimeoutRef.current !== null) {
+      window.clearTimeout(rowMotionTimeoutRef.current);
+    }
+  }, []);
+
+  const saveDashboardOrder = useCallback(async (
+    nextItems: DashboardLibraryItem[],
+  ) => {
+    if (!isOwner) {
+      return;
+    }
+
+    setIsSavingOrder(true);
+
+    try {
+      const preferences = getDashboardPreferencePayload(nextItems);
+      const response = await fetch('/api/dashboard/preferences', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(preferences),
+      });
+
+      if (!response.ok) {
+        throw new Error(await readErrorMessage(response, 'Dashboard order could not be saved'));
+      }
+
+      const payload = await response.json() as {
+        preferences?: {
+          homeDashboardUid?: string;
+          pinnedDashboardUids?: string[];
+          dashboardOrderUids?: string[];
+        };
+      };
+      const savedHomeDashboardUid = payload.preferences?.homeDashboardUid ?? preferences.homeDashboardUid;
+      const savedPinnedDashboardUids = new Set(payload.preferences?.pinnedDashboardUids ?? preferences.pinnedDashboardUids);
+      const savedDashboardOrderUids = payload.preferences?.dashboardOrderUids ?? preferences.dashboardOrderUids;
+
+      setItems((currentItems) => orderDashboardItems(
+        currentItems.map((item) => ({
+          ...item,
+          isHome: item.uid === savedHomeDashboardUid,
+          isPinned: savedPinnedDashboardUids.has(item.uid),
+        })),
+        savedDashboardOrderUids,
+      ));
+    } catch (error) {
+      notifyError('Dashboard order could not be saved', {
+        message: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setIsSavingOrder(false);
+    }
+  }, [isOwner, notifyError]);
   const handleDirtyChange = useCallback((dashboardUid: string, isDirty: boolean) => {
     if (!isOwner) {
       return;
@@ -130,6 +407,7 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
     if (!settingsDashboardUid) {
       setExpandedDashboardUid(null);
       scrolledSettingsUidRef.current = null;
+      initialSettingsDashboardUidRef.current = null;
       return;
     }
 
@@ -143,6 +421,7 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
       setSettingsDashboardUid(null);
       setExpandedDashboardUid(null);
       scrolledSettingsUidRef.current = null;
+      initialSettingsDashboardUidRef.current = null;
       return;
     }
 
@@ -152,7 +431,14 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
   }, [items, pathname, searchParams, settingsDashboardUid]);
 
   useEffect(() => {
-    if (!expandedDashboardUid || settingsDashboardUid !== expandedDashboardUid) {
+    const initialSettingsDashboardUid = initialSettingsDashboardUidRef.current;
+
+    if (
+      !initialSettingsDashboardUid ||
+      !expandedDashboardUid ||
+      settingsDashboardUid !== expandedDashboardUid ||
+      expandedDashboardUid !== initialSettingsDashboardUid
+    ) {
       return;
     }
 
@@ -163,6 +449,7 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
     const dashboardRow = dashboardRowRefs.current.get(expandedDashboardUid);
     dashboardRow?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
     scrolledSettingsUidRef.current = expandedDashboardUid;
+    initialSettingsDashboardUidRef.current = null;
   }, [expandedDashboardUid, settingsDashboardUid]);
 
   function updateSettingsUrl(dashboardUid: string | null, navigationMode: 'push' | 'replace' = 'push') {
@@ -240,6 +527,141 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
     setExpandedSettingsDashboardUid(nextAction.type === 'expand' ? nextAction.dashboardUid : null);
   }
 
+  function handleDashboardDragStart(event: DragEvent<HTMLButtonElement>, dashboardUid: string) {
+    if (!isOwner || isSavingOrder) {
+      event.preventDefault();
+      return;
+    }
+
+    const dashboardRow = dashboardRowRefs.current.get(dashboardUid);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', dashboardUid);
+    if (dashboardRow) {
+      event.dataTransfer.setDragImage(dashboardRow, 24, dashboardRow.offsetHeight / 2);
+    }
+    draggedDashboardUidRef.current = dashboardUid;
+    setDraggedDashboardUid(dashboardUid);
+    setDropTarget(null);
+  }
+
+  function getDashboardDropTargetFromPoint(clientY: number): DashboardDropTarget | null {
+    for (const dashboard of items) {
+      const row = dashboardRowRefs.current.get(dashboard.uid);
+      if (!row) {
+        continue;
+      }
+
+      const bounds = row.getBoundingClientRect();
+      if (clientY < bounds.top) {
+        return { dashboardUid: dashboard.uid, position: 'before' };
+      }
+
+      if (clientY <= bounds.bottom) {
+        return {
+          dashboardUid: dashboard.uid,
+          position: clientY < bounds.top + bounds.height / 2 ? 'before' : 'after',
+        };
+      }
+    }
+
+    const lastDashboard = items.at(-1);
+    return lastDashboard ? { dashboardUid: lastDashboard.uid, position: 'after' } : null;
+  }
+
+  function handleDashboardListDragOver(event: DragEvent<HTMLUListElement>) {
+    const activeDashboardUid = draggedDashboardUidRef.current ?? draggedDashboardUid;
+    if (!isOwner || !activeDashboardUid) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    const nextTarget = getDashboardDropTargetFromPoint(event.clientY);
+    if (!nextTarget) {
+      setDropTarget(null);
+      return;
+    }
+
+    setDropTarget((currentTarget) => (
+      currentTarget?.dashboardUid === nextTarget.dashboardUid && currentTarget.position === nextTarget.position
+        ? currentTarget
+        : nextTarget
+    ));
+  }
+
+  function handleDashboardListDragLeave(event: DragEvent<HTMLUListElement>) {
+    if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) {
+      return;
+    }
+
+    setDropTarget(null);
+  }
+
+  function handleDashboardDragEnd() {
+    draggedDashboardUidRef.current = null;
+    setDraggedDashboardUid(null);
+    setDropTarget(null);
+  }
+
+  function handleDashboardListDrop(event: DragEvent<HTMLUListElement>) {
+    event.preventDefault();
+    const activeDashboardUid = draggedDashboardUidRef.current ?? draggedDashboardUid;
+    const target = dropTarget ?? getDashboardDropTargetFromPoint(event.clientY);
+
+    if (!isOwner || !activeDashboardUid || !target || activeDashboardUid === target.dashboardUid) {
+      handleDashboardDragEnd();
+      return;
+    }
+
+    const nextItems = reorderDashboardItems(items, activeDashboardUid, target.dashboardUid, target.position);
+    handleDashboardDragEnd();
+
+    if (nextItems === items) {
+      return;
+    }
+
+    runDashboardOrderTransition(
+      () => {
+        setSettledDashboardUid(activeDashboardUid);
+        setItems(nextItems);
+      },
+      dashboardRowRefs.current,
+      nextItems.map((item) => item.uid),
+      setRowMotion,
+      rowMotionFrameRef,
+      rowMotionTimeoutRef,
+    );
+    dispatchDashboardOrderUpdated(nextItems);
+    void saveDashboardOrder(nextItems);
+  }
+
+  function handleDashboardGrabberKeyDown(event: KeyboardEvent<HTMLButtonElement>, dashboardUid: string) {
+    if (!isOwner || isSavingOrder || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextItems = moveDashboardItem(items, dashboardUid, event.key === 'ArrowUp' ? -1 : 1);
+
+    if (nextItems === items) {
+      return;
+    }
+
+    runDashboardOrderTransition(
+      () => {
+        setSettledDashboardUid(dashboardUid);
+        setItems(nextItems);
+      },
+      dashboardRowRefs.current,
+      nextItems.map((item) => item.uid),
+      setRowMotion,
+      rowMotionFrameRef,
+      rowMotionTimeoutRef,
+    );
+    dispatchDashboardOrderUpdated(nextItems);
+    void saveDashboardOrder(nextItems);
+  }
+
   return (
     <div className="relative grid gap-4">
       {isOwner ? <DashboardCreateForm /> : null}
@@ -247,6 +669,7 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
         className={`hidden gap-6 rounded-[4px] border border-dashboard-panel-border bg-dashboard-panel-header-bg p-5 md:grid md:items-center ${dashboardLibraryColumns}`}
         data-testid="dashboard-library-header"
       >
+        {isOwner ? <span aria-hidden="true" /> : null}
         <span className="body_text text-text-soft">Name</span>
         <span className={`grid gap-6 ${dashboardLibraryDetailColumns}`}>
           <span className="body_text text-text-soft">Type</span>
@@ -254,7 +677,13 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
           <span aria-hidden="true" />
         </span>
       </div>
-      <ul aria-label="Dashboards" className="grid gap-2">
+      <ul
+        aria-label="Dashboards"
+        className="dashboard-library-list grid gap-2"
+        onDragOver={handleDashboardListDragOver}
+        onDragLeave={handleDashboardListDragLeave}
+        onDrop={handleDashboardListDrop}
+      >
         {items.map((dashboard) => (
           <li
             key={dashboard.uid}
@@ -266,8 +695,27 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
 
               dashboardRowRefs.current.delete(dashboard.uid);
             }}
-            className="overflow-hidden rounded-[6px] border border-dashboard-panel-border bg-dashboard-panel-bg shadow-sm transition-colors hover:border-text-soft"
+            className={twMerge(
+              'dashboard-library-row relative overflow-hidden rounded-[6px] border border-dashboard-panel-border bg-dashboard-panel-bg shadow-sm hover:border-text-soft',
+              draggedDashboardUid === dashboard.uid && 'opacity-60 ring-1 ring-text-soft',
+            )}
+            data-dashboard-order-state={settledDashboardUid === dashboard.uid ? 'settled' : undefined}
+            style={getDashboardRowStyle(dashboard.uid, rowMotion[dashboard.uid])}
+            onAnimationEnd={(event) => {
+              if (event.currentTarget === event.target) {
+                setSettledDashboardUid((currentUid) => currentUid === dashboard.uid ? null : currentUid);
+              }
+            }}
           >
+            {dropTarget?.dashboardUid === dashboard.uid && draggedDashboardUid !== dashboard.uid ? (
+              <span
+                aria-hidden="true"
+                className={twMerge(
+                  'pointer-events-none absolute left-3 right-3 z-20 h-0.5 rounded-full bg-accent shadow-sm',
+                  dropTarget.position === 'before' ? 'top-0' : 'bottom-0',
+                )}
+              />
+            ) : null}
             <article className={`relative grid min-h-[4.5rem] gap-6 p-5 ${dashboardLibraryColumns}`}>
               <Link
                 ariaLabel={`Open ${dashboard.title} dashboard`}
@@ -277,6 +725,22 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
               >
                 <span className="sr-only">Open {dashboard.title} dashboard</span>
               </Link>
+              {isOwner ? (
+                <span className="z-[3] flex items-center justify-start">
+                  <Button
+                    ariaLabel={`Drag ${dashboard.title} to reorder`}
+                    disabled={isSavingOrder}
+                    draggable={!isSavingOrder}
+                    onDragStart={(event) => handleDashboardDragStart(event, dashboard.uid)}
+                    onDragEnd={handleDashboardDragEnd}
+                    onKeyDown={(event) => handleDashboardGrabberKeyDown(event, dashboard.uid)}
+                    title={`Drag ${dashboard.title} to reorder`}
+                    twStyles="grid h-10 w-8 place-items-center rounded-[4px] text-text-soft transition-colors hover:bg-dashboard-time-picker-bg-hover hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong cursor-grab active:cursor-grabbing"
+                  >
+                    <Icon icon="grabber" twStyles="h-6 w-6" />
+                  </Button>
+                </span>
+              ) : null}
               <span className="pointer-events-none z-[1] grid min-w-0 content-center gap-1">
                 <span className="flex min-w-0 items-center gap-3">
                   <Icon
@@ -293,7 +757,7 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
                   </span>
                 ) : null}
               </span>
-              <div className={`z-[1] grid min-w-0 gap-4 md:items-center md:gap-6 ${dashboardLibraryDetailColumns}`}>
+              <div className={`z-[1] grid min-w-0 gap-4 md:items-center md:gap-6 ${isOwner ? 'col-start-2 md:col-start-auto' : ''} ${dashboardLibraryDetailColumns}`}>
                 <span className="pointer-events-none flex items-center">
                   <DashboardLibraryBadge icon={DASHBOARD_TYPE_ICON[dashboard.type]}>
                     {DASHBOARD_TYPE_LABEL[dashboard.type]}
@@ -320,6 +784,7 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
                         dashboard={dashboard}
                         homeDashboardUid={homeDashboardUid}
                         pinnedDashboardUids={pinnedDashboardUids}
+                        dashboardOrderUids={dashboardOrderUids}
                         isSaving={savingDashboardUid === dashboard.uid}
                         setSavingDashboardUid={setSavingDashboardUid}
                         setItems={setItems}
@@ -396,6 +861,7 @@ export function DashboardLibrary({ dashboards, isOwner }: DashboardLibraryProps)
       {pendingHomeDashboard ? (
         <DashboardHomeConfirmationDialog
           dashboard={pendingHomeDashboard}
+          dashboardOrderUids={dashboardOrderUids}
           pinnedDashboardUids={pinnedDashboardUids}
           onCancel={() => setPendingHomeDashboard(null)}
           onSaved={() => setPendingHomeDashboard(null)}
@@ -562,6 +1028,7 @@ function DashboardHomeButton({
 
 function DashboardHomeConfirmationDialog({
   dashboard,
+  dashboardOrderUids,
   pinnedDashboardUids,
   onCancel,
   onSaved,
@@ -569,6 +1036,7 @@ function DashboardHomeConfirmationDialog({
   setSavingDashboardUid,
 }: {
   dashboard: DashboardLibraryItem;
+  dashboardOrderUids: string[];
   pinnedDashboardUids: string[];
   onCancel: () => void;
   onSaved: () => void;
@@ -590,6 +1058,7 @@ function DashboardHomeConfirmationDialog({
         body: JSON.stringify({
           homeDashboardUid: dashboard.uid,
           pinnedDashboardUids,
+          dashboardOrderUids,
         }),
       });
 
@@ -601,6 +1070,7 @@ function DashboardHomeConfirmationDialog({
         preferences?: {
           homeDashboardUid?: string;
           pinnedDashboardUids?: string[];
+          dashboardOrderUids?: string[];
         };
       };
       const savedHomeDashboardUid = payload.preferences?.homeDashboardUid ?? dashboard.uid;
@@ -652,6 +1122,7 @@ function DashboardPinButton({
   dashboard,
   homeDashboardUid,
   pinnedDashboardUids,
+  dashboardOrderUids,
   isSaving,
   setSavingDashboardUid,
   setItems,
@@ -659,6 +1130,7 @@ function DashboardPinButton({
   dashboard: DashboardLibraryItem;
   homeDashboardUid: string;
   pinnedDashboardUids: string[];
+  dashboardOrderUids: string[];
   isSaving: boolean;
   setSavingDashboardUid: (dashboardUid: string | null) => void;
   setItems: Dispatch<SetStateAction<DashboardLibraryItem[]>>;
@@ -684,6 +1156,7 @@ function DashboardPinButton({
         body: JSON.stringify({
           homeDashboardUid,
           pinnedDashboardUids: nextPinnedDashboardUids,
+          dashboardOrderUids,
         }),
       });
 
@@ -694,6 +1167,7 @@ function DashboardPinButton({
       const payload = await response.json() as {
         preferences?: {
           pinnedDashboardUids?: string[];
+          dashboardOrderUids?: string[];
         };
       };
       const savedPinnedDashboardUids = new Set(payload.preferences?.pinnedDashboardUids ?? nextPinnedDashboardUids);

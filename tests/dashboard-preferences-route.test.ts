@@ -36,6 +36,7 @@ describe('dashboard preferences route', () => {
       body: JSON.stringify({
         homeDashboardUid: 'overview',
         pinnedDashboardUids: ['statistics'],
+        dashboardOrderUids: ['statistics', 'overview'],
       }),
     }));
     const json = await response.json();
@@ -51,6 +52,7 @@ describe('dashboard preferences route', () => {
       preferences: {
         homeDashboardUid: 'overview',
         pinnedDashboardUids: ['statistics', 'overview'],
+        dashboardOrderUids: ['statistics', 'overview'],
       },
     });
 
@@ -60,6 +62,7 @@ describe('dashboard preferences route', () => {
       body: JSON.stringify({
         homeDashboardUid: 'overview',
         pinnedDashboardUids: ['statistics', 'overview'],
+        dashboardOrderUids: ['statistics', 'overview'],
       }),
     }));
     const json = await response.json();
@@ -69,6 +72,7 @@ describe('dashboard preferences route', () => {
     expect(saveDashboardPreferences).toHaveBeenCalledWith({
       homeDashboardUid: 'overview',
       pinnedDashboardUids: ['statistics', 'overview'],
+      dashboardOrderUids: ['statistics', 'overview'],
     });
   });
 });

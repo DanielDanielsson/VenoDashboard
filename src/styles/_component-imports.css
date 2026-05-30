@@ -15,4 +15,5 @@
 @import "../../ui/compositions/AppShell/appShell.css";
 @import "../../ui/compositions/ConnectionsMapPanel/connectionsMapPanel.css";
 @import "../../ui/compositions/DashboardGrid/dashboardGridPanel.css";
+@import "../../ui/compositions/DashboardLibrary/dashboardLibrary.css";
 @import "../../ui/compositions/LiveGlucosePanel/liveGlucosePanel.css";

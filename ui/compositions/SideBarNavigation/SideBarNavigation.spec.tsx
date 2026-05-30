@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { SideBarNavigation } from './SideBarNavigation';
@@ -42,6 +42,7 @@ describe('SideBarNavigation', () => {
       ['Statistics', '/dashboards/statistics'],
       ['Overview', '/dashboards/overview'],
     ]);
+    expect(links[0]).toHaveClass('duration-dashboard-order');
     expect(links[0].querySelector('use')).toHaveAttribute('href', '/static_assets/iconSprite.svg#activity');
     expect(links[1].querySelector('use')).toHaveAttribute('href', '/static_assets/iconSprite.svg#dashboard-grid');
     expect(screen.getByRole('button', { name: 'Collapse dashboards list' })).toHaveAttribute('aria-expanded', 'true');
@@ -50,6 +51,36 @@ describe('SideBarNavigation', () => {
       '/static_assets/iconSprite.svg#chevron-up',
     );
     expect(screen.queryByRole('button', { name: /pin/i })).not.toBeInTheDocument();
+  });
+
+  test('reorders pinned dashboards when the dashboard order changes in the library', async () => {
+    render(
+      <SideBarNavigation
+        isOwner={false}
+        pinnedDashboards={[
+          { uid: 'statistics', title: 'Statistics', icon: 'activity' },
+          { uid: 'fun-time', title: 'Fun time' },
+          { uid: 'overview', title: 'Overview' },
+        ]}
+      />,
+    );
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('veno:dashboard-order-updated', {
+        detail: {
+          dashboardOrderUids: ['fun-time', 'statistics', 'overview'],
+        },
+      }));
+    });
+
+    const accordion = screen.getByRole('list', { name: 'Pinned dashboards' });
+
+    expect(await within(accordion).findByRole('link', { name: 'Fun time' })).toBeInTheDocument();
+    expect(within(accordion).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Fun time',
+      'Statistics',
+      'Overview',
+    ]);
   });
 
   test('collapses and expands the pinned dashboard list from a separate icon button', async () => {

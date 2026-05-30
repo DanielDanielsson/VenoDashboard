@@ -1,4 +1,5 @@
 @theme {
   --default-transition-duration: 140ms;
+  --duration-dashboard-order: 200ms;
   --ease-fade: cubic-bezier(0.7, 0, 0.84, 0);
 }

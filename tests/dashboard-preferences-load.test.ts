@@ -22,6 +22,7 @@ describe('dashboard preferences loading', () => {
       preferences: {
         homeDashboardUid: 'statistics',
         pinnedDashboardUids: [],
+        dashboardOrderUids: ['statistics', 'overview'],
       },
     });
 
@@ -32,6 +33,7 @@ describe('dashboard preferences loading', () => {
     expect(preferences).toEqual({
       homeDashboardUid: 'statistics',
       pinnedDashboardUids: [],
+      dashboardOrderUids: ['statistics', 'overview'],
       source: 'api',
     });
   });

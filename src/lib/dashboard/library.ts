@@ -38,6 +38,9 @@ export async function loadDashboardLibrary(): Promise<DashboardLibrary> {
   const pinnedIndex = new Map(
     preferences.pinnedDashboardUids.map((dashboardUid, index) => [dashboardUid, index]),
   );
+  const dashboardOrderIndex = new Map(
+    preferences.dashboardOrderUids.map((dashboardUid, index) => [dashboardUid, index]),
+  );
   const dashboards = dashboardResponse.dashboards
     .map((dashboard) => ({
       uid: dashboard.uid,
@@ -52,6 +55,21 @@ export async function loadDashboardLibrary(): Promise<DashboardLibrary> {
       isPinned: pinnedIndex.has(dashboard.uid),
     }))
     .sort((left, right) => {
+      const leftOrderIndex = dashboardOrderIndex.get(left.uid);
+      const rightOrderIndex = dashboardOrderIndex.get(right.uid);
+
+      if (leftOrderIndex !== undefined || rightOrderIndex !== undefined) {
+        if (leftOrderIndex === undefined) {
+          return 1;
+        }
+
+        if (rightOrderIndex === undefined) {
+          return -1;
+        }
+
+        return leftOrderIndex - rightOrderIndex;
+      }
+
       const leftPinnedIndex = pinnedIndex.get(left.uid);
       const rightPinnedIndex = pinnedIndex.get(right.uid);
 

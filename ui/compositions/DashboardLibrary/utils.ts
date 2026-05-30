@@ -10,6 +10,8 @@ import {
 import type { DashboardLibraryItem } from '@/lib/dashboard/library';
 import type { DashboardMetadataSaveResult } from './types';
 
+export type DashboardDropPosition = 'before' | 'after';
+
 export function normalizeDashboardDescriptionDraft(
   description: DashboardDescriptionDocument | null,
 ): WysiwygDocument {
@@ -102,4 +104,86 @@ export function applyDashboardMetadataSaveResult(
       isPinned: hasPinnedPreferences ? pinnedDashboardUids.has(nextUid) : item.isPinned,
     };
   });
+}
+
+export function getDashboardPreferencePayload(items: DashboardLibraryItem[]) {
+  return {
+    homeDashboardUid: items.find((dashboard) => dashboard.isHome)?.uid ?? items[0]?.uid ?? '',
+    pinnedDashboardUids: items.filter((dashboard) => dashboard.isPinned).map((dashboard) => dashboard.uid),
+    dashboardOrderUids: items.map((dashboard) => dashboard.uid),
+  };
+}
+
+export function orderDashboardItems(
+  items: DashboardLibraryItem[],
+  dashboardOrderUids: string[],
+): DashboardLibraryItem[] {
+  const currentIndex = new Map(items.map((dashboard, index) => [dashboard.uid, index]));
+  const orderIndex = new Map(dashboardOrderUids.map((dashboardUid, index) => [dashboardUid, index]));
+
+  return [...items].sort((left, right) => {
+    const leftOrderIndex = orderIndex.get(left.uid);
+    const rightOrderIndex = orderIndex.get(right.uid);
+
+    if (leftOrderIndex !== undefined || rightOrderIndex !== undefined) {
+      if (leftOrderIndex === undefined) {
+        return 1;
+      }
+
+      if (rightOrderIndex === undefined) {
+        return -1;
+      }
+
+      return leftOrderIndex - rightOrderIndex;
+    }
+
+    return (currentIndex.get(left.uid) ?? 0) - (currentIndex.get(right.uid) ?? 0);
+  });
+}
+
+export function reorderDashboardItems(
+  items: DashboardLibraryItem[],
+  draggedDashboardUid: string,
+  targetDashboardUid: string,
+  position: DashboardDropPosition,
+): DashboardLibraryItem[] {
+  if (draggedDashboardUid === targetDashboardUid) {
+    return items;
+  }
+
+  const draggedDashboard = items.find((dashboard) => dashboard.uid === draggedDashboardUid);
+  if (!draggedDashboard) {
+    return items;
+  }
+
+  const nextItems = items.filter((dashboard) => dashboard.uid !== draggedDashboardUid);
+  const targetIndex = nextItems.findIndex((dashboard) => dashboard.uid === targetDashboardUid);
+  if (targetIndex < 0) {
+    return items;
+  }
+
+  const insertIndex = position === 'after' ? targetIndex + 1 : targetIndex;
+  return [
+    ...nextItems.slice(0, insertIndex),
+    draggedDashboard,
+    ...nextItems.slice(insertIndex),
+  ];
+}
+
+export function moveDashboardItem(
+  items: DashboardLibraryItem[],
+  dashboardUid: string,
+  direction: -1 | 1,
+): DashboardLibraryItem[] {
+  const currentIndex = items.findIndex((dashboard) => dashboard.uid === dashboardUid);
+  const nextIndex = currentIndex + direction;
+
+  if (currentIndex < 0 || nextIndex < 0 || nextIndex >= items.length) {
+    return items;
+  }
+
+  const nextItems = [...items];
+  const [dashboard] = nextItems.splice(currentIndex, 1);
+  nextItems.splice(nextIndex, 0, dashboard);
+  return nextItems;
 }

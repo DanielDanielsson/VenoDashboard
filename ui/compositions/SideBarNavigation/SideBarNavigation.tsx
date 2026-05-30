@@ -1,6 +1,13 @@
 'use client';
 
-import { useEffect, useSyncExternalStore } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+} from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { twMerge } from 'tailwind-merge';
@@ -34,6 +41,98 @@ export type {
   SidebarUser,
 } from './types';
 
+const DASHBOARD_ORDER_UPDATED_EVENT = 'veno:dashboard-order-updated';
+
+interface SidebarDashboardMotion {
+  offset: number;
+  phase: 'offset' | 'animate';
+}
+
+function parseDurationMs(value: string): number {
+  const trimmed = value.trim();
+
+  if (trimmed.endsWith('ms')) {
+    return Number.parseFloat(trimmed);
+  }
+
+  if (trimmed.endsWith('s')) {
+    return Number.parseFloat(trimmed) * 1000;
+  }
+
+  return 200;
+}
+
+function getSidebarDashboardListGap(rowRefs: Map<string, HTMLLIElement>): number {
+  const firstRow = rowRefs.values().next().value;
+  const rowGap = firstRow?.parentElement
+    ? getComputedStyle(firstRow.parentElement).rowGap
+    : '0';
+  const parsedGap = Number.parseFloat(rowGap);
+
+  return Number.isNaN(parsedGap) ? 0 : parsedGap;
+}
+
+function getSidebarDashboardMotion(
+  rowRefs: Map<string, HTMLLIElement>,
+  nextDashboardUids: string[],
+): Record<string, SidebarDashboardMotion> {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    return {};
+  }
+
+  const measurements = new Map(
+    Array.from(rowRefs.entries()).map(([dashboardUid, row]) => [
+      dashboardUid,
+      {
+        height: row.getBoundingClientRect().height,
+        top: row.getBoundingClientRect().top,
+      },
+    ]),
+  );
+  const firstTop = Math.min(...Array.from(measurements.values()).map((measurement) => measurement.top));
+
+  if (!Number.isFinite(firstTop)) {
+    return {};
+  }
+
+  const rowGap = getSidebarDashboardListGap(rowRefs);
+  const motion: Record<string, SidebarDashboardMotion> = {};
+  let nextTop = firstTop;
+
+  nextDashboardUids.forEach((dashboardUid) => {
+    const measurement = measurements.get(dashboardUid);
+    if (!measurement) {
+      return;
+    }
+
+    const offset = measurement.top - nextTop;
+    if (Math.abs(offset) >= 1) {
+      motion[dashboardUid] = {
+        offset,
+        phase: 'offset',
+      };
+    }
+
+    nextTop += measurement.height + rowGap;
+  });
+
+  return motion;
+}
+
+function getSidebarDashboardStyle(motion?: SidebarDashboardMotion): CSSProperties | undefined {
+  if (!motion) {
+    return undefined;
+  }
+
+  return {
+    transform: motion.phase === 'offset' ? `translateY(${motion.offset}px)` : 'translateY(0)',
+    transition: motion.phase === 'offset'
+      ? 'none'
+      : 'transform var(--duration-dashboard-order) ease-out',
+    zIndex: 1,
+  };
+}
+
 export const SideBarNavigation = ({
   isOwner = false,
   pinnedDashboards = [],
@@ -42,6 +141,11 @@ export const SideBarNavigation = ({
   callsToAction = DEFAULT_CALLS_TO_ACTION,
 }: SideBarNavigationProps) => {
   const pathname = usePathname();
+  const pinnedDashboardRowRefs = useRef(new Map<string, HTMLLIElement>());
+  const pinnedDashboardMotionFrameRef = useRef<number | null>(null);
+  const pinnedDashboardMotionTimeoutRef = useRef<number | null>(null);
+  const [dashboardOrderUids, setDashboardOrderUids] = useState<string[] | null>(null);
+  const [pinnedDashboardMotion, setPinnedDashboardMotion] = useState<Record<string, SidebarDashboardMotion>>({});
   const isCollapsed = useSyncExternalStore(
     subscribeToSidebarPreference,
     readSidebarCollapsedSnapshot,
@@ -62,15 +166,118 @@ export const SideBarNavigation = ({
     () => true,
   );
   const dashboardsActive = pathname === '/dashboards';
+  const displayedPinnedDashboards = useMemo(() => {
+    if (!dashboardOrderUids) {
+      return pinnedDashboards;
+    }
 
+    const orderIndex = new Map(dashboardOrderUids.map((dashboardUid, index) => [dashboardUid, index]));
+
+    return [...pinnedDashboards].sort((left, right) => {
+      const leftIndex = orderIndex.get(left.uid);
+      const rightIndex = orderIndex.get(right.uid);
+
+      if (leftIndex !== undefined || rightIndex !== undefined) {
+        if (leftIndex === undefined) {
+          return 1;
+        }
+
+        if (rightIndex === undefined) {
+          return -1;
+        }
+
+        return leftIndex - rightIndex;
+      }
+
+      return 0;
+    });
+  }, [dashboardOrderUids, pinnedDashboards]);
   useEffect(() => {
     document.documentElement.style.setProperty('--dashboard-sidebar-width', sidebarWidth);
   }, [sidebarWidth]);
 
+  useEffect(() => {
+    function handleDashboardOrderUpdated(event: Event) {
+      const nextDashboardOrderUids = (event as CustomEvent<{ dashboardOrderUids?: string[] }>).detail
+        ?.dashboardOrderUids;
+
+      if (!Array.isArray(nextDashboardOrderUids)) {
+        return;
+      }
+
+      const nextPinnedDashboardUids = [...pinnedDashboards]
+        .sort((left, right) => {
+          const leftIndex = nextDashboardOrderUids.indexOf(left.uid);
+          const rightIndex = nextDashboardOrderUids.indexOf(right.uid);
+
+          if (leftIndex !== -1 || rightIndex !== -1) {
+            if (leftIndex === -1) {
+              return 1;
+            }
+
+            if (rightIndex === -1) {
+              return -1;
+            }
+
+            return leftIndex - rightIndex;
+          }
+
+          return 0;
+        })
+        .map((dashboard) => dashboard.uid);
+      const nextMotion = getSidebarDashboardMotion(pinnedDashboardRowRefs.current, nextPinnedDashboardUids);
+
+      if (pinnedDashboardMotionFrameRef.current !== null) {
+        window.cancelAnimationFrame(pinnedDashboardMotionFrameRef.current);
+      }
+      if (pinnedDashboardMotionTimeoutRef.current !== null) {
+        window.clearTimeout(pinnedDashboardMotionTimeoutRef.current);
+      }
+
+      setPinnedDashboardMotion(nextMotion);
+      setDashboardOrderUids(nextDashboardOrderUids);
+
+      if (Object.keys(nextMotion).length === 0) {
+        return;
+      }
+
+      pinnedDashboardMotionFrameRef.current = window.requestAnimationFrame(() => {
+        setPinnedDashboardMotion((currentMotion) => Object.fromEntries(
+          Object.entries(currentMotion).map(([dashboardUid, motion]) => [
+            dashboardUid,
+            { ...motion, phase: 'animate' },
+          ]),
+        ));
+      });
+
+      const duration = parseDurationMs(
+        getComputedStyle(document.documentElement).getPropertyValue('--duration-dashboard-order'),
+      );
+
+      pinnedDashboardMotionTimeoutRef.current = window.setTimeout(() => {
+        setPinnedDashboardMotion({});
+        pinnedDashboardMotionFrameRef.current = null;
+        pinnedDashboardMotionTimeoutRef.current = null;
+      }, duration + 50);
+    }
+
+    window.addEventListener(DASHBOARD_ORDER_UPDATED_EVENT, handleDashboardOrderUpdated);
+    return () => window.removeEventListener(DASHBOARD_ORDER_UPDATED_EVENT, handleDashboardOrderUpdated);
+  }, [pinnedDashboards]);
+
+  useEffect(() => () => {
+    if (pinnedDashboardMotionFrameRef.current !== null) {
+      window.cancelAnimationFrame(pinnedDashboardMotionFrameRef.current);
+    }
+    if (pinnedDashboardMotionTimeoutRef.current !== null) {
+      window.clearTimeout(pinnedDashboardMotionTimeoutRef.current);
+    }
+  }, []);
+
   return (
     <nav
       className={twMerge(
-        'fixed left-0 top-0 hidden h-screen flex-col border-r border-border p-4 transition-[width] duration-200 md:flex',
+        'fixed left-0 top-0 hidden h-screen flex-col border-r border-border p-4 transition-[width] duration-dashboard-order md:flex',
         isCollapsed ? 'w-[76px] items-center' : 'w-[270px]',
       )}
       aria-label="Sidebar navigation"
@@ -105,7 +312,7 @@ export const SideBarNavigation = ({
               aria-label="Dashboards"
               title={isCollapsed ? 'Dashboards' : undefined}
               className={twMerge(
-                'ui_nav_text relative grid min-h-10 w-full grid-cols-[20px_minmax(0,1fr)] items-center gap-3 rounded-[4px] px-3 py-2.5 text-nav-link-text transition-colors hover:bg-nav-link-bg-hover hover:text-nav-link-text-hover',
+                'ui_nav_text relative grid min-h-10 w-full grid-cols-[20px_minmax(0,1fr)] items-center gap-3 rounded-[4px] px-3 py-2.5 text-nav-link-text transition-colors duration-dashboard-order hover:bg-nav-link-bg-hover hover:text-nav-link-text-hover',
                 dashboardsActive && 'bg-nav-link-bg-hover text-nav-link-text-hover',
                 isCollapsed && 'grid-cols-[20px] gap-0',
               )}
@@ -118,7 +325,7 @@ export const SideBarNavigation = ({
                 ariaLabel={dashboardsExpanded ? 'Collapse dashboards list' : 'Expand dashboards list'}
                 aria-expanded={dashboardsExpanded}
                 onClick={() => setDashboardsExpandedPreference(!dashboardsExpanded)}
-                twStyles="grid h-10 w-10 place-items-center rounded-[4px] text-nav-link-text transition-colors hover:bg-nav-link-bg-hover hover:text-nav-link-text-hover"
+                twStyles="grid h-10 w-10 place-items-center rounded-[4px] text-nav-link-text transition-colors duration-dashboard-order hover:bg-nav-link-bg-hover hover:text-nav-link-text-hover"
                 title={dashboardsExpanded ? 'Collapse dashboards list' : 'Expand dashboards list'}
               >
                 <Icon
@@ -131,7 +338,7 @@ export const SideBarNavigation = ({
           <div
             aria-hidden={!dashboardsExpanded}
             className={twMerge(
-              'grid overflow-hidden transition-[grid-template-rows,margin-top] duration-200 ease-out',
+              'grid overflow-hidden transition-[grid-template-rows,margin-top] duration-dashboard-order ease-out',
               dashboardsExpanded ? 'mt-1 grid-rows-[1fr]' : 'mt-0 grid-rows-[0fr]',
             )}
             data-dashboards-accordion-state={dashboardsExpanded ? 'expanded' : 'collapsed'}
@@ -140,21 +347,33 @@ export const SideBarNavigation = ({
               <ul
                 aria-label="Pinned dashboards"
                 className={twMerge(
-                  'relative grid gap-0.5 transition-[margin-left,padding-left] duration-200 ease-out before:absolute before:bottom-2 before:top-2 before:w-px before:bg-border before:content-[\'\']',
+                  'relative grid gap-0.5 transition-[margin-left,padding-left] duration-dashboard-order ease-out before:absolute before:bottom-2 before:top-2 before:w-px before:bg-border before:content-[\'\']',
                   isCollapsed
                     ? 'before:left-0'
                     : 'ml-[21px] pl-6 before:left-0',
                 )}
               >
-                {pinnedDashboards.map((dashboard) => (
-                  <li key={dashboard.uid}>
+                {displayedPinnedDashboards.map((dashboard) => (
+                  <li
+                    key={dashboard.uid}
+                    ref={(node) => {
+                      if (node) {
+                        pinnedDashboardRowRefs.current.set(dashboard.uid, node);
+                        return;
+                      }
+
+                      pinnedDashboardRowRefs.current.delete(dashboard.uid);
+                    }}
+                    className="relative"
+                    style={getSidebarDashboardStyle(pinnedDashboardMotion[dashboard.uid])}
+                  >
                     <Link
                       href={`/dashboards/${dashboard.uid}`}
                       aria-label={isCollapsed ? dashboard.title : undefined}
                       tabIndex={dashboardsExpanded ? undefined : -1}
                       title={isCollapsed ? dashboard.title : undefined}
                       className={twMerge(
-                        'body_text relative min-h-10 rounded-[4px] py-2 text-text-soft transition-colors hover:bg-nav-link-bg-hover hover:text-text',
+                        'body_text relative min-h-10 rounded-[4px] py-2 text-text-soft transition-colors duration-dashboard-order hover:bg-nav-link-bg-hover hover:text-text',
                         pathname === `/dashboards/${dashboard.uid}` && 'bg-nav-link-bg-hover text-text',
                         isCollapsed
                           ? 'grid grid-cols-[20px] items-center gap-0 px-3'
@@ -269,4 +488,3 @@ export const SideBarNavigation = ({
     </nav>
   );
 };
-

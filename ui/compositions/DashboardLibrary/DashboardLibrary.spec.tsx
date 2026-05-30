@@ -64,6 +64,7 @@ describe('DashboardLibrary', () => {
     usePathnameMock.mockReturnValue('/dashboards');
     useSearchParamsMock.mockReturnValue(new URLSearchParams());
     window.history.replaceState(null, '', '/dashboards');
+    document.documentElement.style.setProperty('--duration-dashboard-order', '1ms');
   });
 
   test('renders column labels and clickable dashboard rows', () => {
@@ -81,6 +82,10 @@ describe('DashboardLibrary', () => {
     expect(within(header).getByText('Name')).toBeInTheDocument();
     expect(within(header).getByText('Type')).toBeInTheDocument();
     expect(within(header).getByText('Tag')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Drag Overview to reorder' }).querySelector('use')).toHaveAttribute(
+      'href',
+      '/static_assets/iconSprite.svg#grabber',
+    );
     expect(overviewLink).toHaveAttribute('href', '/dashboards/overview');
     expect(within(library).getByText('Overview')).toBeInTheDocument();
     expect(within(library).getAllByText('Live')).toHaveLength(1);
@@ -108,6 +113,7 @@ describe('DashboardLibrary', () => {
           preferences: {
             homeDashboardUid: 'overview',
             pinnedDashboardUids: ['statistics', 'overview'],
+            dashboardOrderUids: ['overview', 'statistics'],
           },
         }),
       })
@@ -117,6 +123,7 @@ describe('DashboardLibrary', () => {
           preferences: {
             homeDashboardUid: 'overview',
             pinnedDashboardUids: ['overview'],
+            dashboardOrderUids: ['overview', 'statistics'],
           },
         }),
       });
@@ -137,6 +144,7 @@ describe('DashboardLibrary', () => {
         body: JSON.stringify({
           homeDashboardUid: 'overview',
           pinnedDashboardUids: ['statistics', 'overview'],
+          dashboardOrderUids: ['overview', 'statistics'],
         }),
       }));
     });
@@ -158,6 +166,7 @@ describe('DashboardLibrary', () => {
         body: JSON.stringify({
           homeDashboardUid: 'overview',
           pinnedDashboardUids: ['overview'],
+          dashboardOrderUids: ['overview', 'statistics'],
         }),
       }));
     });
@@ -170,6 +179,188 @@ describe('DashboardLibrary', () => {
     expect(refresh).toHaveBeenCalledTimes(2);
     notifications = screen.getByRole('region', { name: 'Notifications' });
     expect(within(notifications).getByText('Dashboard unpinned').closest('[data-variant="success"]')).toBeInTheDocument();
+  });
+
+  test('admin users can move dashboards into a persisted order', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        preferences: {
+          homeDashboardUid: 'overview',
+          pinnedDashboardUids: ['statistics'],
+          dashboardOrderUids: ['statistics', 'overview'],
+        },
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <NotificationsProvider>
+        <DashboardLibrary dashboards={dashboards} isOwner />
+      </NotificationsProvider>,
+    );
+
+    const library = screen.getByRole('list', { name: 'Dashboards' });
+    const statisticsGrabber = screen.getByRole('button', { name: 'Drag Statistics to reorder' });
+
+    fireEvent.keyDown(statisticsGrabber, { key: 'ArrowUp' });
+
+    await waitFor(() => {
+      expect(within(library).getAllByRole('link', { name: /Open .* dashboard/ }).map((link) => (
+        link.getAttribute('href')
+      ))).toEqual(['/dashboards/statistics', '/dashboards/overview']);
+    });
+    const settledRow = within(library).getByRole('link', { name: 'Open Statistics dashboard' }).closest('li');
+
+    expect(settledRow).toHaveClass('dashboard-library-row');
+    expect(settledRow).toHaveAttribute('data-dashboard-order-state', 'settled');
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith('/api/dashboard/preferences', expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({
+          homeDashboardUid: 'overview',
+          pinnedDashboardUids: ['statistics'],
+          dashboardOrderUids: ['statistics', 'overview'],
+        }),
+      }));
+    });
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  test('keeps the current scroll position when reordering an expanded dashboard row', async () => {
+    const scrollTo = vi.fn();
+    const originalScrollTo = window.scrollTo;
+    const originalScrollX = Object.getOwnPropertyDescriptor(window, 'scrollX');
+    const originalScrollY = Object.getOwnPropertyDescriptor(window, 'scrollY');
+    Object.defineProperty(window, 'scrollX', { configurable: true, value: 0 });
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 420 });
+    window.scrollTo = scrollTo;
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        preferences: {
+          homeDashboardUid: 'overview',
+          pinnedDashboardUids: ['statistics'],
+          dashboardOrderUids: ['statistics', 'overview'],
+        },
+      }),
+    }));
+
+    try {
+      render(
+        <NotificationsProvider>
+          <DashboardLibrary dashboards={dashboards} isOwner />
+        </NotificationsProvider>,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open Statistics settings' }));
+      expect(screen.getByRole('region', { name: 'Statistics settings' })).toBeInTheDocument();
+
+      fireEvent.keyDown(screen.getByRole('button', { name: 'Drag Statistics to reorder' }), {
+        key: 'ArrowUp',
+      });
+
+      await waitFor(() => {
+        expect(scrollTo).toHaveBeenCalledTimes(2);
+      });
+      expect(scrollTo).toHaveBeenCalledWith(0, 420);
+    } finally {
+      window.scrollTo = originalScrollTo;
+      if (originalScrollX) {
+        Object.defineProperty(window, 'scrollX', originalScrollX);
+      }
+      if (originalScrollY) {
+        Object.defineProperty(window, 'scrollY', originalScrollY);
+      }
+    }
+  });
+
+  test('failed dashboard order saves keep the optimistic order until refresh', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({
+        error: {
+          message: 'API unavailable',
+        },
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <NotificationsProvider>
+        <DashboardLibrary dashboards={dashboards} isOwner />
+      </NotificationsProvider>,
+    );
+
+    const library = screen.getByRole('list', { name: 'Dashboards' });
+    const statisticsGrabber = screen.getByRole('button', { name: 'Drag Statistics to reorder' });
+
+    fireEvent.keyDown(statisticsGrabber, { key: 'ArrowUp' });
+
+    await waitFor(() => {
+      expect(within(library).getAllByRole('link', { name: /Open .* dashboard/ }).map((link) => (
+        link.getAttribute('href')
+      ))).toEqual(['/dashboards/statistics', '/dashboards/overview']);
+    });
+
+    const notifications = await screen.findByRole('region', { name: 'Notifications' });
+
+    expect(within(notifications).getByText('Dashboard order could not be saved').closest('[data-variant="error"]')).toBeInTheDocument();
+    expect(within(library).getAllByRole('link', { name: /Open .* dashboard/ }).map((link) => (
+      link.getAttribute('href')
+    ))).toEqual(['/dashboards/statistics', '/dashboards/overview']);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  test('keeps the drop indicator visible over the gap between dashboard rows', async () => {
+    render(
+      <NotificationsProvider>
+        <DashboardLibrary dashboards={dashboards} isOwner />
+      </NotificationsProvider>,
+    );
+
+    const library = screen.getByRole('list', { name: 'Dashboards' });
+    const rows = Array.from(library.querySelectorAll('.dashboard-library-row'));
+    const rowRects = [
+      { top: 100, bottom: 180, height: 80 },
+      { top: 188, bottom: 268, height: 80 },
+    ];
+
+    rows.forEach((row, index) => {
+      Object.defineProperty(row, 'getBoundingClientRect', {
+        value: vi.fn(() => ({
+          ...rowRects[index],
+          left: 0,
+          right: 400,
+          width: 400,
+          x: 0,
+          y: rowRects[index].top,
+          toJSON: () => ({}),
+        } as DOMRect)),
+      });
+    });
+
+    const dataTransfer = {
+      dropEffect: 'move',
+      effectAllowed: 'move',
+      setData: vi.fn(),
+      setDragImage: vi.fn(),
+    };
+
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Drag Overview to reorder' }), {
+      dataTransfer,
+    });
+    fireEvent.dragOver(library, {
+      clientY: 184,
+      dataTransfer,
+    });
+
+    await waitFor(() => {
+      const statisticsRow = screen.getByRole('link', { name: 'Open Statistics dashboard' }).closest('li');
+
+      expect(statisticsRow?.querySelector('span[aria-hidden="true"]')).toBeInTheDocument();
+    });
   });
 
   test('expands and scrolls dashboard settings from the settings url parameter', async () => {
@@ -196,24 +387,32 @@ describe('DashboardLibrary', () => {
     }
   });
 
-  test('syncs dashboard settings expansion to the url parameter', () => {
+  test('syncs dashboard settings expansion to the url parameter without scrolling', () => {
     const pushStateSpy = vi.spyOn(window.history, 'pushState');
+    const scrollIntoView = vi.fn();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
 
-    render(
-      <NotificationsProvider>
-        <DashboardLibrary dashboards={dashboards} isOwner />
-      </NotificationsProvider>,
-    );
+    try {
+      render(
+        <NotificationsProvider>
+          <DashboardLibrary dashboards={dashboards} isOwner />
+        </NotificationsProvider>,
+      );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Statistics settings' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Open Statistics settings' }));
 
-    expect(screen.getByRole('region', { name: 'Statistics settings' })).toBeInTheDocument();
-    expect(pushStateSpy).toHaveBeenCalledWith(null, '', '/dashboards?settings=statistics');
+      expect(screen.getByRole('region', { name: 'Statistics settings' })).toBeInTheDocument();
+      expect(pushStateSpy).toHaveBeenCalledWith(null, '', '/dashboards?settings=statistics');
+      expect(scrollIntoView).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close Statistics settings' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Close Statistics settings' }));
 
-    expect(screen.queryByRole('region', { name: 'Statistics settings' })).not.toBeInTheDocument();
-    expect(pushStateSpy).toHaveBeenLastCalledWith(null, '', '/dashboards');
+      expect(screen.queryByRole('region', { name: 'Statistics settings' })).not.toBeInTheDocument();
+      expect(pushStateSpy).toHaveBeenLastCalledWith(null, '', '/dashboards');
+    } finally {
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+    }
   });
 
   test('admin users can set a dashboard as home after confirmation', async () => {
@@ -224,6 +423,7 @@ describe('DashboardLibrary', () => {
           preferences: {
             homeDashboardUid: 'statistics',
             pinnedDashboardUids: ['statistics'],
+            dashboardOrderUids: ['overview', 'statistics'],
           },
         }),
       });
@@ -254,6 +454,7 @@ describe('DashboardLibrary', () => {
         body: JSON.stringify({
           homeDashboardUid: 'statistics',
           pinnedDashboardUids: ['statistics'],
+          dashboardOrderUids: ['overview', 'statistics'],
         }),
       }));
     });
@@ -405,6 +606,7 @@ describe('DashboardLibrary', () => {
         preferences: {
           homeDashboardUid: 'statistics',
           pinnedDashboardUids: [],
+          dashboardOrderUids: ['statistics'],
         },
       }),
     });
@@ -452,6 +654,7 @@ describe('DashboardLibrary', () => {
         preferences: {
           homeDashboardUid: 'overview',
           pinnedDashboardUids: ['reports'],
+          dashboardOrderUids: ['overview', 'reports'],
         },
       }),
     });

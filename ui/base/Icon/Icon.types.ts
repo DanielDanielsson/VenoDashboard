@@ -25,6 +25,7 @@ export type IconName =
   | 'mail'
   | 'bookmark'
   | 'bookmark-filled'
+  | 'grabber'
   | 'chevron-left'
   | 'chevron-down'
   | 'chevron-up'

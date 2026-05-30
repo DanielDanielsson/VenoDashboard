@@ -1,0 +1,52 @@
+@keyframes dashboard-library-row-drop {
+  0% {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  100% {
+    box-shadow: none;
+  }
+}
+
+.dashboard-library-list,
+.dashboard-library-row {
+  overflow-anchor: none;
+}
+
+.dashboard-library-row {
+  transition:
+    border-color var(--duration-dashboard-order) ease-out,
+    box-shadow var(--duration-dashboard-order) ease-out,
+    opacity var(--duration-dashboard-order) ease-out,
+    transform var(--duration-dashboard-order) ease-out;
+}
+
+.dashboard-library-row[data-dashboard-order-state="settled"] {
+  animation: dashboard-library-row-drop var(--duration-dashboard-order) ease-out;
+}
+
+html[data-dashboard-order-transition="active"]::view-transition-group(.dashboard-library-row-transition),
+html[data-dashboard-order-transition="active"]::view-transition-old(.dashboard-library-row-transition),
+html[data-dashboard-order-transition="active"]::view-transition-new(.dashboard-library-row-transition),
+html[data-dashboard-order-transition="active"]::view-transition-group(*) {
+  animation-duration: var(--duration-dashboard-order);
+  animation-timing-function: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-library-row {
+    transition: none;
+  }
+
+  .dashboard-library-row[data-dashboard-order-state="settled"] {
+    animation: none;
+  }
+
+  html[data-dashboard-order-transition="active"]::view-transition-group(.dashboard-library-row-transition),
+  html[data-dashboard-order-transition="active"]::view-transition-old(.dashboard-library-row-transition),
+  html[data-dashboard-order-transition="active"]::view-transition-new(.dashboard-library-row-transition),
+  html[data-dashboard-order-transition="active"]::view-transition-group(*) {
+    animation-duration: 1ms;
+  }
+}
