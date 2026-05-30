@@ -17,11 +17,14 @@ Do not treat this repo as the source of truth for glucose ingestion or storage. 
 ## Core Architecture
 
 1. `src/app` contains the app router pages and route handlers.
-2. `ui/components` contains small reusable UI pieces.
-3. `ui/compositions` contains higher level dashboard sections and page level compositions.
-4. `src/lib` contains auth, API clients, data shaping, caching, and server side helpers.
-5. `src/styles/config` is the canonical home for theme and font utilities.
-6. `.agents/skills` contains repo-local skills that apply only to `VenoDashboard`
+2. `ui/base` contains foundational primitives such as `Button`, `Input`, `Checkbox`, `Link`, `Grid`, `Icon`, `SegmentedSelector`, and `BunnyImage`.
+3. `ui/components` contains small reusable UI pieces built from base primitives.
+4. `ui/compositions` contains higher level dashboard sections and page level compositions.
+5. `src/lib` contains auth, API clients, data shaping, caching, and server side helpers.
+6. `src/styles/config` is the canonical home for theme and font utilities.
+7. `.agents/skills` contains repo-local skills that apply only to `VenoDashboard`
+
+Use `ui/base` primitives over standard HTML elements when an equivalent exists, especially for buttons, links, inputs, checkboxes, layout grids, icons, segmented controls, and optimized images.
 
 ## Composition And Component File Structure
 
@@ -69,7 +72,7 @@ Timer specific rules:
 
 ## Dashboard Panels
 
-Dashboard pages are now data driven.
+Dashboard pages are data driven.
 
 Do not add new dashboard panels by hardcoding page level grid JSX.
 
@@ -160,27 +163,11 @@ Panel view and URL state rules:
 
 Panel interaction rules:
 
-1. panel action buttons are always mounted but hidden until panel hover or menu open
-2. the three dot menu opens without requiring dashboard edit mode
-3. clicking outside an open panel menu should close it
-4. selecting `Edit` from a panel menu must enter focused panel edit mode, update `editPanel`, and open the shared settings drawer
-5. selecting `View` from a panel menu must enter solo panel view and update `viewPanel`
-6. focused panel edit mode also enters focused panel view so the edited panel uses the available dashboard area
-7. hovering a panel and pressing `V` enters view mode for that panel
-8. pressing `V` while already viewing that same panel exits focused panel view
-9. pressing `V` while editing a panel switches that panel from `editPanel` to `viewPanel`
-10. hovering a panel and pressing `E` enters focused panel edit mode for that panel
-11. pressing `E` while already editing that same panel exits focused panel edit mode
-12. pressing `E` while viewing a panel switches that panel from `viewPanel` to `editPanel`
-13. keyboard shortcuts must be ignored inside inputs, textareas, selects, and editable content
-14. focused panel view and edit should keep the selected panel when time range changes
-15. focused panel modes should render only the `to dashboard` back action in the dashboard header toolbar, not dashboard level edit, save, close, add, or delete controls
-16. panel settings save and close controls belong in the right side settings drawer
-17. focused panel view should avoid page scroll by sizing the grid panel to the remaining viewport height
-18. grid move animations should only run while editing layout, not while entering or leaving focused panel view or edit mode
-19. panel menus should use the same visual language as `DashboardTimeRangePicker`
-20. keyboard shortcut hints should use `ui/components/KeyboardKey/KeyboardKey.tsx`
-21. view and edit mode transitions should avoid visible remount flashes. Cache or preserve panel display state when a panel fetches data on mount
+1. panel menus should be available outside dashboard edit mode and expose `View` and `Edit` actions for the selected panel
+2. focused panel view and edit modes are URL driven through `viewPanel` and `editPanel`, with edit mode opening the shared right side settings drawer
+3. focused panel modes should keep the panel in context, avoid page scroll, and show only the `to dashboard` back action in the dashboard header toolbar
+4. panel keyboard shortcuts should support view and edit mode without firing inside inputs, textareas, selects, or editable content
+5. panel menus should use the same visual language as `DashboardTimeRangePicker`, and shortcut hints should use `ui/components/KeyboardKey/KeyboardKey.tsx`
 
 ## Multiple Dashboards
 
@@ -195,11 +182,14 @@ Canonical routes and files:
 5. `/dashboard` and `/dashboard/statistics` are compatibility paths only. Do not add new dashboard behavior there.
 6. `src/app/dashboards/layout.tsx` and `src/app/dashboard/layout.tsx` both load `loadDashboardLibrary()` and pass pinned dashboards into `SideBarNavigation`.
 7. `ui/compositions/SideBarNavigation/SideBarNavigation.tsx` owns the left navigation dashboards accordion.
-8. `ui/compositions/DashboardLibrary/DashboardLibrary.tsx` owns dashboard create, pin, unpin, and library delete actions.
+8. `ui/compositions/DashboardLibrary/DashboardLibrary.tsx` owns dashboard create, pin, unpin, and the library row settings accordion.
 9. `src/lib/dashboard/library.ts` merges the dashboard list with dashboard preferences.
 10. `src/lib/dashboard/preferences.ts` loads home and pinned dashboard preferences.
-11. `src/lib/dashboard/resources.ts` loads a dashboard resource and prefers persisted dashboard settings when they exist.
-12. `src/lib/dashboard/panel-catalog.ts` is the source of truth for add panel options, default panel definitions, default layout, and dashboard type compatibility.
+11. `src/lib/dashboard/resources.ts` loads a dashboard resource, applies API metadata over persisted layout settings, and redirects renamed dashboard aliases.
+12. `src/lib/dashboard/metadata.ts` owns dashboard metadata description types and plain text extraction.
+13. `src/lib/dashboard/panel-catalog.ts` is the source of truth for add panel options, default panel definitions, default layout, and dashboard type compatibility.
+14. `ui/compositions/DashboardLibrary/DashboardMetadataSettings.tsx` owns dashboard name and description editing inside the library accordion.
+15. `ui/compositions/DashboardLibrary/utils.ts` owns metadata draft normalization, semantic dirty checks, description serialization, and optimistic save result merging.
 
 Dashboard type rules:
 
@@ -220,6 +210,31 @@ Rendering rules:
 6. the live dashboard internal edit toolbar should align left, matching the time range toolbar placement
 7. time range dashboards use `editControlsPortalId` to place shared grid controls next to the time range selector
 8. delete dashboard should only appear from shared grid edit mode when deletion is allowed
+
+Dashboard metadata settings rules:
+
+1. dashboard metadata means API resource fields such as `title`, `description`, and `uid`
+2. metadata settings also own dashboard `icon` and `defaultTimeRange`
+3. metadata settings are edited from the `/dashboards` library page through the row three dot settings accordion
+4. only one dashboard metadata settings accordion should be open at a time
+5. public visitors may open metadata settings and edit drafts locally as a preview
+6. public visitors must not persist metadata settings; clicking save should show a shared notification asking them to sign in
+7. admin metadata saves use `PATCH /api/dashboard/dashboards/[dashboardUid]`, which proxies VenoAPI dashboard metadata updates
+8. dashboard descriptions are structured WYSIWYG documents, not HTML strings
+9. collapsed dashboard rows should show description plain text with a two line clamp when a description exists
+10. the dynamic dashboard page header should show the API dashboard title and description, not stale values from persisted dashboard settings documents
+11. `loadDashboardResource()` must apply API resource metadata over persisted dashboard settings so layout settings cannot override renamed dashboard titles or uids
+12. renaming a persisted dashboard changes the dashboard uid and URL through VenoAPI; after a successful save, update local library state and call `router.refresh()`
+13. pinned and home dashboard links should be refreshed after metadata saves because VenoAPI migrates preferences when a uid changes
+14. pinned dashboard links should render the dashboard metadata icon and fall back to `dashboard-grid`
+15. time range dashboards should use dashboard `defaultTimeRange` only when the URL has no explicit time range parameters
+16. default time range settings are preset ranges only, such as `3d` or `7d`; custom absolute windows belong in URL state, not dashboard metadata
+17. default time range settings should reuse `DashboardTimeRangePicker` in preset mode, not a separate dropdown
+18. delete dashboard belongs inside the expanded metadata settings accordion, not as a top level row button
+19. unsaved admin metadata edits must be guarded before switching accordion rows, closing the accordion, or opening a dashboard link
+20. dirty checks must be semantic, comparing normalized names, canonical WYSIWYG content, icon, and default time range
+21. public preview edits should not trigger the unsaved changes confirmation
+22. successful metadata saves and failures must use the shared notification API
 
 Pinned and home dashboard rules:
 
@@ -479,8 +494,10 @@ Rules:
 
 1. if `PULSE_API_BASE_URL` points to `localhost` or `127.0.0.1`, verify that the target port is actually listening before debugging dashboard code
 2. verify that `GET /api/status?format=json` responds from that local API target before assuming the dashboard has a frontend bug
-3. if the local API depends on Docker services, check that Docker is running before investigating dashboard rendering or data flow
-4. if the local API is down, say so explicitly and treat missing dashboard data as an environment problem first
+3. for `/dashboards` failures, also verify `GET /api/v1/dashboards` and `GET /api/v1/dashboard-preferences`; status alone is not enough because an old API image can serve status while missing newer dashboard routes
+4. if `/api/status?format=json` works but `/api/v1/dashboards` returns `404`, suspect a stale `VenoAPI` Docker image first and rebuild `VenoAPI` with `docker compose up -d --build api`
+5. if the local API depends on Docker services, check that Docker is running before investigating dashboard rendering or data flow
+6. if the local API is down, say so explicitly and treat missing dashboard data as an environment problem first
 
 ## Testing And Pre Push
 
