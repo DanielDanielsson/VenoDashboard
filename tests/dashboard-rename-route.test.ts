@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const getOwnerSession = vi.fn();
-const renameDashboard = vi.fn();
+const updateDashboardMetadata = vi.fn();
 
 vi.mock('@/lib/auth', () => ({
   getOwnerSession,
@@ -17,14 +17,14 @@ vi.mock('@/lib/pulse-api/client', () => ({
       this.status = status;
     }
   },
-  renameDashboard,
+  updateDashboardMetadata,
 }));
 
 describe('dashboard rename route', () => {
   beforeEach(() => {
     vi.resetModules();
     getOwnerSession.mockReset();
-    renameDashboard.mockReset();
+    updateDashboardMetadata.mockReset();
   });
 
   test('denies public dashboard renames', async () => {
@@ -44,15 +44,16 @@ describe('dashboard rename route', () => {
 
     expect(response.status).toBe(401);
     expect(json.error.message).toBe('Unauthorized');
-    expect(renameDashboard).not.toHaveBeenCalled();
+    expect(updateDashboardMetadata).not.toHaveBeenCalled();
   });
 
   test('renames admin dashboards through VenoAPI', async () => {
     getOwnerSession.mockResolvedValue({ user: { email: 'owner@example.com' } });
-    renameDashboard.mockResolvedValue({
+    updateDashboardMetadata.mockResolvedValue({
       dashboard: {
         uid: 'overview',
         title: 'Daily Overview',
+        description: null,
         type: 'live',
         version: 2,
         dashboard: {},
@@ -64,6 +65,7 @@ describe('dashboard rename route', () => {
       method: 'PATCH',
       body: JSON.stringify({
         title: 'Daily Overview',
+        description: null,
         expectedVersion: 1,
       }),
     }), {
@@ -73,8 +75,9 @@ describe('dashboard rename route', () => {
 
     expect(response.status).toBe(200);
     expect(json.dashboard.title).toBe('Daily Overview');
-    expect(renameDashboard).toHaveBeenCalledWith('overview', {
+    expect(updateDashboardMetadata).toHaveBeenCalledWith('overview', {
       title: 'Daily Overview',
+      description: null,
       expectedVersion: 1,
     });
   });

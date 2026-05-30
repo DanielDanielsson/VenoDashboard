@@ -33,6 +33,7 @@ describe('dashboard resource loading', () => {
       dashboard: {
         uid: 'overview',
         title: 'API Overview',
+        description: null,
         type: 'live',
         version: 4,
         dashboard: {
@@ -93,6 +94,7 @@ describe('dashboard resource loading', () => {
 
     expect(mocks.fetchDashboardResource).toHaveBeenCalledWith('overview');
     expect(result.dashboard.spec.title).toBe('API Overview');
+    expect(result.description).toBeNull();
     expect(result.type).toBe('live');
     expect(result.version).toBe(4);
     expect(result.source).toBe('api');
@@ -104,6 +106,7 @@ describe('dashboard resource loading', () => {
       dashboard: {
         uid: 'overview',
         title: 'API Overview',
+        description: null,
         type: 'live',
         version: 4,
         dashboard: {
@@ -171,7 +174,18 @@ describe('dashboard resource loading', () => {
     mocks.fetchDashboardResource.mockResolvedValue({
       dashboard: {
         uid: 'training-review',
-        title: 'Training review',
+        title: 'Training review renamed',
+        description: {
+          version: 1,
+          blocks: [
+            {
+              id: 'block-1',
+              type: 'paragraph',
+              spans: [{ text: 'Training review description' }],
+            },
+          ],
+        },
+        defaultTimeRange: '14d',
         type: 'timeRange',
         version: 1,
         dashboard: {
@@ -179,7 +193,7 @@ describe('dashboard resource loading', () => {
           schemaVersion: 'veno.dashboard.v1',
           spec: {
             uid: 'training-review',
-            title: 'Training review',
+            title: 'Stale settings title',
             timeSettings: {
               autoRefresh: '',
               autoRefreshIntervals: ['5s'],
@@ -256,6 +270,18 @@ describe('dashboard resource loading', () => {
 
     expect(mocks.fetchDashboardSettings).toHaveBeenCalledWith('training-review');
     expect(result.dashboard.spec.elements['panel-time-in-range']).toBeDefined();
+    expect(result.dashboard.spec.title).toBe('Training review renamed');
+    expect(result.defaultTimeRange).toBe('14d');
+    expect(result.description).toEqual({
+      version: 1,
+      blocks: [
+        {
+          id: 'block-1',
+          type: 'paragraph',
+          spans: [{ text: 'Training review description' }],
+        },
+      ],
+    });
     expect(result.dashboard.spec.layout.spec.items).toHaveLength(1);
     expect(result.version).toBe(1);
   });
@@ -265,6 +291,7 @@ describe('dashboard resource loading', () => {
       dashboard: {
         uid: 'bad-live-dashboard',
         title: 'Bad Live Dashboard',
+        description: null,
         type: 'live',
         version: 1,
         dashboard: {

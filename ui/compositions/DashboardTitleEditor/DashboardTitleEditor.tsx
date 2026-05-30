@@ -60,6 +60,7 @@ export function DashboardTitleEditor({
         },
         body: JSON.stringify({
           title: normalizedTitle,
+          description: null,
           expectedVersion: version,
         }),
       });

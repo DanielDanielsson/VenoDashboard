@@ -14,6 +14,8 @@ import type {
 } from '@/lib/pulse-api/types';
 import type { DashboardSettingsResponse } from '@/lib/dashboard/settings';
 import type { DashboardDefinition, DashboardType } from '@/lib/dashboard/schema';
+import type { DashboardDescriptionDocument, DashboardIconName } from '@/lib/dashboard/metadata';
+import type { TimeRange } from '@/lib/glucose/time-ranges';
 import {
   getApiBaseUrl,
   getAdminApiToken,
@@ -205,6 +207,9 @@ export async function fetchDashboardSettings(dashboardUid: string): Promise<Dash
 export interface DashboardResourceRecord {
   uid: string;
   title: string;
+  description: DashboardDescriptionDocument | null;
+  icon: DashboardIconName | null;
+  defaultTimeRange: TimeRange | null;
   type: DashboardType;
   version: number;
   dashboard: DashboardDefinition;
@@ -216,13 +221,22 @@ export interface DashboardResourceResponse {
   dashboard: DashboardResourceRecord;
 }
 
+export interface DashboardResourceRedirectResponse {
+  redirect: {
+    dashboardUid: string;
+  };
+}
+
 export interface DashboardCreatePayload {
   title: string;
   type: DashboardType;
 }
 
-export interface DashboardRenamePayload {
+export interface DashboardMetadataUpdatePayload {
   title: string;
+  description: DashboardDescriptionDocument | null;
+  icon?: DashboardIconName | null;
+  defaultTimeRange?: TimeRange | null;
   expectedVersion: number;
 }
 
@@ -239,7 +253,9 @@ export interface DashboardPreferencesResponse {
   preferences: DashboardPreferencesRecord;
 }
 
-export async function fetchDashboardResource(dashboardUid: string): Promise<DashboardResourceResponse> {
+export async function fetchDashboardResource(
+  dashboardUid: string,
+): Promise<DashboardResourceResponse | DashboardResourceRedirectResponse> {
   const response = await fetch(resolveUrl(`/api/v1/dashboards/${encodeURIComponent(dashboardUid)}`), {
     method: 'GET',
     cache: 'no-store',
@@ -249,7 +265,7 @@ export async function fetchDashboardResource(dashboardUid: string): Promise<Dash
     await parseError(response);
   }
 
-  return parseJson<DashboardResourceResponse>(response);
+  return parseJson<DashboardResourceResponse | DashboardResourceRedirectResponse>(response);
 }
 
 export async function fetchDashboardList(): Promise<DashboardListResponse> {
@@ -272,11 +288,17 @@ export async function createDashboard(payload: DashboardCreatePayload): Promise<
   });
 }
 
-export async function renameDashboard(
+export async function updateDashboardMetadata(
   dashboardUid: string,
-  payload: DashboardRenamePayload,
-): Promise<DashboardResourceResponse> {
-  return adminJson<DashboardResourceResponse>(
+  payload: DashboardMetadataUpdatePayload,
+): Promise<DashboardResourceResponse & {
+  previousUid?: string;
+  preferences?: DashboardPreferencesRecord;
+}> {
+  return adminJson<DashboardResourceResponse & {
+    previousUid?: string;
+    preferences?: DashboardPreferencesRecord;
+  }>(
     `/api/admin/dashboards/${encodeURIComponent(dashboardUid)}`,
     {
       method: 'PATCH',

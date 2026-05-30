@@ -3,8 +3,8 @@ import { getOwnerSession } from '@/lib/auth';
 import {
   PulseApiClientError,
   deleteDashboard,
-  renameDashboard,
-  type DashboardRenamePayload
+  updateDashboardMetadata,
+  type DashboardMetadataUpdatePayload
 } from '@/lib/pulse-api/client';
 
 interface RouteContext {
@@ -20,10 +20,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   const { dashboardUid } = await context.params;
-  const payload = (await request.json()) as DashboardRenamePayload;
+  const payload = (await request.json()) as DashboardMetadataUpdatePayload;
 
   try {
-    const response = await renameDashboard(dashboardUid, payload);
+    const response = await updateDashboardMetadata(dashboardUid, payload);
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
     const status = error instanceof PulseApiClientError ? error.status : 502;

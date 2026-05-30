@@ -1,10 +1,15 @@
 import { fetchDashboardList } from '@/lib/pulse-api/client';
+import type { TimeRange } from '@/lib/glucose/time-ranges';
 import type { DashboardType } from './schema';
+import type { DashboardDescriptionDocument, DashboardIconName } from './metadata';
 import { loadDashboardPreferences } from './preferences';
 
 export interface DashboardLibraryItem {
   uid: string;
   title: string;
+  description: DashboardDescriptionDocument | null;
+  icon: DashboardIconName | null;
+  defaultTimeRange: TimeRange | null;
   type: DashboardType;
   version: number | null;
   updatedAt: string | null;
@@ -37,6 +42,9 @@ export async function loadDashboardLibrary(): Promise<DashboardLibrary> {
     .map((dashboard) => ({
       uid: dashboard.uid,
       title: dashboard.title,
+      description: dashboard.description ?? null,
+      icon: dashboard.icon ?? 'dashboard-grid',
+      defaultTimeRange: dashboard.defaultTimeRange ?? (dashboard.type === 'timeRange' ? '3d' : null),
       type: dashboard.type,
       version: dashboard.version,
       updatedAt: dashboard.updatedAt ?? null,

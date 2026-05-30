@@ -66,12 +66,14 @@ describe('dashboard library loading', () => {
     ]);
     expect(library.dashboards.map((dashboard) => ({
       uid: dashboard.uid,
+      icon: dashboard.icon,
+      defaultTimeRange: dashboard.defaultTimeRange,
       isHome: dashboard.isHome,
       isPinned: dashboard.isPinned,
     }))).toEqual([
-      { uid: 'statistics', isHome: true, isPinned: true },
-      { uid: 'training', isHome: false, isPinned: false },
-      { uid: 'overview', isHome: false, isPinned: false },
+      { uid: 'statistics', icon: 'dashboard-grid', defaultTimeRange: '3d', isHome: true, isPinned: true },
+      { uid: 'training', icon: 'dashboard-grid', defaultTimeRange: '3d', isHome: false, isPinned: false },
+      { uid: 'overview', icon: 'dashboard-grid', defaultTimeRange: null, isHome: false, isPinned: false },
     ]);
   });
 
