@@ -1,9 +1,7 @@
 import type { SidebarCallToAction, SidebarDashboardLink, SidebarSecondaryLink } from './types';
 
-export const SIDEBAR_STORAGE_KEY = 'veno-sidebar-collapsed';
-export const SIDEBAR_EVENT = 'veno-sidebar-collapsed-change';
-export const DASHBOARDS_EXPANDED_STORAGE_KEY = 'veno-sidebar-dashboards-expanded';
-export const DASHBOARDS_EXPANDED_EVENT = 'veno-sidebar-dashboards-expanded-change';
+export const SIDEBAR_COLLAPSED_COOKIE = 'veno-sidebar-collapsed';
+export const DASHBOARDS_EXPANDED_COOKIE = 'veno-sidebar-dashboards-expanded';
 export const SIDEBAR_WIDTH_EXPANDED = '270px';
 export const SIDEBAR_WIDTH_COLLAPSED = '76px';
 

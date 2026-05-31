@@ -40,6 +40,8 @@ export interface SideBarNavigationProps {
   homeDashboardUid?: string;
   currentUser?: SidebarUser;
   callsToAction?: ReadonlyArray<SidebarCallToAction>;
+  initialCollapsed?: boolean;
+  initialDashboardsExpanded?: boolean;
 }
 
 export interface SidebarCallToActionCardProps {

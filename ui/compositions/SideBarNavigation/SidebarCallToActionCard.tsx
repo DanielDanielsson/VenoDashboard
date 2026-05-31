@@ -3,10 +3,10 @@ import { twMerge } from 'tailwind-merge';
 import { Icon } from '../../base/Icon';
 import type { SidebarCallToActionCardProps } from './types';
 
-export function SidebarCallToActionCard({
+export const SidebarCallToActionCard = ({
   callToAction,
   collapsed,
-}: SidebarCallToActionCardProps) {
+}: SidebarCallToActionCardProps) => {
   return (
     <div
       className="relative w-full overflow-hidden"
@@ -35,4 +35,4 @@ export function SidebarCallToActionCard({
       </aside>
     </div>
   );
-}
+};

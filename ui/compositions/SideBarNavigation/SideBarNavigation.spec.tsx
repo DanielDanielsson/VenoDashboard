@@ -5,6 +5,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { SideBarNavigation } from './SideBarNavigation';
 
 const usePathname = vi.fn();
+const clearPreferenceCookies = () => {
+  document.cookie = 'veno-sidebar-collapsed=; Path=/; Max-Age=0';
+  document.cookie = 'veno-sidebar-dashboards-expanded=; Path=/; Max-Age=0';
+};
 
 vi.mock('next/navigation', () => ({
   usePathname: () => usePathname(),
@@ -13,11 +17,12 @@ vi.mock('next/navigation', () => ({
 describe('SideBarNavigation', () => {
   beforeEach(() => {
     usePathname.mockReturnValue('/dashboards/statistics');
-    localStorage.clear();
+    clearPreferenceCookies();
     document.documentElement.style.removeProperty('--dashboard-sidebar-width');
   });
 
   afterEach(() => {
+    clearPreferenceCookies();
     document.documentElement.style.removeProperty('--dashboard-sidebar-width');
   });
 
@@ -33,6 +38,7 @@ describe('SideBarNavigation', () => {
     );
 
     expect(screen.getByRole('link', { name: 'Dashboards' })).toHaveAttribute('href', '/dashboards');
+    expect(screen.getByRole('link', { name: 'Dashboards' }).querySelector('use')).toHaveAttribute('href', '/static_assets/iconSprite.svg#dashboard-grid');
     expect(screen.getByRole('navigation', { name: 'Sidebar navigation' })).toHaveClass('border-border');
     expect(document.querySelector('[data-sidebar-primary-nav]')).toHaveClass('mt-3', 'border-t', 'border-border', 'pt-3');
     const accordion = screen.getByRole('list', { name: 'Pinned dashboards' });
@@ -83,6 +89,88 @@ describe('SideBarNavigation', () => {
     ]);
   });
 
+  test('updates pinned dashboard metadata without a server refresh', () => {
+    render(
+      <SideBarNavigation
+        isOwner={false}
+        homeDashboardUid="statistics"
+        pinnedDashboards={[
+          { uid: 'statistics', title: 'Statistics', icon: 'activity' },
+          { uid: 'overview', title: 'Overview' },
+        ]}
+      />,
+    );
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('veno:dashboard-metadata-updated', {
+        detail: {
+          previousUid: 'statistics',
+          dashboard: {
+            uid: 'reports',
+            title: 'Reports',
+            icon: 'calendar',
+          },
+          preferences: {
+            homeDashboardUid: 'reports',
+            pinnedDashboardUids: ['reports', 'overview'],
+          },
+        },
+      }));
+    });
+
+    const accordion = screen.getByRole('list', { name: 'Pinned dashboards' });
+    const reportsLink = within(accordion).getByRole('link', { name: 'Reports' });
+
+    expect(reportsLink).toHaveAttribute('href', '/dashboards/reports');
+    expect(reportsLink.querySelector('use')).toHaveAttribute('href', '/static_assets/iconSprite.svg#calendar');
+    expect(screen.queryByRole('link', { name: 'Statistics' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Veno' })).toHaveAttribute('href', '/dashboards/reports');
+  });
+
+  test('updates pinned and home dashboard preferences without a server refresh', () => {
+    render(
+      <SideBarNavigation
+        isOwner={false}
+        homeDashboardUid="overview"
+        pinnedDashboards={[
+          { uid: 'overview', title: 'Overview' },
+        ]}
+      />,
+    );
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('veno:dashboard-preferences-updated', {
+        detail: {
+          homeDashboardUid: 'statistics',
+          pinnedDashboardUids: ['overview', 'statistics'],
+          dashboards: [
+            { uid: 'statistics', title: 'Statistics', icon: 'activity' },
+          ],
+        },
+      }));
+    });
+
+    const accordion = screen.getByRole('list', { name: 'Pinned dashboards' });
+    const statisticsLink = within(accordion).getByRole('link', { name: 'Statistics' });
+
+    expect(statisticsLink).toHaveAttribute('href', '/dashboards/statistics');
+    expect(statisticsLink.querySelector('use')).toHaveAttribute('href', '/static_assets/iconSprite.svg#activity');
+    expect(screen.getByRole('link', { name: 'Veno' })).toHaveAttribute('href', '/dashboards/statistics');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('veno:dashboard-preferences-updated', {
+        detail: {
+          homeDashboardUid: 'overview',
+          pinnedDashboardUids: ['statistics'],
+        },
+      }));
+    });
+
+    expect(screen.queryByRole('link', { name: 'Overview' })).not.toBeInTheDocument();
+    expect(within(accordion).getByRole('link', { name: 'Statistics' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Veno' })).toHaveAttribute('href', '/dashboards/overview');
+  });
+
   test('collapses and expands the pinned dashboard list from a separate icon button', async () => {
     const user = userEvent.setup();
     render(
@@ -100,7 +188,7 @@ describe('SideBarNavigation', () => {
     expect(screen.queryByRole('list', { name: 'Pinned dashboards' })).not.toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Pinned dashboards', hidden: true }).closest('[data-dashboards-accordion-state]')).toHaveClass('grid-rows-[0fr]');
     expect(screen.getByRole('link', { name: 'Statistics', hidden: true })).toHaveAttribute('tabindex', '-1');
-    expect(localStorage.getItem('veno-sidebar-dashboards-expanded')).toBe('false');
+    expect(document.cookie).toContain('veno-sidebar-dashboards-expanded=false');
     expect(screen.getByRole('button', { name: 'Expand dashboards list' })).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByRole('button', { name: 'Expand dashboards list' }).querySelector('use')).toHaveAttribute(
       'href',
@@ -111,7 +199,7 @@ describe('SideBarNavigation', () => {
 
     expect(screen.getByRole('list', { name: 'Pinned dashboards' })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Pinned dashboards' }).closest('[data-dashboards-accordion-state]')).toHaveClass('grid-rows-[1fr]');
-    expect(localStorage.getItem('veno-sidebar-dashboards-expanded')).toBe('true');
+    expect(document.cookie).toContain('veno-sidebar-dashboards-expanded=true');
   });
 
   test('keeps the dashboards accordion collapsed after navigating to another sidebar link', async () => {
@@ -131,7 +219,7 @@ describe('SideBarNavigation', () => {
 
     unmount();
     usePathname.mockReturnValue('/dashboard/about');
-    render(<SideBarNavigation {...props} />);
+    render(<SideBarNavigation {...props} initialDashboardsExpanded={false} />);
 
     expect(screen.queryByRole('list', { name: 'Pinned dashboards' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand dashboards list' })).toHaveAttribute('aria-expanded', 'false');
@@ -173,7 +261,8 @@ describe('SideBarNavigation', () => {
     await user.click(screen.getByRole('button', { name: 'Collapse sidebar navigation' }));
 
     expect(screen.getByRole('navigation', { name: 'Sidebar navigation' })).toHaveAttribute('data-sidebar-state', 'collapsed');
-    expect(localStorage.getItem('veno-sidebar-collapsed')).toBe('true');
+    expect(document.cookie).toContain('veno-sidebar-collapsed=true');
+    expect(document.documentElement.dataset.sidebarCollapsed).toBe('true');
     expect(document.documentElement.style.getPropertyValue('--dashboard-sidebar-width')).toBe('76px');
     expect(screen.getByRole('button', { name: 'Expand sidebar navigation' })).toBeInTheDocument();
   });
@@ -305,12 +394,12 @@ describe('SideBarNavigation', () => {
 
   test('restores full feedback calls to action after the sidebar expands', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('veno-sidebar-collapsed', 'true');
 
     const { container } = render(
       <SideBarNavigation
         isOwner
         pinnedDashboards={[]}
+        initialCollapsed
         callsToAction={[
           {
             id: 'feedback',

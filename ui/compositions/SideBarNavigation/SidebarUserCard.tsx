@@ -3,13 +3,13 @@ import { twMerge } from 'tailwind-merge';
 import { Icon } from '../../base/Icon';
 import type { SidebarUserCardProps } from './types';
 
-export function SidebarUserCard({
+export const SidebarUserCard = ({
   user,
   isOwner,
   layoutCollapsed,
   labelClassName,
   showNotificationDot,
-}: SidebarUserCardProps) {
+}: SidebarUserCardProps) => {
   const hasProfileImage = Boolean(user.imageUrl);
   const userActionHref = isOwner ? '/dashboard/settings' : '/login';
   const userActionLabel = isOwner ? 'Open settings' : 'Sign in';
@@ -53,4 +53,4 @@ export function SidebarUserCard({
       </Link>
     </div>
   );
-}
+};

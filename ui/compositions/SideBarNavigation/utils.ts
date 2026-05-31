@@ -1,72 +1,38 @@
 import {
-  DASHBOARDS_EXPANDED_EVENT,
-  DASHBOARDS_EXPANDED_STORAGE_KEY,
-  SIDEBAR_EVENT,
-  SIDEBAR_STORAGE_KEY,
+  DASHBOARDS_EXPANDED_COOKIE,
+  SIDEBAR_WIDTH_COLLAPSED,
+  SIDEBAR_WIDTH_EXPANDED,
+  SIDEBAR_COLLAPSED_COOKIE,
 } from './const';
 
-export function readSidebarCollapsedSnapshot(): boolean {
-  if (typeof window === 'undefined') {
-    return false;
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+
+const writePreferenceCookie = (name: string, value: boolean): void => {
+  document.cookie = [
+    `${name}=${String(value)}`,
+    'Path=/',
+    `Max-Age=${COOKIE_MAX_AGE_SECONDS}`,
+    'SameSite=Lax',
+  ].join('; ');
+};
+
+export const applySidebarCollapsedDocumentState = (collapsed: boolean): void => {
+  if (typeof document === 'undefined') {
+    return;
   }
 
-  return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true';
-}
+  document.documentElement.dataset.sidebarCollapsed = collapsed ? 'true' : 'false';
+  document.documentElement.style.setProperty(
+    '--dashboard-sidebar-width',
+    collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED,
+  );
+};
 
-export function subscribeToSidebarPreference(callback: () => void): () => void {
-  if (typeof window === 'undefined') {
-    return () => undefined;
-  }
+export const setSidebarCollapsedPreference = (collapsed: boolean): void => {
+  writePreferenceCookie(SIDEBAR_COLLAPSED_COOKIE, collapsed);
+  applySidebarCollapsedDocumentState(collapsed);
+};
 
-  const handleStorage = (event: StorageEvent) => {
-    if (!event.key || event.key === SIDEBAR_STORAGE_KEY) {
-      callback();
-    }
-  };
-
-  window.addEventListener(SIDEBAR_EVENT, callback);
-  window.addEventListener('storage', handleStorage);
-
-  return () => {
-    window.removeEventListener(SIDEBAR_EVENT, callback);
-    window.removeEventListener('storage', handleStorage);
-  };
-}
-
-export function setSidebarCollapsedPreference(collapsed: boolean): void {
-  window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(collapsed));
-  window.dispatchEvent(new Event(SIDEBAR_EVENT));
-}
-
-export function readDashboardsExpandedSnapshot(): boolean {
-  if (typeof window === 'undefined') {
-    return true;
-  }
-
-  return window.localStorage.getItem(DASHBOARDS_EXPANDED_STORAGE_KEY) !== 'false';
-}
-
-export function subscribeToDashboardsExpandedPreference(callback: () => void): () => void {
-  if (typeof window === 'undefined') {
-    return () => undefined;
-  }
-
-  const handleStorage = (event: StorageEvent) => {
-    if (!event.key || event.key === DASHBOARDS_EXPANDED_STORAGE_KEY) {
-      callback();
-    }
-  };
-
-  window.addEventListener(DASHBOARDS_EXPANDED_EVENT, callback);
-  window.addEventListener('storage', handleStorage);
-
-  return () => {
-    window.removeEventListener(DASHBOARDS_EXPANDED_EVENT, callback);
-    window.removeEventListener('storage', handleStorage);
-  };
-}
-
-export function setDashboardsExpandedPreference(expanded: boolean): void {
-  window.localStorage.setItem(DASHBOARDS_EXPANDED_STORAGE_KEY, String(expanded));
-  window.dispatchEvent(new Event(DASHBOARDS_EXPANDED_EVENT));
-}
+export const setDashboardsExpandedPreference = (expanded: boolean): void => {
+  writePreferenceCookie(DASHBOARDS_EXPANDED_COOKIE, expanded);
+};

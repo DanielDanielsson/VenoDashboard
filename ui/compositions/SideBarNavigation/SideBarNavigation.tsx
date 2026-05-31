@@ -2,10 +2,10 @@
 
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   type CSSProperties,
 } from 'react';
 import Link from 'next/link';
@@ -25,13 +25,11 @@ import {
 import { SidebarCallToActionCard } from './SidebarCallToActionCard';
 import { SidebarUserCard } from './SidebarUserCard';
 import type { SideBarNavigationProps } from './types';
+import type { PinnedDashboardNavigationItem } from './types';
 import {
-  readDashboardsExpandedSnapshot,
-  readSidebarCollapsedSnapshot,
+  applySidebarCollapsedDocumentState,
   setDashboardsExpandedPreference,
   setSidebarCollapsedPreference,
-  subscribeToDashboardsExpandedPreference,
-  subscribeToSidebarPreference,
 } from './utils';
 
 export type {
@@ -42,13 +40,34 @@ export type {
 } from './types';
 
 const DASHBOARD_ORDER_UPDATED_EVENT = 'veno:dashboard-order-updated';
+const DASHBOARD_METADATA_UPDATED_EVENT = 'veno:dashboard-metadata-updated';
+const DASHBOARD_PREFERENCES_UPDATED_EVENT = 'veno:dashboard-preferences-updated';
+
+interface DashboardMetadataUpdatedDetail {
+  previousUid?: string;
+  dashboard?: {
+    uid?: string;
+    title?: string;
+    icon?: PinnedDashboardNavigationItem['icon'];
+  };
+  preferences?: {
+    homeDashboardUid?: string;
+    pinnedDashboardUids?: string[];
+  };
+}
+
+interface DashboardPreferencesUpdatedDetail {
+  homeDashboardUid?: string;
+  pinnedDashboardUids?: string[];
+  dashboards?: PinnedDashboardNavigationItem[];
+}
 
 interface SidebarDashboardMotion {
   offset: number;
   phase: 'offset' | 'animate';
 }
 
-function parseDurationMs(value: string): number {
+const parseDurationMs = (value: string): number => {
   const trimmed = value.trim();
 
   if (trimmed.endsWith('ms')) {
@@ -60,9 +79,9 @@ function parseDurationMs(value: string): number {
   }
 
   return 200;
-}
+};
 
-function getSidebarDashboardListGap(rowRefs: Map<string, HTMLLIElement>): number {
+const getSidebarDashboardListGap = (rowRefs: Map<string, HTMLLIElement>): number => {
   const firstRow = rowRefs.values().next().value;
   const rowGap = firstRow?.parentElement
     ? getComputedStyle(firstRow.parentElement).rowGap
@@ -70,12 +89,12 @@ function getSidebarDashboardListGap(rowRefs: Map<string, HTMLLIElement>): number
   const parsedGap = Number.parseFloat(rowGap);
 
   return Number.isNaN(parsedGap) ? 0 : parsedGap;
-}
+};
 
-function getSidebarDashboardMotion(
+const getSidebarDashboardMotion = (
   rowRefs: Map<string, HTMLLIElement>,
   nextDashboardUids: string[],
-): Record<string, SidebarDashboardMotion> {
+): Record<string, SidebarDashboardMotion> => {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
     return {};
   }
@@ -117,9 +136,9 @@ function getSidebarDashboardMotion(
   });
 
   return motion;
-}
+};
 
-function getSidebarDashboardStyle(motion?: SidebarDashboardMotion): CSSProperties | undefined {
+const getSidebarDashboardStyle = (motion?: SidebarDashboardMotion): CSSProperties | undefined => {
   if (!motion) {
     return undefined;
   }
@@ -131,7 +150,7 @@ function getSidebarDashboardStyle(motion?: SidebarDashboardMotion): CSSPropertie
       : 'transform var(--duration-dashboard-order) ease-out',
     zIndex: 1,
   };
-}
+};
 
 export const SideBarNavigation = ({
   isOwner = false,
@@ -139,18 +158,18 @@ export const SideBarNavigation = ({
   homeDashboardUid,
   currentUser,
   callsToAction = DEFAULT_CALLS_TO_ACTION,
+  initialCollapsed = false,
+  initialDashboardsExpanded = true,
 }: SideBarNavigationProps) => {
   const pathname = usePathname();
   const pinnedDashboardRowRefs = useRef(new Map<string, HTMLLIElement>());
   const pinnedDashboardMotionFrameRef = useRef<number | null>(null);
   const pinnedDashboardMotionTimeoutRef = useRef<number | null>(null);
+  const [localHomeDashboardUid, setLocalHomeDashboardUid] = useState(homeDashboardUid);
+  const [localPinnedDashboards, setLocalPinnedDashboards] = useState(pinnedDashboards);
   const [dashboardOrderUids, setDashboardOrderUids] = useState<string[] | null>(null);
   const [pinnedDashboardMotion, setPinnedDashboardMotion] = useState<Record<string, SidebarDashboardMotion>>({});
-  const isCollapsed = useSyncExternalStore(
-    subscribeToSidebarPreference,
-    readSidebarCollapsedSnapshot,
-    () => false,
-  );
+  const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
   const user = currentUser ?? { name: isOwner ? 'Admin' : 'Visitor', imageUrl: null };
   const sidebarWidth = isCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED;
   const labelClassName = twMerge(
@@ -160,20 +179,16 @@ export const SideBarNavigation = ({
   const iconLinkClassName = isCollapsed
     ? 'grid min-h-10 grid-cols-[20px] justify-start gap-0 px-3 py-2.5'
     : 'grid min-h-10 grid-cols-[20px_minmax(0,1fr)] px-3 py-2.5';
-  const dashboardsExpanded = useSyncExternalStore(
-    subscribeToDashboardsExpandedPreference,
-    readDashboardsExpandedSnapshot,
-    () => true,
-  );
+  const [dashboardsExpanded, setDashboardsExpanded] = useState(initialDashboardsExpanded);
   const dashboardsActive = pathname === '/dashboards';
   const displayedPinnedDashboards = useMemo(() => {
     if (!dashboardOrderUids) {
-      return pinnedDashboards;
+      return localPinnedDashboards;
     }
 
     const orderIndex = new Map(dashboardOrderUids.map((dashboardUid, index) => [dashboardUid, index]));
 
-    return [...pinnedDashboards].sort((left, right) => {
+    return [...localPinnedDashboards].sort((left, right) => {
       const leftIndex = orderIndex.get(left.uid);
       const rightIndex = orderIndex.get(right.uid);
 
@@ -191,13 +206,114 @@ export const SideBarNavigation = ({
 
       return 0;
     });
-  }, [dashboardOrderUids, pinnedDashboards]);
-  useEffect(() => {
-    document.documentElement.style.setProperty('--dashboard-sidebar-width', sidebarWidth);
-  }, [sidebarWidth]);
+  }, [dashboardOrderUids, localPinnedDashboards]);
 
   useEffect(() => {
-    function handleDashboardOrderUpdated(event: Event) {
+    setLocalHomeDashboardUid(homeDashboardUid);
+  }, [homeDashboardUid]);
+
+  useEffect(() => {
+    setLocalPinnedDashboards(pinnedDashboards);
+  }, [pinnedDashboards]);
+
+  useLayoutEffect(() => {
+    applySidebarCollapsedDocumentState(isCollapsed);
+  }, [isCollapsed]);
+
+  useEffect(() => {
+    const handleDashboardMetadataUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<DashboardMetadataUpdatedDetail>).detail;
+      const previousUid = detail?.previousUid;
+      const dashboard = detail?.dashboard;
+      const nextUid = dashboard?.uid ?? previousUid;
+
+      if (!previousUid || !nextUid || !dashboard) {
+        return;
+      }
+
+      setLocalHomeDashboardUid((currentUid) => {
+        if (detail.preferences?.homeDashboardUid !== undefined) {
+          return detail.preferences.homeDashboardUid;
+        }
+
+        return currentUid === previousUid ? nextUid : currentUid;
+      });
+
+      setLocalPinnedDashboards((currentDashboards) => {
+        const updatedDashboards = currentDashboards.map((currentDashboard) => {
+          if (currentDashboard.uid !== previousUid && currentDashboard.uid !== nextUid) {
+            return currentDashboard;
+          }
+
+          return {
+            ...currentDashboard,
+            uid: nextUid,
+            title: dashboard.title ?? currentDashboard.title,
+            icon: dashboard.icon ?? currentDashboard.icon,
+          };
+        });
+
+        const pinnedDashboardUids = detail.preferences?.pinnedDashboardUids;
+        if (!pinnedDashboardUids) {
+          return updatedDashboards;
+        }
+
+        const pinnedUidSet = new Set(pinnedDashboardUids);
+        const hasUpdatedDashboard = updatedDashboards.some((currentDashboard) => currentDashboard.uid === nextUid);
+        const nextDashboards = pinnedUidSet.has(nextUid) && !hasUpdatedDashboard
+          ? [
+              ...updatedDashboards,
+              {
+                uid: nextUid,
+                title: dashboard.title ?? nextUid,
+                icon: dashboard.icon,
+              },
+            ]
+          : updatedDashboards;
+
+        return nextDashboards.filter((currentDashboard) => pinnedUidSet.has(currentDashboard.uid));
+      });
+    };
+
+    window.addEventListener(DASHBOARD_METADATA_UPDATED_EVENT, handleDashboardMetadataUpdated);
+    return () => window.removeEventListener(DASHBOARD_METADATA_UPDATED_EVENT, handleDashboardMetadataUpdated);
+  }, []);
+
+  useEffect(() => {
+    const handleDashboardPreferencesUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<DashboardPreferencesUpdatedDetail>).detail;
+
+      if (detail.homeDashboardUid !== undefined) {
+        setLocalHomeDashboardUid(detail.homeDashboardUid);
+      }
+
+      if (detail.pinnedDashboardUids) {
+        const pinnedUidSet = new Set(detail.pinnedDashboardUids);
+        const eventDashboardByUid = new Map((detail.dashboards ?? []).map((dashboard) => [dashboard.uid, dashboard]));
+
+        setLocalPinnedDashboards((currentDashboards) => {
+          const nextDashboards = currentDashboards
+            .map((dashboard) => eventDashboardByUid.get(dashboard.uid) ?? dashboard)
+            .filter((dashboard) => pinnedUidSet.has(dashboard.uid));
+          const nextDashboardUids = new Set(nextDashboards.map((dashboard) => dashboard.uid));
+
+          eventDashboardByUid.forEach((dashboard) => {
+            if (pinnedUidSet.has(dashboard.uid) && !nextDashboardUids.has(dashboard.uid)) {
+              nextDashboards.push(dashboard);
+            }
+          });
+
+          return nextDashboards;
+        });
+      }
+    };
+
+    window.addEventListener(DASHBOARD_PREFERENCES_UPDATED_EVENT, handleDashboardPreferencesUpdated);
+    return () => window.removeEventListener(DASHBOARD_PREFERENCES_UPDATED_EVENT, handleDashboardPreferencesUpdated);
+  }, []);
+
+  useEffect(() => {
+    const handleDashboardOrderUpdated = (event: Event) => {
       const nextDashboardOrderUids = (event as CustomEvent<{ dashboardOrderUids?: string[] }>).detail
         ?.dashboardOrderUids;
 
@@ -205,7 +321,7 @@ export const SideBarNavigation = ({
         return;
       }
 
-      const nextPinnedDashboardUids = [...pinnedDashboards]
+      const nextPinnedDashboardUids = [...localPinnedDashboards]
         .sort((left, right) => {
           const leftIndex = nextDashboardOrderUids.indexOf(left.uid);
           const rightIndex = nextDashboardOrderUids.indexOf(right.uid);
@@ -259,11 +375,11 @@ export const SideBarNavigation = ({
         pinnedDashboardMotionFrameRef.current = null;
         pinnedDashboardMotionTimeoutRef.current = null;
       }, duration + 50);
-    }
+    };
 
     window.addEventListener(DASHBOARD_ORDER_UPDATED_EVENT, handleDashboardOrderUpdated);
     return () => window.removeEventListener(DASHBOARD_ORDER_UPDATED_EVENT, handleDashboardOrderUpdated);
-  }, [pinnedDashboards]);
+  }, [localPinnedDashboards]);
 
   useEffect(() => () => {
     if (pinnedDashboardMotionFrameRef.current !== null) {
@@ -275,18 +391,22 @@ export const SideBarNavigation = ({
   }, []);
 
   return (
-    <nav
-      className={twMerge(
-        'fixed left-0 top-0 hidden h-screen flex-col border-r border-border p-4 transition-[width] duration-dashboard-order md:flex',
-        isCollapsed ? 'w-[76px] items-center' : 'w-[270px]',
-      )}
-      aria-label="Sidebar navigation"
-      data-sidebar-state={isCollapsed ? 'collapsed' : 'expanded'}
-      data-sidebar-text-state={isCollapsed ? 'collapsed' : 'expanded'}
-    >
+    <>
+      <style>
+        {`:root { --dashboard-sidebar-width: ${sidebarWidth}; }`}
+      </style>
+      <nav
+        className={twMerge(
+          'fixed left-0 top-0 hidden h-screen flex-col border-r border-border p-4 transition-[width] duration-dashboard-order md:flex',
+          isCollapsed ? 'w-[76px] items-center' : 'w-[270px]',
+        )}
+        aria-label="Sidebar navigation"
+        data-sidebar-state={isCollapsed ? 'collapsed' : 'expanded'}
+        data-sidebar-text-state={isCollapsed ? 'collapsed' : 'expanded'}
+      >
       <div className="flex h-16 w-full items-center justify-center">
         <Link
-          href={homeDashboardUid ? `/dashboards/${homeDashboardUid}` : '/dashboards'}
+          href={localHomeDashboardUid ? `/dashboards/${localHomeDashboardUid}` : '/dashboards'}
           className="relative flex items-center justify-center gap-2 text-text"
           aria-label="Veno"
         >
@@ -317,14 +437,18 @@ export const SideBarNavigation = ({
                 isCollapsed && 'grid-cols-[20px] gap-0',
               )}
             >
-              <Icon icon="home" twStyles="h-5 w-5" />
+              <Icon icon="dashboard-grid" twStyles="h-5 w-5" />
               <span className={labelClassName}>Dashboards</span>
             </Link>
             {!isCollapsed ? (
               <Button
                 ariaLabel={dashboardsExpanded ? 'Collapse dashboards list' : 'Expand dashboards list'}
                 aria-expanded={dashboardsExpanded}
-                onClick={() => setDashboardsExpandedPreference(!dashboardsExpanded)}
+                onClick={() => {
+                  const nextDashboardsExpanded = !dashboardsExpanded;
+                  setDashboardsExpanded(nextDashboardsExpanded);
+                  setDashboardsExpandedPreference(nextDashboardsExpanded);
+                }}
                 twStyles="grid h-10 w-10 place-items-center rounded-[4px] text-nav-link-text transition-colors duration-dashboard-order hover:bg-nav-link-bg-hover hover:text-nav-link-text-hover"
                 title={dashboardsExpanded ? 'Collapse dashboards list' : 'Expand dashboards list'}
               >
@@ -413,7 +537,8 @@ export const SideBarNavigation = ({
               <div className={twMerge(
                 'ui_nav_text relative grid min-h-10 grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 rounded-[4px] px-3 py-2.5 text-nav-link-text/45',
                 isCollapsed && 'grid-cols-[20px] gap-0',
-              )}>
+              )}
+              >
                 <Icon icon={link.icon} twStyles="h-5 w-5" />
                 <span className={labelClassName}>{link.label}</span>
                 <span
@@ -453,7 +578,11 @@ export const SideBarNavigation = ({
           <Button
             ariaLabel={isCollapsed ? 'Expand sidebar navigation' : 'Collapse sidebar navigation'}
             aria-expanded={!isCollapsed}
-            onClick={() => setSidebarCollapsedPreference(!isCollapsed)}
+            onClick={() => {
+              const nextCollapsed = !isCollapsed;
+              setIsCollapsed(nextCollapsed);
+              setSidebarCollapsedPreference(nextCollapsed);
+            }}
             twStyles={twMerge(
               'body_text relative grid min-h-10 w-full grid-cols-[20px] items-center gap-0 rounded-[4px] px-3 py-2 text-text-soft transition-colors hover:bg-nav-link-bg-hover hover:text-text',
             )}
@@ -485,6 +614,7 @@ export const SideBarNavigation = ({
           showNotificationDot={isCollapsed && callsToAction.length > 0}
         />
       </div>
-    </nav>
+      </nav>
+    </>
   );
 };
