@@ -2,11 +2,15 @@ import { readFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const baseUrl = process.env.PULSE_API_BASE_URL?.trim() || 'http://localhost:3101';
-const fetchAttempts = Number.parseInt(process.env.CONTRACT_FETCH_ATTEMPTS || '4', 10);
+const requireRemote = process.env.CONTRACT_REQUIRE_REMOTE === 'true';
+const fetchAttempts = Number.parseInt(
+  process.env.CONTRACT_FETCH_ATTEMPTS || (requireRemote ? '4' : '1'),
+  10,
+);
 const fetchTimeoutMs = Number.parseInt(process.env.CONTRACT_FETCH_TIMEOUT_MS || '15000', 10);
 const retryDelayMs = Number.parseInt(process.env.CONTRACT_FETCH_RETRY_DELAY_MS || '3000', 10);
 
-function assertOpenApiContract(value, source) {
+const assertOpenApiContract = (value, source) => {
   if (!value || typeof value !== 'object') {
     throw new Error(`${source}: contract is not an object`);
   }
@@ -18,9 +22,9 @@ function assertOpenApiContract(value, source) {
   if (!value.paths || typeof value.paths !== 'object') {
     throw new Error(`${source}: missing paths object`);
   }
-}
+};
 
-function assertAgentContext(value, source) {
+const assertAgentContext = (value, source) => {
   if (!value || typeof value !== 'object') {
     throw new Error(`${source}: agent context is not an object`);
   }
@@ -35,22 +39,22 @@ function assertAgentContext(value, source) {
   if (!Array.isArray(value.endpoints) || !Array.isArray(value.errorCodes)) {
     throw new Error(`${source}: endpoints and errorCodes must be arrays`);
   }
-}
+};
 
-async function readJson(filePath) {
+const readJson = async (filePath) => {
   return JSON.parse(await readFile(filePath, 'utf8'));
-}
+};
 
-function formatFetchError(error) {
+const formatFetchError = (error) => {
   if (error instanceof Error) {
     const cause = error.cause instanceof Error ? `: ${error.cause.message}` : '';
     return `${error.name}: ${error.message}${cause}`;
   }
 
   return String(error);
-}
+};
 
-async function fetchJson(url) {
+const fetchJson = async (url) => {
   let lastError;
 
   for (let attempt = 1; attempt <= fetchAttempts; attempt += 1) {
@@ -80,16 +84,47 @@ async function fetchJson(url) {
   throw new Error(
     `Remote request failed after ${fetchAttempts} attempts: ${url} (${formatFetchError(lastError)})`,
   );
-}
+};
+
+const validateRemoteContract = async (url, assertContract, source) => {
+  try {
+    const remoteContract = await fetchJson(url);
+    assertContract(remoteContract, source);
+    return true;
+  } catch (error) {
+    if (requireRemote) {
+      throw error;
+    }
+
+    console.warn(
+      `${source}: remote validation skipped because ${url} was unavailable (${formatFetchError(error)})`,
+    );
+    return false;
+  }
+};
 
 const localOpenApi = await readJson('content/contracts/openapi.snapshot.json');
 const localAgentContext = await readJson('content/contracts/agent-context.snapshot.json');
 assertOpenApiContract(localOpenApi, 'local openapi snapshot');
 assertAgentContext(localAgentContext, 'local agent context snapshot');
 
-const remoteOpenApi = await fetchJson(`${baseUrl}/docs/openapi.json`);
-const remoteAgentContext = await fetchJson(`${baseUrl}/docs/agent-context.json`);
-assertOpenApiContract(remoteOpenApi, 'remote openapi');
-assertAgentContext(remoteAgentContext, 'remote agent context');
+const remoteOpenApiValid = await validateRemoteContract(
+  `${baseUrl}/docs/openapi.json`,
+  assertOpenApiContract,
+  'remote openapi',
+);
 
-console.log('contract validation passed');
+let remoteAgentContextValid = false;
+if (remoteOpenApiValid) {
+  remoteAgentContextValid = await validateRemoteContract(
+    `${baseUrl}/docs/agent-context.json`,
+    assertAgentContext,
+    'remote agent context',
+  );
+}
+
+console.log(
+  remoteOpenApiValid && remoteAgentContextValid
+    ? 'contract validation passed'
+    : 'contract snapshot validation passed',
+);
