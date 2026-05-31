@@ -82,7 +82,7 @@ import type { ConsumerProfileResponse } from '@/lib/pulse-api/types';
 import { useDashboardNotifications } from '@ui/compositions/DashboardDefinitionRenderer/useDashboardNotifications';
 import { timeRangeDashboardRegistry } from './TimeRangeDashboardRegistry';
 
-async function fetchJson<T>(url: string): Promise<T> {
+const fetchJson = async <T,>(url: string): Promise<T> => {
   const response = await fetch(url);
   const json = (await response.json()) as T & { error?: { message?: string } };
 
@@ -91,7 +91,7 @@ async function fetchJson<T>(url: string): Promise<T> {
   }
 
   return json;
-}
+};
 
 const DEFAULT_GLUCOSE_CHART_COLOR_MODE: GlucoseColorMode = 'standard';
 const GLUCOSE_TIMELINE_PANEL_ID = 'panel-glucose-timeline';
@@ -107,14 +107,14 @@ const DEFAULT_GLUCOSE_TIMELINE_PANEL_SETTINGS: GlucoseTimelinePanelSettings = {
   yAxisMax: 25,
 };
 
-function getUpdatesKey(revision: string): string {
+const getUpdatesKey = (revision: string): string => {
   return `/api/dashboard/glucose/updates?since=${encodeURIComponent(revision)}`;
-}
+};
 
-function getSelectionTargetWindow(
+const getSelectionTargetWindow = (
   selection: HistorySelection,
   sourceData: GlucoseApiResponse | undefined
-): HistoryWindow | null {
+): HistoryWindow | null => {
   if (selection.kind === 'custom') {
     return selection.window;
   }
@@ -124,18 +124,18 @@ function getSelectionTargetWindow(
   }
 
   return buildPresetWindow(sourceData.meta.to, selection.range);
-}
+};
 
-function parseChartYMax(yAxisMax: number): number {
+const parseChartYMax = (yAxisMax: number): number => {
   const parsed = Number(yAxisMax);
   return Number.isFinite(parsed) ? Math.max(12, parsed) : 25;
-}
+};
 
-function roundCorrectionValue(value: number): number {
+const roundCorrectionValue = (value: number): number => {
   return Number(value.toFixed(1));
-}
+};
 
-function getTimelineNoteSignature(note: TimelineNote | null): string | null {
+const getTimelineNoteSignature = (note: TimelineNote | null): string | null => {
   if (!note) {
     return null;
   }
@@ -154,19 +154,19 @@ function getTimelineNoteSignature(note: TimelineNote | null): string | null {
     note.createdBy,
     note.updatedBy
   ].join('|');
-}
+};
 
-function wasTimelineNoteEdited(note: TimelineNote): boolean {
+const wasTimelineNoteEdited = (note: TimelineNote): boolean => {
   return note.updatedAt !== note.createdAt || note.updatedBy !== note.createdBy;
-}
+};
 
-function GlucoseTimelineSettingsFields({
+const GlucoseTimelineSettingsFields = ({
   settings,
   updateSettings,
 }: {
   settings: GlucoseTimelinePanelSettings;
   updateSettings: (updater: (current: GlucoseTimelinePanelSettings) => GlucoseTimelinePanelSettings) => void;
-}): ReactElement {
+}): ReactElement => {
   return (
     <div className="flex items-end gap-4">
       <div className="grid gap-2">
@@ -197,11 +197,11 @@ function GlucoseTimelineSettingsFields({
       </div>
     </div>
   );
-}
+};
 
-function GlucoseTimelineChart(
+const GlucoseTimelineChart = (
   props: Omit<ComponentProps<typeof GlucoseChart>, 'colorMode' | 'yMax'>,
-): ReactElement {
+): ReactElement => {
   const [settings] = useDashboardPanelSettings(
     GLUCOSE_TIMELINE_PANEL_ID,
     DEFAULT_GLUCOSE_TIMELINE_PANEL_SETTINGS,
@@ -214,30 +214,30 @@ function GlucoseTimelineChart(
       yMax={parseChartYMax(settings.yAxisMax)}
     />
   );
-}
+};
 
-function GlucoseAgpWithPanelSettings(
+const GlucoseAgpWithPanelSettings = (
   props: Omit<ComponentProps<typeof GlucoseAgpChart>, 'yMax'>,
-): ReactElement {
+): ReactElement => {
   const [settings] = useDashboardPanelSettings(
     GLUCOSE_TIMELINE_PANEL_ID,
     DEFAULT_GLUCOSE_TIMELINE_PANEL_SETTINGS,
   );
 
   return <GlucoseAgpChart {...props} yMax={parseChartYMax(settings.yAxisMax)} />;
-}
+};
 
-function formatWorkoutDate(timestamp: string): string {
+const formatWorkoutDate = (timestamp: string): string => {
   return new Date(timestamp).toLocaleDateString([], {
     month: 'short',
     day: 'numeric',
     year: 'numeric'
   });
-}
+};
 
-function getChartHeight(
+const getChartHeight = (
   data: Pick<GlucoseApiResponse, 'basalItems' | 'eventItems' | 'stepItems' | 'workoutItems' | 'noteItems'> | undefined
-): number {
+): number => {
   const glucosePlotHeight = 240;
   const paddingTop = 32;
   const paddingBottom = 48;
@@ -263,13 +263,13 @@ function getChartHeight(
   totalHeight += bandGap + getTimelineNoteBandHeight(data?.noteItems ?? []);
 
   return totalHeight;
-}
+};
 
-function getSelectionSignature(selection: HistorySelection): string {
+const getSelectionSignature = (selection: HistorySelection): string => {
   return JSON.stringify(selection);
-}
+};
 
-export function GlucoseAnalysisView({
+export const GlucoseAnalysisView = ({
   isOwner = false,
   initialSnapshot,
   dashboardDefinition,
@@ -285,7 +285,7 @@ export function GlucoseAnalysisView({
   initialSelection?: HistorySelection;
   initialTimeZone?: string;
   allowDashboardDelete?: boolean;
-}) {
+}) => {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1857,4 +1857,4 @@ export function GlucoseAnalysisView({
       </DashboardViewPanelUrlStateBridge>
     </div>
   );
-}
+};

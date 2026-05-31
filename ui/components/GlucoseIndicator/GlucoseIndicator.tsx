@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type CSSProperties } from 'react';
+import { twMerge } from 'tailwind-merge';
 import { getGlucoseColor, type GlucoseColorMode } from '@/lib/glucose/tints';
 import { Icon } from '../../base/Icon';
 
@@ -79,7 +80,7 @@ const FIT_CONTAINER_COMPACT_LABEL_STYLES = {
   '--glucose-indicator-size' | '--glucose-indicator-value-font-size'
 >;
 
-function normalizeTrend(trend: string): TrendDirection {
+const normalizeTrend = (trend: string): TrendDirection => {
   const s = trend.toLowerCase().replace(/[^a-z]/g, '');
   if (
     s.includes('risingfast') ||
@@ -108,7 +109,7 @@ function normalizeTrend(trend: string): TrendDirection {
   )
     return 'down-slight';
   return 'stable';
-}
+};
 
 const TREND_ROTATION: Record<TrendDirection, number> = {
   up: -90,
@@ -122,7 +123,7 @@ const TREND_ROTATION: Record<TrendDirection, number> = {
 const CIRCLE_CENTER_X = 76 / 184;
 const CIRCLE_CENTER_Y = 76 / 153;
 
-function formatAge(timestamp: string, nowMs: number): string {
+const formatAge = (timestamp: string, nowMs: number): string => {
   const age = nowMs - new Date(timestamp).getTime();
   const minutes = Math.round(age / 60_000);
   if (minutes < 1) return 'just now';
@@ -130,9 +131,9 @@ function formatAge(timestamp: string, nowMs: number): string {
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
   return `${hours}h ${minutes % 60}m ago`;
-}
+};
 
-export function GlucoseIndicator({
+export const GlucoseIndicator = ({
   value,
   trend,
   displayValue,
@@ -144,7 +145,7 @@ export function GlucoseIndicator({
   fitToContainer = false,
   fitPlacement = 'center',
   colorMode = 'standard',
-}: GlucoseIndicatorProps) {
+}: GlucoseIndicatorProps) => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -274,7 +275,7 @@ export function GlucoseIndicator({
 
         {showUnit ? (
           <span
-            className={`${cfg.unitClassName} text-text-soft`}
+            className={twMerge(cfg.unitClassName, 'text-text-soft')}
             style={
               fitToContainer
                 ? {
@@ -288,11 +289,11 @@ export function GlucoseIndicator({
           </span>
         ) : null}
         {showAge && timestamp && (
-          <span className={`${cfg.ageClassName} text-text-dim`}>
+          <span className={twMerge(cfg.ageClassName, 'text-text-dim')}>
             {formatAge(timestamp, nowMs)}
           </span>
         )}
       </div>
     </div>
   );
-}
+};

@@ -38,13 +38,13 @@ export const DashboardGridPanel = forwardRef<HTMLDivElement, DashboardGridPanelP
   },
 );
 
-function DashboardGridPanelActions({
+const DashboardGridPanelActions = ({
   panelId,
   title,
 }: {
   panelId: string;
   title: string;
-}) {
+}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const { editPanel, hoveredPanelId, isEditMode, isOwner, removePanel, viewPanel } = useDashboardGridActions();
@@ -139,4 +139,4 @@ function DashboardGridPanelActions({
       ) : null}
     </>
   );
-}
+};

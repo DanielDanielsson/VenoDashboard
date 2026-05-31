@@ -5,7 +5,7 @@ import './keyboardKey.css';
 
 type KeyboardKeyProps = ComponentPropsWithoutRef<'kbd'>;
 
-export function KeyboardKey({ children, className, ...props }: KeyboardKeyProps) {
+export const KeyboardKey = ({ children, className, ...props }: KeyboardKeyProps) => {
   return (
     <kbd
       className={twMerge(
@@ -17,4 +17,4 @@ export function KeyboardKey({ children, className, ...props }: KeyboardKeyProps)
       {children}
     </kbd>
   );
-}
+};

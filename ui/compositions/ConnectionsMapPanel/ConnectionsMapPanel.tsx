@@ -52,7 +52,7 @@ const DEFAULT_NODE_POSITIONS: Record<string, { x: number; y: number }> = {
 
 const HIDDEN_HANDLE_CLASS = '!h-1 !w-1 !border-0 !bg-transparent !opacity-0';
 
-function getStateLabel(state: ConnectionNodeState): string {
+const getStateLabel = (state: ConnectionNodeState): string => {
   switch (state) {
     case 'live':
       return 'Live';
@@ -63,9 +63,9 @@ function getStateLabel(state: ConnectionNodeState): string {
     default:
       return 'Idle';
   }
-}
+};
 
-function getFreshnessTone(state: ConnectionNodeState): 'fresh' | 'aging' | 'stale' | 'inactive' {
+const getFreshnessTone = (state: ConnectionNodeState): 'fresh' | 'aging' | 'stale' | 'inactive' => {
   switch (state) {
     case 'live':
       return 'fresh';
@@ -76,17 +76,17 @@ function getFreshnessTone(state: ConnectionNodeState): 'fresh' | 'aging' | 'stal
     default:
       return 'inactive';
   }
-}
+};
 
-function showsLatestActivity(nodeId: string): boolean {
+const showsLatestActivity = (nodeId: string): boolean => {
   return nodeId !== 'veno-api' && nodeId !== 'veno-dashboard';
-}
+};
 
-function getNodeTone(state: ConnectionNodeState): {
+const getNodeTone = (state: ConnectionNodeState): {
   ring: string;
   chip: string;
   text: string;
-} {
+} => {
   switch (state) {
     case 'live':
       return {
@@ -113,9 +113,9 @@ function getNodeTone(state: ConnectionNodeState): {
         text: 'text-text-soft',
       };
   }
-}
+};
 
-function getEdgeClass(state: ConnectionNodeState): string {
+const getEdgeClass = (state: ConnectionNodeState): string => {
   switch (state) {
     case 'live':
       return 'connection-map-edge-live';
@@ -126,9 +126,9 @@ function getEdgeClass(state: ConnectionNodeState): string {
     default:
       return 'connection-map-edge-inactive';
   }
-}
+};
 
-function getMarkerColor(state: ConnectionNodeState): string {
+const getMarkerColor = (state: ConnectionNodeState): string => {
   switch (state) {
     case 'live':
       return 'var(--color-connection-map-line-live)';
@@ -139,16 +139,16 @@ function getMarkerColor(state: ConnectionNodeState): string {
     default:
       return 'var(--color-connection-map-line)';
   }
-}
+};
 
-function formatUpdatedAt(updatedAt: string): string {
+const formatUpdatedAt = (updatedAt: string): string => {
   return new Date(updatedAt).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
+};
 
-function getHandlesForEdge(edge: ConnectionMapEdge): Pick<Edge<ConnectionGraphEdgeData>, 'sourceHandle' | 'targetHandle'> {
+const getHandlesForEdge = (edge: ConnectionMapEdge): Pick<Edge<ConnectionGraphEdgeData>, 'sourceHandle' | 'targetHandle'> => {
   switch (edge.id) {
     case 'official-api':
     case 'share-api':
@@ -170,9 +170,9 @@ function getHandlesForEdge(edge: ConnectionMapEdge): Pick<Edge<ConnectionGraphEd
     default:
       return { sourceHandle: 'source-right', targetHandle: 'target-left' };
   }
-}
+};
 
-function getEdgeOffset(edgeId: string): { x: number; y: number } {
+const getEdgeOffset = (edgeId: string): { x: number; y: number } => {
   switch (edgeId) {
     case 'api-dashboard':
       return { x: -18, y: 0 };
@@ -187,9 +187,9 @@ function getEdgeOffset(edgeId: string): { x: number; y: number } {
     default:
       return { x: 0, y: 0 };
   }
-}
+};
 
-function buildFlowNodes(snapshot: ConnectionMapSnapshot, existingNodes?: ConnectionFlowNode[]): ConnectionFlowNode[] {
+const buildFlowNodes = (snapshot: ConnectionMapSnapshot, existingNodes?: ConnectionFlowNode[]): ConnectionFlowNode[] => {
   return snapshot.nodes.map((node) => {
     const existingNode = existingNodes?.find((candidate) => candidate.id === node.id);
 
@@ -202,9 +202,9 @@ function buildFlowNodes(snapshot: ConnectionMapSnapshot, existingNodes?: Connect
       data: { ...node },
     };
   });
-}
+};
 
-function buildFlowEdges(snapshot: ConnectionMapSnapshot): ConnectionFlowEdge[] {
+const buildFlowEdges = (snapshot: ConnectionMapSnapshot): ConnectionFlowEdge[] => {
   return snapshot.edges.map((edge) => ({
     id: edge.id,
     source: edge.from,
@@ -225,9 +225,9 @@ function buildFlowEdges(snapshot: ConnectionMapSnapshot): ConnectionFlowEdge[] {
     },
     ...getHandlesForEdge(edge),
   }));
-}
+};
 
-function ConnectionNodeCard({ data }: NodeProps<ConnectionFlowNode>) {
+const ConnectionNodeCard = ({ data }: NodeProps<ConnectionFlowNode>) => {
   const tone = getNodeTone(data.state);
 
   return (
@@ -278,9 +278,9 @@ function ConnectionNodeCard({ data }: NodeProps<ConnectionFlowNode>) {
       ) : null}
     </div>
   );
-}
+};
 
-function ConnectionMapFlowEdge({
+const ConnectionMapFlowEdge = ({
   id,
   sourceX,
   sourceY,
@@ -290,7 +290,7 @@ function ConnectionMapFlowEdge({
   targetPosition,
   markerEnd,
   data,
-}: EdgeProps<ConnectionFlowEdge>) {
+}: EdgeProps<ConnectionFlowEdge>) => {
   const offset = getEdgeOffset(id);
   const [path] = getBezierPath({
     sourceX: sourceX + offset.x,
@@ -310,7 +310,7 @@ function ConnectionMapFlowEdge({
       markerEnd={markerEnd}
     />
   );
-}
+};
 
 const nodeTypes = {
   connectionNode: ConnectionNodeCard,
@@ -320,9 +320,9 @@ const edgeTypes = {
   connectionEdge: ConnectionMapFlowEdge,
 };
 
-function ConnectionsMapCanvas({
+const ConnectionsMapCanvas = ({
   initialSnapshot,
-}: ConnectionsMapPanelProps) {
+}: ConnectionsMapPanelProps) => {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasRefreshError, setHasRefreshError] = useState(false);
@@ -415,12 +415,12 @@ function ConnectionsMapCanvas({
       </div>
     </DashboardPanel>
   );
-}
+};
 
-export function ConnectionsMapPanel(props: ConnectionsMapPanelProps) {
+export const ConnectionsMapPanel = (props: ConnectionsMapPanelProps) => {
   return (
     <ReactFlowProvider>
       <ConnectionsMapCanvas {...props} />
     </ReactFlowProvider>
   );
-}
+};

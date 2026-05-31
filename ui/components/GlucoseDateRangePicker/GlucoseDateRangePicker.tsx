@@ -20,19 +20,19 @@ interface CalendarDay {
 
 const WEEKDAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
-function startOfDay(date: Date): Date {
+const startOfDay = (date: Date): Date => {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
-}
+};
 
-function endOfDay(date: Date): Date {
+const endOfDay = (date: Date): Date => {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
-}
+};
 
-function addMonths(date: Date, amount: number): Date {
+const addMonths = (date: Date, amount: number): Date => {
   return new Date(date.getFullYear(), date.getMonth() + amount, 1);
-}
+};
 
-function formatTriggerLabel(value: DateRangeValue | null): string {
+const formatTriggerLabel = (value: DateRangeValue | null): string => {
   if (!value) {
     return 'Custom';
   }
@@ -41,9 +41,9 @@ function formatTriggerLabel(value: DateRangeValue | null): string {
   const to = new Date(value.to);
   const formatter = new Intl.DateTimeFormat([], { month: 'short', day: 'numeric' });
   return `${formatter.format(from)} - ${formatter.format(to)}`;
-}
+};
 
-function formatFullDate(date: Date | null): string {
+const formatFullDate = (date: Date | null): string => {
   if (!date) {
     return 'Select date';
   }
@@ -53,9 +53,9 @@ function formatFullDate(date: Date | null): string {
     month: 'short',
     day: 'numeric'
   }).format(date);
-}
+};
 
-function isSameDay(a: Date | null, b: Date | null): boolean {
+const isSameDay = (a: Date | null, b: Date | null): boolean => {
   if (!a || !b) {
     return false;
   }
@@ -65,13 +65,13 @@ function isSameDay(a: Date | null, b: Date | null): boolean {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   );
-}
+};
 
-function compareDay(a: Date, b: Date): number {
+const compareDay = (a: Date, b: Date): number => {
   return startOfDay(a).getTime() - startOfDay(b).getTime();
-}
+};
 
-function createMonthDays(month: Date): CalendarDay[] {
+const createMonthDays = (month: Date): CalendarDay[] => {
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
   const firstOfMonth = new Date(year, monthIndex, 1);
@@ -88,9 +88,9 @@ function createMonthDays(month: Date): CalendarDay[] {
   }
 
   return days;
-}
+};
 
-export function GlucoseDateRangePicker({ value, onApply }: GlucoseDateRangePickerProps) {
+export const GlucoseDateRangePicker = ({ value, onApply }: GlucoseDateRangePickerProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [leftMonth, setLeftMonth] = useState(() => startOfDay(new Date()));
   const [draftStart, setDraftStart] = useState<Date | null>(null);
@@ -366,4 +366,4 @@ export function GlucoseDateRangePicker({ value, onApply }: GlucoseDateRangePicke
       )}
     </div>
   );
-}
+};

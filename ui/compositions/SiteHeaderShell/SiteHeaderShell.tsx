@@ -7,7 +7,7 @@ const HIDE_SCROLL_THRESHOLD = 120;
 const SHOW_SCROLL_THRESHOLD = 56;
 const TOP_RESET_THRESHOLD = 24;
 
-export function SiteHeaderShell({ children }: Readonly<{ children: React.ReactNode }>) {
+export const SiteHeaderShell = ({ children }: Readonly<{ children: React.ReactNode }>) => {
   const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollYRef = useRef(0);
@@ -74,4 +74,4 @@ export function SiteHeaderShell({ children }: Readonly<{ children: React.ReactNo
       {children}
     </div>
   );
-}
+};

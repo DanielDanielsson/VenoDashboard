@@ -20,12 +20,12 @@ interface OverviewDashboardViewProps {
   allowDashboardDelete?: boolean;
 }
 
-export function OverviewDashboardView({
+export const OverviewDashboardView = ({
   context,
   dashboard,
   dashboardVersion,
   allowDashboardDelete = false,
-}: OverviewDashboardViewProps) {
+}: OverviewDashboardViewProps) => {
   const settingsRegistry = useMemo<DashboardPanelSettingsRegistry>(
     () => ({
       'veno.live-glucose': createCurrentGlucosePanelSettingsRegistration(),
@@ -66,4 +66,4 @@ export function OverviewDashboardView({
       </DashboardViewPanelUrlStateBridge>
     </>
   );
-}
+};

@@ -12,7 +12,7 @@ const HISTOGRAM_PALETTE = [
   'var(--color-histogram-chart-bar-alt)',
 ] as const;
 
-function buildTicks(maxValue: number): HistogramChartTick[] {
+const buildTicks = (maxValue: number): HistogramChartTick[] => {
   if (maxValue <= 0) {
     return [{ value: 0, label: '0' }];
   }
@@ -24,14 +24,14 @@ function buildTicks(maxValue: number): HistogramChartTick[] {
       label: Number.isInteger(value) ? String(value) : value.toFixed(1),
     };
   });
-}
+};
 
-export function HistogramChart({
+export const HistogramChart = ({
   data,
   ariaLabel,
   height = DEFAULT_HEIGHT,
   yTicks,
-}: HistogramChartProps): ReactElement {
+}: HistogramChartProps): ReactElement => {
   const chartWidth = VIEWBOX_WIDTH - PADDING.left - PADDING.right;
   const chartHeight = height - PADDING.top - PADDING.bottom;
   const maxValue = data.length ? Math.max(...data.map((bin) => Math.max(0, bin.value))) : 0;
@@ -98,4 +98,4 @@ export function HistogramChart({
       })}
     </svg>
   );
-}
+};

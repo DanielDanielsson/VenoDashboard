@@ -11,7 +11,7 @@ const LINKS = [
   { href: '/agents', label: 'Agents' }
 ] as const;
 
-export async function SiteHeader() {
+export const SiteHeader = async () => {
   const session = await getOwnerSession();
 
   return (
@@ -44,4 +44,4 @@ export async function SiteHeader() {
       </div>
     </header>
   );
-}
+};

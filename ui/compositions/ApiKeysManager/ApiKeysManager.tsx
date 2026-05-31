@@ -16,7 +16,7 @@ interface SecretState {
   warning?: string;
 }
 
-export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
+export const ApiKeysManager = ({ initialItems }: ApiKeysManagerProps) => {
   const [items, setItems] = useState(initialItems.filter((item) => !isSystemApiKeyName(item.name)));
   const [name, setName] = useState('');
   const [message, setMessage] = useState('Ready');
@@ -159,7 +159,7 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
         </div>
 
         {secret ? (
-          <div className="ui_helper_text mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-5 text-emerald-100">
+          <div className="ui_helper_text mt-6 rounded-2xl border border-base-success-border-dark bg-base-success-soft-dark p-5 text-base-success-dark">
             <p className="body_text_emphasis">Copy this now. The secret is shown once.</p>
             <p className="body_text mt-3">Name: {secret.name}</p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -174,16 +174,16 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
                 Copy API key
               </button>
             </div>
-            {secret.warning ? <p className="body_text mt-3 text-amber-100">{secret.warning}</p> : null}
+            {secret.warning ? <p className="body_text mt-3 text-base-warning-dark">{secret.warning}</p> : null}
           </div>
         ) : null}
 
         <p
           className={
             messageTone === 'error'
-              ? 'ui_helper_text mt-6 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-rose-200'
+              ? 'ui_helper_text mt-6 rounded-xl border border-base-error-border-dark bg-base-error-soft-dark px-4 py-3 text-base-error-dark'
               : messageTone === 'success'
-                ? 'ui_helper_text mt-6 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-emerald-200'
+                ? 'ui_helper_text mt-6 rounded-xl border border-base-success-border-dark bg-base-success-soft-dark px-4 py-3 text-base-success-dark'
                 : 'ui_helper_text mt-6 rounded-xl border border-border bg-surface-muted px-4 py-3 text-text-dim'
           }
         >
@@ -217,7 +217,7 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
                 <tr key={item.id}>
                   <td className="ui_table_text_strong px-4 py-4 text-text">{item.name}</td>
                   <td className="ui_mono_text px-4 py-4 text-text-dim">{item.id}</td>
-                  <td className="ui_table_text px-4 py-4 text-emerald-300">{item.status}</td>
+                  <td className="ui_table_text px-4 py-4 text-base-success-dark">{item.status}</td>
                   <td className="ui_table_text px-4 py-4 text-text-dim">{new Date(item.createdAt).toLocaleString()}</td>
                   <td className="ui_table_text px-4 py-4 text-text-dim">
                     {item.lastUsedAt ? new Date(item.lastUsedAt).toLocaleString() : 'Never'}
@@ -240,4 +240,4 @@ export function ApiKeysManager({ initialItems }: ApiKeysManagerProps) {
       </section>
     </div>
   );
-}
+};

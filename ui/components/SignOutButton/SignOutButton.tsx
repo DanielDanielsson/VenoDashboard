@@ -1,6 +1,6 @@
 'use client';
 
-export function SignOutButton() {
+export const SignOutButton = () => {
   async function signOut() {
     await fetch('/api/auth/logout', {
       method: 'POST'
@@ -18,4 +18,4 @@ export function SignOutButton() {
       Sign out
     </button>
   );
-}
+};

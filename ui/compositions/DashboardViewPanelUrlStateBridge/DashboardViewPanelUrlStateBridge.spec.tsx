@@ -41,7 +41,7 @@ vi.mock('react-grid-layout', () => ({
   noCompactor: () => [],
 }));
 
-function createLayout(): GridLayoutKind {
+const createLayout = (): GridLayoutKind => {
   return {
     kind: 'GridLayout',
     spec: {
@@ -75,7 +75,7 @@ function createLayout(): GridLayoutKind {
       ],
     },
   };
-}
+};
 
 describe('DashboardViewPanelUrlStateBridge', () => {
   test('opens the requested solo panel from a public viewPanel link', () => {

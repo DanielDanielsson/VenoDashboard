@@ -26,7 +26,7 @@ interface DashboardDefinitionRendererProps<TContext> {
   allowDashboardDelete?: boolean;
 }
 
-export function DashboardDefinitionRenderer<TContext>({
+export const DashboardDefinitionRenderer = <TContext,>({
   dashboard,
   dashboardType,
   panelRegistry,
@@ -43,7 +43,7 @@ export function DashboardDefinitionRenderer<TContext>({
   timeInRangeDefaultLayout,
   editControlsPortalId,
   allowDashboardDelete,
-}: DashboardDefinitionRendererProps<TContext>): ReactElement {
+}: DashboardDefinitionRendererProps<TContext>): ReactElement => {
   return (
     <DashboardGridRuntime
       dashboardUid={dashboard.spec.uid}
@@ -105,4 +105,4 @@ export function DashboardDefinitionRenderer<TContext>({
       })}
     </DashboardGridRuntime>
   );
-}
+};

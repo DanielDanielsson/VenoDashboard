@@ -61,25 +61,25 @@ const WYSIWYG_TEXT_MARK_OPTIONS = [
   { value: 'underline', label: 'Underline', icon: 'U', iconClassName: 'underline underline-offset-4' },
 ] satisfies ReadonlyArray<{ value: WysiwygTextMark; label: string; icon: string; iconClassName: string }>;
 
-function ChevronDownIcon(): ReactElement {
+const ChevronDownIcon = (): ReactElement => {
   return (
     <svg className="h-3 w-3" viewBox="0 0 20 20" aria-hidden="true">
       <path d="M5 7.5 10 12l5-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
-}
+};
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
+};
 
-function normalizeBlockType(value: unknown): WysiwygBlockType {
+const normalizeBlockType = (value: unknown): WysiwygBlockType => {
   return typeof value === 'string' && WYSIWYG_BLOCK_TYPES.has(value as WysiwygBlockType)
     ? value as WysiwygBlockType
     : 'paragraph';
-}
+};
 
-function normalizeMarks(value: unknown): WysiwygTextMark[] | undefined {
+const normalizeMarks = (value: unknown): WysiwygTextMark[] | undefined => {
   if (!Array.isArray(value)) {
     return undefined;
   }
@@ -92,9 +92,9 @@ function normalizeMarks(value: unknown): WysiwygTextMark[] | undefined {
   const marks = WYSIWYG_TEXT_MARKS.filter((mark) => validMarks.has(mark));
 
   return marks.length > 0 ? marks : undefined;
-}
+};
 
-function normalizeSpans(value: unknown): WysiwygTextSpan[] {
+const normalizeSpans = (value: unknown): WysiwygTextSpan[] => {
   if (!Array.isArray(value)) {
     return [{ text: '' }];
   }
@@ -111,17 +111,17 @@ function normalizeSpans(value: unknown): WysiwygTextSpan[] {
     });
 
   return spans.length > 0 ? mergeAdjacentSpans(spans) : [{ text: '' }];
-}
+};
 
-function areMarksEqual(left: WysiwygTextMark[] | undefined, right: WysiwygTextMark[] | undefined): boolean {
+const areMarksEqual = (left: WysiwygTextMark[] | undefined, right: WysiwygTextMark[] | undefined): boolean => {
   const normalizedLeft = left ?? [];
   const normalizedRight = right ?? [];
 
   return normalizedLeft.length === normalizedRight.length
     && normalizedLeft.every((mark, index) => normalizedRight[index] === mark);
-}
+};
 
-function mergeAdjacentSpans(spans: WysiwygTextSpan[]): WysiwygTextSpan[] {
+const mergeAdjacentSpans = (spans: WysiwygTextSpan[]): WysiwygTextSpan[] => {
   return spans.reduce<WysiwygTextSpan[]>((currentSpans, span) => {
     const previous = currentSpans.at(-1);
     if (!previous || !areMarksEqual(previous.marks, span.marks)) {
@@ -136,9 +136,9 @@ function mergeAdjacentSpans(spans: WysiwygTextSpan[]): WysiwygTextSpan[] {
       },
     ];
   }, []);
-}
+};
 
-export function createWysiwygDocument(text = ''): WysiwygDocument {
+export const createWysiwygDocument = (text = ''): WysiwygDocument => {
   return {
     version: 1,
     blocks: [
@@ -153,9 +153,9 @@ export function createWysiwygDocument(text = ''): WysiwygDocument {
       },
     ],
   };
-}
+};
 
-export function normalizeWysiwygDocument(value: unknown): WysiwygDocument {
+export const normalizeWysiwygDocument = (value: unknown): WysiwygDocument => {
   if (!isRecord(value) || !Array.isArray(value.blocks)) {
     return createWysiwygDocument();
   }
@@ -172,17 +172,17 @@ export function normalizeWysiwygDocument(value: unknown): WysiwygDocument {
     version: 1,
     blocks: blocks.length > 0 ? blocks : createWysiwygDocument().blocks,
   };
-}
+};
 
-function serializeWysiwygDocument(value: WysiwygDocument): string {
+const serializeWysiwygDocument = (value: WysiwygDocument): string => {
   return JSON.stringify(normalizeWysiwygDocument(value));
-}
+};
 
-function getBlockText(block: WysiwygBlock): string {
+const getBlockText = (block: WysiwygBlock): string => {
   return block.spans.map((span) => span.text).join('');
-}
+};
 
-function getContentClassName(type: WysiwygBlockType): string {
+const getContentClassName = (type: WysiwygBlockType): string => {
   if (type === 'heading') {
     return 'section_title text-text';
   }
@@ -192,9 +192,9 @@ function getContentClassName(type: WysiwygBlockType): string {
   }
 
   return 'body_text_relaxed text-text-soft';
-}
+};
 
-function getBlockTypeTypographyClassName(type: WysiwygBlockType): string {
+const getBlockTypeTypographyClassName = (type: WysiwygBlockType): string => {
   if (type === 'heading') {
     return 'section_title';
   }
@@ -204,9 +204,9 @@ function getBlockTypeTypographyClassName(type: WysiwygBlockType): string {
   }
 
   return 'body_text_relaxed';
-}
+};
 
-function renderMarkedText(text: string, marks: WysiwygTextMark[] = []): ReactNode {
+const renderMarkedText = (text: string, marks: WysiwygTextMark[] = []): ReactNode => {
   return marks.reduce<ReactNode>((content, mark) => {
     if (mark === 'bold') {
       return <strong>{content}</strong>;
@@ -218,17 +218,17 @@ function renderMarkedText(text: string, marks: WysiwygTextMark[] = []): ReactNod
 
     return <u>{content}</u>;
   }, text);
-}
+};
 
-function serializeMarks(marks: WysiwygTextMark[] | undefined): string | undefined {
+const serializeMarks = (marks: WysiwygTextMark[] | undefined): string | undefined => {
   return marks?.length ? marks.join(' ') : undefined;
-}
+};
 
-function parseSerializedMarks(value: string | undefined): WysiwygTextMark[] | undefined {
+const parseSerializedMarks = (value: string | undefined): WysiwygTextMark[] | undefined => {
   return normalizeMarks(value?.split(' '));
-}
+};
 
-function getEditableMarkClassName(marks: WysiwygTextMark[] | undefined): string | undefined {
+const getEditableMarkClassName = (marks: WysiwygTextMark[] | undefined): string | undefined => {
   if (!marks?.length) {
     return undefined;
   }
@@ -238,22 +238,22 @@ function getEditableMarkClassName(marks: WysiwygTextMark[] | undefined): string 
     marks.includes('italic') && 'italic',
     marks.includes('underline') && 'underline',
   );
-}
+};
 
-function renderInlineSpans(spans: WysiwygTextSpan[]): ReactNode {
+const renderInlineSpans = (spans: WysiwygTextSpan[]): ReactNode => {
   return spans.map((span, index) => (
     <span key={`${index}-${span.text}`}>
       {renderMarkedText(span.text, span.marks)}
     </span>
   ));
-}
+};
 
-export function WysiwygContent({
+export const WysiwygContent = ({
   value,
   emptyText = 'No text configured.',
   showOverflowFade = false,
   twStyles,
-}: WysiwygContentProps): ReactElement {
+}: WysiwygContentProps): ReactElement => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
   const blocks = useMemo(() => normalizeWysiwygDocument(value).blocks, [value]);
@@ -325,14 +325,14 @@ export function WysiwygContent({
       ) : null}
     </div>
   );
-}
+};
 
-function updateEditableBlockElementType(element: HTMLElement, type: WysiwygBlockType) {
+const updateEditableBlockElementType = (element: HTMLElement, type: WysiwygBlockType) => {
   element.dataset.wysiwygBlockType = type;
   element.className = twMerge('outline-none', getContentClassName(type));
-}
+};
 
-function renderEditableBlocks(editorElement: HTMLElement, blocks: WysiwygBlock[]) {
+const renderEditableBlocks = (editorElement: HTMLElement, blocks: WysiwygBlock[]) => {
   const nextChildren = blocks.map((block) => {
     const element = document.createElement('div');
     element.dataset.wysiwygBlock = '';
@@ -359,21 +359,21 @@ function renderEditableBlocks(editorElement: HTMLElement, blocks: WysiwygBlock[]
   });
 
   editorElement.replaceChildren(...nextChildren);
-}
+};
 
-function isEditableBlockElement(node: ChildNode): node is HTMLElement {
+const isEditableBlockElement = (node: ChildNode): node is HTMLElement => {
   return node instanceof HTMLElement && node.dataset.wysiwygBlock !== undefined;
-}
+};
 
-function hasUnstructuredEditorChildren(editorElement: HTMLElement): boolean {
+const hasUnstructuredEditorChildren = (editorElement: HTMLElement): boolean => {
   return Array.from(editorElement.childNodes).some((child) => !isEditableBlockElement(child));
-}
+};
 
-function getBlockTypeFromElement(element: HTMLElement): WysiwygBlockType {
+const getBlockTypeFromElement = (element: HTMLElement): WysiwygBlockType => {
   return normalizeBlockType(element.dataset.wysiwygBlockType);
-}
+};
 
-function getSpansFromEditableBlockElement(element: HTMLElement): WysiwygTextSpan[] {
+const getSpansFromEditableBlockElement = (element: HTMLElement): WysiwygTextSpan[] => {
   const spans = Array.from(element.childNodes).reduce<WysiwygTextSpan[]>((currentSpans, child) => {
     if (child instanceof HTMLElement) {
       const marks = parseSerializedMarks(child.dataset.wysiwygMarks);
@@ -396,12 +396,12 @@ function getSpansFromEditableBlockElement(element: HTMLElement): WysiwygTextSpan
   }, []);
 
   return spans.length > 0 ? mergeAdjacentSpans(spans) : [{ text: '' }];
-}
+};
 
-function createBlocksFromEditableElement(
+const createBlocksFromEditableElement = (
   editorElement: HTMLElement,
   previousBlocks: WysiwygBlock[],
-): WysiwygBlock[] {
+): WysiwygBlock[] => {
   const childNodes = Array.from(editorElement.childNodes);
 
   if (childNodes.length === 0) {
@@ -442,9 +442,9 @@ function createBlocksFromEditableElement(
   }, []);
 
   return blocks.length > 0 ? blocks : createWysiwygDocument().blocks;
-}
+};
 
-function getEditableBlockElementForNode(editorElement: HTMLElement, node: Node | null): HTMLElement | null {
+const getEditableBlockElementForNode = (editorElement: HTMLElement, node: Node | null): HTMLElement | null => {
   if (!node || !editorElement.contains(node)) {
     return null;
   }
@@ -455,29 +455,29 @@ function getEditableBlockElementForNode(editorElement: HTMLElement, node: Node |
   return blockElement instanceof HTMLElement && blockElement.parentElement === editorElement
     ? blockElement
     : null;
-}
+};
 
-function getEditableBlockIndex(editorElement: HTMLElement, blockElement: HTMLElement): number {
+const getEditableBlockIndex = (editorElement: HTMLElement, blockElement: HTMLElement): number => {
   return Math.max(0, Array.from(editorElement.children).findIndex((child) => child === blockElement));
-}
+};
 
-function getTextOffsetWithinBlock(blockElement: HTMLElement, node: Node, offset: number): number {
+const getTextOffsetWithinBlock = (blockElement: HTMLElement, node: Node, offset: number): number => {
   const range = document.createRange();
   range.selectNodeContents(blockElement);
   range.setEnd(node, offset);
 
   return range.toString().length;
-}
+};
 
-function getTextOffsetWithinElement(element: HTMLElement, node: Node, offset: number): number {
+const getTextOffsetWithinElement = (element: HTMLElement, node: Node, offset: number): number => {
   const range = document.createRange();
   range.selectNodeContents(element);
   range.setEnd(node, offset);
 
   return range.toString().length;
-}
+};
 
-function blockSelectionHasMark(block: WysiwygBlock, startOffset: number, endOffset: number, mark: WysiwygTextMark): boolean {
+const blockSelectionHasMark = (block: WysiwygBlock, startOffset: number, endOffset: number, mark: WysiwygTextMark): boolean => {
   let textOffset = 0;
   const selectedSpans = block.spans.filter((span) => {
     const spanStart = textOffset;
@@ -488,9 +488,9 @@ function blockSelectionHasMark(block: WysiwygBlock, startOffset: number, endOffs
   });
 
   return selectedSpans.length > 0 && selectedSpans.every((span) => span.marks?.includes(mark));
-}
+};
 
-function setMarkOnSpan(marks: WysiwygTextMark[] | undefined, mark: WysiwygTextMark, enabled: boolean): WysiwygTextMark[] | undefined {
+const setMarkOnSpan = (marks: WysiwygTextMark[] | undefined, mark: WysiwygTextMark, enabled: boolean): WysiwygTextMark[] | undefined => {
   const currentMarks = new Set(marks ?? []);
   if (enabled) {
     currentMarks.add(mark);
@@ -500,25 +500,25 @@ function setMarkOnSpan(marks: WysiwygTextMark[] | undefined, mark: WysiwygTextMa
 
   const nextMarks = WYSIWYG_TEXT_MARKS.filter((item) => currentMarks.has(item));
   return nextMarks.length ? nextMarks : undefined;
-}
+};
 
-function mergeTextMarks(
+const mergeTextMarks = (
   currentMarks: WysiwygTextMark[] | undefined,
   marksToAdd: WysiwygTextMark[],
-): WysiwygTextMark[] | undefined {
+): WysiwygTextMark[] | undefined => {
   const nextMarks = new Set(currentMarks ?? []);
   marksToAdd.forEach((mark) => nextMarks.add(mark));
 
   const marks = WYSIWYG_TEXT_MARKS.filter((mark) => nextMarks.has(mark));
   return marks.length > 0 ? marks : undefined;
-}
+};
 
-function applyMarkToBlock(
+const applyMarkToBlock = (
   block: WysiwygBlock,
   startOffset: number,
   endOffset: number,
   mark: WysiwygTextMark,
-): WysiwygBlock {
+): WysiwygBlock => {
   const shouldRemoveMark = blockSelectionHasMark(block, startOffset, endOffset, mark);
   let textOffset = 0;
   const nextSpans = block.spans.flatMap<WysiwygTextSpan>((span) => {
@@ -552,14 +552,14 @@ function applyMarkToBlock(
     ...block,
     spans: mergeAdjacentSpans(nextSpans),
   };
-}
+};
 
-function addMarksToBlockRange(
+const addMarksToBlockRange = (
   block: WysiwygBlock,
   startOffset: number,
   endOffset: number,
   marks: WysiwygTextMark[],
-): WysiwygBlock {
+): WysiwygBlock => {
   if (marks.length === 0 || endOffset <= startOffset) {
     return block;
   }
@@ -596,9 +596,9 @@ function addMarksToBlockRange(
     ...block,
     spans: mergeAdjacentSpans(nextSpans),
   };
-}
+};
 
-function getInsertedRange(previousText: string, nextText: string): [number, number] | null {
+const getInsertedRange = (previousText: string, nextText: string): [number, number] | null => {
   if (nextText.length <= previousText.length) {
     return null;
   }
@@ -624,21 +624,21 @@ function getInsertedRange(previousText: string, nextText: string): [number, numb
   }
 
   return [prefixLength, nextSuffixIndex];
-}
+};
 
-function applyActiveMarksToInsertedText(
+const applyActiveMarksToInsertedText = (
   previousBlock: WysiwygBlock | undefined,
   nextBlock: WysiwygBlock,
   activeMarks: WysiwygTextMark[],
-): WysiwygBlock {
+): WysiwygBlock => {
   const insertedRange = getInsertedRange(previousBlock ? getBlockText(previousBlock) : '', getBlockText(nextBlock));
 
   return insertedRange
     ? addMarksToBlockRange(nextBlock, insertedRange[0], insertedRange[1], activeMarks)
     : nextBlock;
-}
+};
 
-function createBlockId(blocks: WysiwygBlock[]): string {
+const createBlockId = (blocks: WysiwygBlock[]): string => {
   let nextIndex = blocks.length + 1;
   let nextId = `block-${nextIndex}`;
   const existingIds = new Set(blocks.map((block) => block.id));
@@ -649,9 +649,9 @@ function createBlockId(blocks: WysiwygBlock[]): string {
   }
 
   return nextId;
-}
+};
 
-function splitSpansAtOffset(spans: WysiwygTextSpan[], offset: number): [WysiwygTextSpan[], WysiwygTextSpan[]] {
+const splitSpansAtOffset = (spans: WysiwygTextSpan[], offset: number): [WysiwygTextSpan[], WysiwygTextSpan[]] => {
   let textOffset = 0;
   const beforeSpans: WysiwygTextSpan[] = [];
   const afterSpans: WysiwygTextSpan[] = [];
@@ -688,24 +688,24 @@ function splitSpansAtOffset(spans: WysiwygTextSpan[], offset: number): [WysiwygT
     beforeSpans.length > 0 ? mergeAdjacentSpans(beforeSpans) : [{ text: '' }],
     afterSpans.length > 0 ? mergeAdjacentSpans(afterSpans) : [{ text: '' }],
   ];
-}
+};
 
-function createTextSpans(text: string, marks: WysiwygTextMark[]): WysiwygTextSpan[] {
+const createTextSpans = (text: string, marks: WysiwygTextMark[]): WysiwygTextSpan[] => {
   return [
     {
       text,
       ...(marks.length > 0 ? { marks } : {}),
     },
   ];
-}
+};
 
-function insertPlainTextIntoBlocks(
+const insertPlainTextIntoBlocks = (
   blocks: WysiwygBlock[],
   blockIndex: number,
   splitOffset: number,
   text: string,
   activeMarks: WysiwygTextMark[],
-): WysiwygBlock[] {
+): WysiwygBlock[] => {
   const currentBlock = blocks[blockIndex] ?? blocks[0] ?? createWysiwygDocument().blocks[0];
   const [beforeSpans, afterSpans] = splitSpansAtOffset(currentBlock.spans, splitOffset);
   const pastedLines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
@@ -745,13 +745,13 @@ function insertPlainTextIntoBlocks(
     ...insertedBlocks,
     ...baseBlocks.slice(blockIndex),
   ];
-}
+};
 
-function getPlainTextPasteCaretPosition(
+const getPlainTextPasteCaretPosition = (
   text: string,
   blockIndex: number,
   splitOffset: number,
-): { blockIndex: number; offset: number } {
+): { blockIndex: number; offset: number } => {
   const pastedLines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   const lastLine = pastedLines.at(-1) ?? '';
 
@@ -759,9 +759,9 @@ function getPlainTextPasteCaretPosition(
     blockIndex: blockIndex + pastedLines.length - 1,
     offset: pastedLines.length === 1 ? splitOffset + lastLine.length : lastLine.length,
   };
-}
+};
 
-function getShortcutMark(event: KeyboardEvent<HTMLDivElement>): WysiwygTextMark | null {
+const getShortcutMark = (event: KeyboardEvent<HTMLDivElement>): WysiwygTextMark | null => {
   if ((!event.metaKey && !event.ctrlKey) || event.altKey) {
     return null;
   }
@@ -780,9 +780,9 @@ function getShortcutMark(event: KeyboardEvent<HTMLDivElement>): WysiwygTextMark 
   }
 
   return null;
-}
+};
 
-function getTextPositionInBlock(blockElement: HTMLElement, offset: number): { node: Node; offset: number } {
+const getTextPositionInBlock = (blockElement: HTMLElement, offset: number): { node: Node; offset: number } => {
   const walker = document.createTreeWalker(blockElement, NodeFilter.SHOW_TEXT);
   let remainingOffset = offset;
   let lastTextNode: Text | null = null;
@@ -805,9 +805,9 @@ function getTextPositionInBlock(blockElement: HTMLElement, offset: number): { no
   }
 
   return { node: fallbackTextNode, offset: fallbackTextNode.data.length };
-}
+};
 
-function setCaretInBlock(editorElement: HTMLElement, blockIndex: number, offset: number) {
+const setCaretInBlock = (editorElement: HTMLElement, blockIndex: number, offset: number) => {
   const blockElement = editorElement.children[blockIndex];
   const selection = window.getSelection();
   if (!(blockElement instanceof HTMLElement) || !selection) {
@@ -821,12 +821,12 @@ function setCaretInBlock(editorElement: HTMLElement, blockIndex: number, offset:
   range.collapse(true);
   selection.removeAllRanges();
   selection.addRange(range);
-}
+};
 
-function getBlockPositionFromTextOffset(
+const getBlockPositionFromTextOffset = (
   blocks: WysiwygBlock[],
   textOffset: number,
-): { blockIndex: number; offset: number } {
+): { blockIndex: number; offset: number } => {
   let remainingOffset = textOffset;
 
   for (let index = 0; index < blocks.length; index += 1) {
@@ -843,13 +843,13 @@ function getBlockPositionFromTextOffset(
     blockIndex: lastBlockIndex,
     offset: getBlockText(blocks[lastBlockIndex] ?? createWysiwygDocument().blocks[0]).length,
   };
-}
+};
 
-function getEditorSelectionPosition(
+const getEditorSelectionPosition = (
   editorElement: HTMLElement,
   range: Range,
   blocks: WysiwygBlock[],
-): { blockIndex: number; offset: number } {
+): { blockIndex: number; offset: number } => {
   const blockElement = getEditableBlockElementForNode(editorElement, range.startContainer);
   if (blockElement) {
     return {
@@ -862,14 +862,14 @@ function getEditorSelectionPosition(
     blocks,
     getTextOffsetWithinElement(editorElement, range.startContainer, range.startOffset),
   );
-}
+};
 
-export function WysiwygEditor({
+export const WysiwygEditor = ({
   value,
   onChange,
   label = 'Text content',
   twStyles,
-}: WysiwygEditorProps): ReactElement {
+}: WysiwygEditorProps): ReactElement => {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const blockTypeMenuRef = useRef<HTMLDivElement | null>(null);
   const previousBlocksRef = useRef<WysiwygBlock[]>([]);
@@ -1308,4 +1308,4 @@ export function WysiwygEditor({
       </div>
     </div>
   );
-}
+};

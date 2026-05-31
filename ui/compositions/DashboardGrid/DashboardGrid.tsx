@@ -119,14 +119,14 @@ const DashboardPanelSettingsContext = createContext<DashboardPanelSettingsContex
   updateSettings: () => {},
 });
 
-export function useDashboardGridActions(): DashboardGridActions {
+export const useDashboardGridActions = (): DashboardGridActions => {
   return useContext(DashboardGridActionsContext);
-}
+};
 
-export function useDashboardPanelSettings<TSettings>(
+export const useDashboardPanelSettings = <TSettings,>(
   panelId: string,
   defaultSettings: TSettings,
-): readonly [TSettings, (updater: (current: TSettings) => TSettings) => void] {
+): readonly [TSettings, (updater: (current: TSettings) => TSettings) => void] => {
   const context = useContext(DashboardPanelSettingsContext);
   const settings = context.getSettings(panelId, defaultSettings);
 
@@ -136,9 +136,9 @@ export function useDashboardPanelSettings<TSettings>(
       context.updateSettings(panelId, defaultSettings, updater);
     },
   ] as const;
-}
+};
 
-function getChildPanelId(child: ReactNode): string | null {
+const getChildPanelId = (child: ReactNode): string | null => {
   if (!child || typeof child !== 'object' || !('props' in child)) {
     return null;
   }
@@ -154,9 +154,9 @@ function getChildPanelId(child: ReactNode): string | null {
   }
 
   return key.replace(/^\.\$/, '');
-}
+};
 
-function getHoveredDashboardPanelId(root: ParentNode | null): string | null {
+const getHoveredDashboardPanelId = (root: ParentNode | null): string | null => {
   if (!root) {
     return null;
   }
@@ -165,25 +165,25 @@ function getHoveredDashboardPanelId(root: ParentNode | null): string | null {
   const hoveredPanel = hoveredPanels[hoveredPanels.length - 1];
 
   return hoveredPanel?.dataset.dashboardPanelId ?? null;
-}
+};
 
-function normalizeGridChildKey(child: ReactNode, panelId: string): ReactNode {
+const normalizeGridChildKey = (child: ReactNode, panelId: string): ReactNode => {
   if (!isValidElement(child)) {
     return child;
   }
 
   return cloneElement(child, { key: panelId });
-}
+};
 
-function clonePanelSettings(settings: Record<string, unknown>): Record<string, unknown> {
+const clonePanelSettings = (settings: Record<string, unknown>): Record<string, unknown> => {
   return structuredClone(settings);
-}
+};
 
-function clonePanelElements(elements: Record<string, PanelKind>): Record<string, PanelKind> {
+const clonePanelElements = (elements: Record<string, PanelKind>): Record<string, PanelKind> => {
   return structuredClone(elements);
-}
+};
 
-function sortSerializable(value: unknown): unknown {
+const sortSerializable = (value: unknown): unknown => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return value;
   }
@@ -193,13 +193,13 @@ function sortSerializable(value: unknown): unknown {
       .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
       .map(([key, item]) => [key, sortSerializable(item)]),
   );
-}
+};
 
-function isPlainSettingsObject(value: unknown): value is Record<string, unknown> {
+const isPlainSettingsObject = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
+};
 
-function mergeDefaultSettings<TSettings>(defaultSettings: TSettings, override: unknown): TSettings {
+const mergeDefaultSettings = <TSettings,>(defaultSettings: TSettings, override: unknown): TSettings => {
   if (isPlainSettingsObject(defaultSettings) && isPlainSettingsObject(override)) {
     return {
       ...defaultSettings,
@@ -208,28 +208,28 @@ function mergeDefaultSettings<TSettings>(defaultSettings: TSettings, override: u
   }
 
   return (override ?? defaultSettings) as TSettings;
-}
+};
 
-function serializeSettings(value: unknown): string {
+const serializeSettings = (value: unknown): string => {
   return JSON.stringify(sortSerializable(value));
-}
+};
 
-function cloneTimeSettings(timeSettings: DashboardTimeSettingsKind): DashboardTimeSettingsKind {
+const cloneTimeSettings = (timeSettings: DashboardTimeSettingsKind): DashboardTimeSettingsKind => {
   return {
     autoRefresh: timeSettings.autoRefresh,
     autoRefreshIntervals: [...timeSettings.autoRefreshIntervals],
   };
-}
+};
 
-function normalizeLayoutNumber(value: number, fallback: number): number {
+const normalizeLayoutNumber = (value: number, fallback: number): number => {
   return Number.isFinite(value) ? Math.round(value) : fallback;
-}
+};
 
-function clampLayoutNumber(value: number, min: number, max: number): number {
+const clampLayoutNumber = (value: number, min: number, max: number): number => {
   return Math.min(max, Math.max(min, value));
-}
+};
 
-function normalizeDashboardPanelLayoutState(layout: DashboardPanelLayoutState): DashboardPanelLayoutState {
+const normalizeDashboardPanelLayoutState = (layout: DashboardPanelLayoutState): DashboardPanelLayoutState => {
   const width = Math.min(
     gridConfig.cols,
     Math.max(1, normalizeLayoutNumber(layout.width, 1)),
@@ -243,37 +243,37 @@ function normalizeDashboardPanelLayoutState(layout: DashboardPanelLayoutState): 
     width,
     height,
   };
-}
+};
 
-function getGridColumnWidth(containerWidth: number): number {
+const getGridColumnWidth = (containerWidth: number): number => {
   return (
     containerWidth -
     gridConfig.margin[0] * (gridConfig.cols - 1) -
     gridConfig.containerPadding[0] * 2
   ) / gridConfig.cols;
-}
+};
 
-function gridWidthToPixels(gridWidth: number, columnWidth: number): number {
+const gridWidthToPixels = (gridWidth: number, columnWidth: number): number => {
   return columnWidth * gridWidth + Math.max(0, gridWidth - 1) * gridConfig.margin[0];
-}
+};
 
-function gridHeightToPixels(gridHeight: number): number {
+const gridHeightToPixels = (gridHeight: number): number => {
   return gridConfig.rowHeight * gridHeight + Math.max(0, gridHeight - 1) * gridConfig.margin[1];
-}
+};
 
-function pixelsToGridWidth(pixelWidth: number, columnWidth: number): number {
+const pixelsToGridWidth = (pixelWidth: number, columnWidth: number): number => {
   return Math.round((pixelWidth + gridConfig.margin[0]) / (columnWidth + gridConfig.margin[0]));
-}
+};
 
-function pixelsToGridHeight(pixelHeight: number): number {
+const pixelsToGridHeight = (pixelHeight: number): number => {
   return Math.round((pixelHeight + gridConfig.margin[1]) / (gridConfig.rowHeight + gridConfig.margin[1]));
-}
+};
 
-function getAspectRatioLayoutState(
+const getAspectRatioLayoutState = (
   current: DashboardPanelLayoutState,
   options: DashboardPanelAspectRatioLayoutOptions,
   containerWidth: number,
-): DashboardPanelLayoutState {
+): DashboardPanelLayoutState => {
   const normalizedCurrent = normalizeDashboardPanelLayoutState(current);
   const columnWidth = getGridColumnWidth(containerWidth);
 
@@ -306,14 +306,14 @@ function getAspectRatioLayoutState(
     width: nextWidth,
     height: nextHeight,
   });
-}
+};
 
-function getGridHeightForAspectRatio(
+const getGridHeightForAspectRatio = (
   gridWidth: number,
   aspectRatio: number,
   containerWidth: number,
   fallbackHeight: number,
-): number {
+): number => {
   const columnWidth = getGridColumnWidth(containerWidth);
 
   if (!Number.isFinite(columnWidth) || columnWidth <= 0 || !Number.isFinite(aspectRatio) || aspectRatio <= 0) {
@@ -322,9 +322,9 @@ function getGridHeightForAspectRatio(
 
   const pixelWidth = gridWidthToPixels(gridWidth, columnWidth);
   return Math.max(1, pixelsToGridHeight(pixelWidth / aspectRatio));
-}
+};
 
-function serializeLayout(layout: Layout): string {
+const serializeLayout = (layout: Layout): string => {
   return JSON.stringify(
     layout
       .map((item) => ({
@@ -336,37 +336,37 @@ function serializeLayout(layout: Layout): string {
       }))
       .sort((left, right) => left.i.localeCompare(right.i)),
   );
-}
+};
 
-function serializeElements(elements: Record<string, PanelKind>): string {
+const serializeElements = (elements: Record<string, PanelKind>): string => {
   return JSON.stringify(sortSerializable(elements));
-}
+};
 
-function getPanelSettingsRegistration(
+const getPanelSettingsRegistration = (
   settingsRegistry: DashboardPanelSettingsRegistry,
   panel: PanelKind,
-): DashboardPanelSettingsRegistration | undefined {
+): DashboardPanelSettingsRegistration | undefined => {
   return settingsRegistry[panel.spec.vizConfig.group];
-}
+};
 
-function getPanelSettingsEntries(
+const getPanelSettingsEntries = (
   settingsRegistry: DashboardPanelSettingsRegistry,
   elements: Record<string, PanelKind>,
-): Array<[string, DashboardPanelSettingsRegistration]> {
+): Array<[string, DashboardPanelSettingsRegistration]> => {
   return Object.entries(elements)
     .map(([panelId, panel]) => {
       const registration = getPanelSettingsRegistration(settingsRegistry, panel);
       return registration ? [panelId, registration] as const : null;
     })
     .filter((entry): entry is [string, DashboardPanelSettingsRegistration] => Boolean(entry));
-}
+};
 
-function buildEffectivePanelSettings(
+const buildEffectivePanelSettings = (
   settingsRegistry: DashboardPanelSettingsRegistry,
   elements: Record<string, PanelKind>,
   persistedPanelSettings: Record<string, unknown>,
   runtimePanelSettings: Record<string, unknown>,
-): Record<string, unknown> {
+): Record<string, unknown> => {
   return Object.fromEntries(
     getPanelSettingsEntries(settingsRegistry, elements).map(([panelId, registration]) => [
       panelId,
@@ -376,12 +376,12 @@ function buildEffectivePanelSettings(
       ),
     ]),
   );
-}
+};
 
-function getNextAddedPanelId(
+const getNextAddedPanelId = (
   entry: DashboardPanelCatalogEntry,
   elements: Record<string, PanelKind>,
-): string {
+): string => {
   if (!entry.allowMultiple || !elements[entry.elementName]) {
     return entry.elementName;
   }
@@ -395,17 +395,17 @@ function getNextAddedPanelId(
   }
 
   return nextPanelId;
-}
+};
 
-function getNextAddedPanelNumericId(elements: Record<string, PanelKind>): number {
+const getNextAddedPanelNumericId = (elements: Record<string, PanelKind>): number => {
   const existingIds = Object.values(elements)
     .map((element) => element.spec.id)
     .filter((id) => Number.isFinite(id));
 
   return existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
-}
+};
 
-export function DashboardGrid({
+export const DashboardGrid = ({
   layout,
   children,
   dashboardType,
@@ -426,7 +426,7 @@ export function DashboardGrid({
   onUnauthorizedSaveDashboard,
   onSaveDashboard,
   onDeleteDashboard,
-}: DashboardGridProps): ReactElement {
+}: DashboardGridProps): ReactElement => {
   const initialLayout = useMemo(() => toReactGridLayoutItems(layout.spec.items), [layout]);
   const [persistedLayout, setPersistedLayout] = useState<Layout>(() => cloneReactGridLayoutItems(initialLayout));
   const [runtimeLayout, setRuntimeLayout] = useState<Layout>(() => cloneReactGridLayoutItems(initialLayout));
@@ -1430,4 +1430,4 @@ export function DashboardGrid({
       </DashboardPanelSettingsContext.Provider>
     </DashboardGridActionsContext.Provider>
   );
-}
+};

@@ -19,15 +19,15 @@ export interface DropdownMenuProps<TValue extends string = string> {
   twStyles?: string;
 }
 
-function ChevronDownIcon(): ReactElement {
+const ChevronDownIcon = (): ReactElement => {
   return (
     <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" aria-hidden="true">
       <path d="M5 7.5 10 12l5-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
-}
+};
 
-export function DropdownMenu<TValue extends string = string>({
+export const DropdownMenu = <TValue extends string = string,>({
   label,
   value,
   placeholder,
@@ -35,7 +35,7 @@ export function DropdownMenu<TValue extends string = string>({
   onChange,
   disabled = false,
   twStyles,
-}: DropdownMenuProps<TValue>): ReactElement {
+}: DropdownMenuProps<TValue>): ReactElement => {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerId = useId();
@@ -137,4 +137,4 @@ export function DropdownMenu<TValue extends string = string>({
       ) : null}
     </div>
   );
-}
+};

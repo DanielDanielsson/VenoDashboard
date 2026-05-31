@@ -8,7 +8,7 @@ interface ConnectedEventPayload {
   cursor?: number | string | null;
 }
 
-function parseCursor(data: string): number | null {
+const parseCursor = (data: string): number | null => {
   try {
     const payload = JSON.parse(data) as ConnectedEventPayload;
     if (typeof payload.cursor === 'number') {
@@ -23,9 +23,9 @@ function parseCursor(data: string): number | null {
   }
 
   return null;
-}
+};
 
-export function DashboardNotificationsBridge() {
+export const DashboardNotificationsBridge = () => {
   const router = useRouter();
   const lastSeqRef = useRef(0);
 
@@ -108,4 +108,4 @@ export function DashboardNotificationsBridge() {
   }, [router]);
 
   return null;
-}
+};

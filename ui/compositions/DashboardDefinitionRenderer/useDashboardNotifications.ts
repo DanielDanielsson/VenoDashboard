@@ -7,7 +7,7 @@ interface DashboardNotificationOptions {
   dashboardUid: string;
 }
 
-export function useDashboardNotifications({ dashboardUid }: DashboardNotificationOptions) {
+export const useDashboardNotifications = ({ dashboardUid }: DashboardNotificationOptions) => {
   void dashboardUid;
   const { notifyError, notifySuccess } = useNotifications();
 
@@ -39,4 +39,4 @@ export function useDashboardNotifications({ dashboardUid }: DashboardNotificatio
       });
     },
   }), [notifyError, notifySuccess]);
-}
+};

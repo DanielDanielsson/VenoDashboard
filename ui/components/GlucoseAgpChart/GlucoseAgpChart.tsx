@@ -29,20 +29,20 @@ interface PlotPoint {
   y: number;
 }
 
-function clamp(value: number, min: number, max: number): number {
+const clamp = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(value, max));
-}
+};
 
-function formatHourLabel(minuteOfDay: number): string {
+const formatHourLabel = (minuteOfDay: number): string => {
   if (minuteOfDay >= 24 * 60) {
     return '24:00';
   }
 
   const hours = Math.floor(minuteOfDay / 60);
   return `${hours.toString().padStart(2, '0')}:00`;
-}
+};
 
-function formatFilterSummary(filter: AgpWeekdayFilter, dayCount: number): string {
+const formatFilterSummary = (filter: AgpWeekdayFilter, dayCount: number): string => {
   if (filter === 'all') {
     return `${dayCount} day${dayCount === 1 ? '' : 's'} in view`;
   }
@@ -54,9 +54,9 @@ function formatFilterSummary(filter: AgpWeekdayFilter, dayCount: number): string
 
   const baseLabel = dayCount === 1 ? option.label.slice(0, -1) : option.label;
   return `${dayCount} ${baseLabel.toLowerCase()} in view`;
-}
+};
 
-function getYAxisTicks(yMax: number): number[] {
+const getYAxisTicks = (yMax: number): number[] => {
   const range = yMax - Y_MIN;
   const roughStep = range / 8;
 
@@ -86,9 +86,9 @@ function getYAxisTicks(yMax: number): number[] {
   }
 
   return ticks;
-}
+};
 
-function getCoverageDurationMs(items: ChartPoint[]): number {
+const getCoverageDurationMs = (items: ChartPoint[]): number => {
   if (items.length < 2) {
     return 0;
   }
@@ -107,9 +107,9 @@ function getCoverageDurationMs(items: ChartPoint[]): number {
   }
 
   return Number.isFinite(min) && Number.isFinite(max) ? Math.max(0, max - min) : 0;
-}
+};
 
-function buildLineSegments(points: Array<PlotPoint | null>): string[] {
+const buildLineSegments = (points: Array<PlotPoint | null>): string[] => {
   const paths: string[] = [];
   let current: PlotPoint[] = [];
 
@@ -130,12 +130,12 @@ function buildLineSegments(points: Array<PlotPoint | null>): string[] {
   }
 
   return paths;
-}
+};
 
-function buildBandSegments(
+const buildBandSegments = (
   upper: Array<PlotPoint | null>,
   lower: Array<PlotPoint | null>
-): string[] {
+): string[] => {
   const paths: string[] = [];
   let upperSegment: PlotPoint[] = [];
   let lowerSegment: PlotPoint[] = [];
@@ -173,9 +173,9 @@ function buildBandSegments(
   }
 
   return paths;
-}
+};
 
-export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpChartProps) {
+export const GlucoseAgpChart = ({ data, height = 320, yMax = 25 }: GlucoseAgpChartProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [weekdayFilter, setWeekdayFilter] = useState<AgpWeekdayFilter>('all');
@@ -612,4 +612,4 @@ export function GlucoseAgpChart({ data, height = 320, yMax = 25 }: GlucoseAgpCha
       </div>
     </div>
   );
-}
+};

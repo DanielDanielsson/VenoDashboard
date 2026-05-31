@@ -16,7 +16,7 @@ const CORE_DOC_LINKS = [
   { href: '/docs/errors', label: 'Errors' }
 ];
 
-export function DocsSidebar({ groups }: DocsSidebarProps) {
+export const DocsSidebar = ({ groups }: DocsSidebarProps) => {
   return (
     <aside className="docs-sidebar">
       <section className="panel docs-shell">
@@ -50,4 +50,4 @@ export function DocsSidebar({ groups }: DocsSidebarProps) {
       </section>
     </aside>
   );
-}
+};

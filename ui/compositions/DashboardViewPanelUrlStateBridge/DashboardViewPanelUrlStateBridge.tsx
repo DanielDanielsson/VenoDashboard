@@ -18,13 +18,13 @@ interface DashboardViewPanelUrlStateBridgeProps {
   }) => ReactNode;
 }
 
-export function DashboardViewPanelUrlStateBridge({
+export const DashboardViewPanelUrlStateBridge = ({
   allowedPanelIds,
   panelIdAliases = {},
   dashboardTitle,
   dashboardUid,
   children,
-}: DashboardViewPanelUrlStateBridgeProps) {
+}: DashboardViewPanelUrlStateBridgeProps) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const lastInvalidSearchRef = useRef<string | null>(null);
@@ -198,4 +198,4 @@ export function DashboardViewPanelUrlStateBridge({
     editedPanelId: localEditedPanelId,
     onEditedPanelChange,
   });
-}
+};

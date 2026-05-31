@@ -12,25 +12,25 @@ interface LatestReading {
   timestamp: string;
 }
 
-function getColorMode(): GlucoseColorMode {
+const getColorMode = (): GlucoseColorMode => {
   try {
     const stored = localStorage.getItem(COLOR_MODE_KEY);
     return stored === 'gradient' || stored === 'standard' ? stored : 'gradient';
   } catch {
     return 'gradient';
   }
-}
+};
 
-function getReadingAgeMs(timestamp: string, nowMs = Date.now()): number {
+const getReadingAgeMs = (timestamp: string, nowMs = Date.now()): number => {
   const readingMs = new Date(timestamp).getTime();
   return Number.isFinite(readingMs) ? nowMs - readingMs : Number.POSITIVE_INFINITY;
-}
+};
 
-export function isDynamicFaviconReadingStale(timestamp: string, nowMs = Date.now()): boolean {
+export const isDynamicFaviconReadingStale = (timestamp: string, nowMs = Date.now()): boolean => {
   return getReadingAgeMs(timestamp, nowMs) > FAVICON_STALE_MS;
-}
+};
 
-function drawFaviconDataUrl(valueMmolL: number, colorOverride?: string): string {
+const drawFaviconDataUrl = (valueMmolL: number, colorOverride?: string): string => {
   const color = colorOverride ?? getGlucoseColor(valueMmolL, getColorMode());
   const size = 32;
   const canvas = document.createElement('canvas');
@@ -49,13 +49,13 @@ function drawFaviconDataUrl(valueMmolL: number, colorOverride?: string): string 
   ctx.fill();
 
   return canvas.toDataURL('image/png');
-}
+};
 
-function getStaleFaviconColor(): string {
+const getStaleFaviconColor = (): string => {
   return getComputedStyle(document.documentElement).getPropertyValue('--color-base-white').trim() || STALE_FAVICON_COLOR;
-}
+};
 
-function setFavicon(dataUrl: string) {
+const setFavicon = (dataUrl: string) => {
   if (!dataUrl) return;
   let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
   if (!link) {
@@ -65,9 +65,9 @@ function setFavicon(dataUrl: string) {
   }
   link.type = 'image/png';
   link.href = dataUrl;
-}
+};
 
-export function DynamicFavicon() {
+export const DynamicFavicon = () => {
   useEffect(() => {
     let latestReading: LatestReading | null = null;
     let staleTimeoutId: number | null = null;
@@ -129,4 +129,4 @@ export function DynamicFavicon() {
   }, []);
 
   return null;
-}
+};

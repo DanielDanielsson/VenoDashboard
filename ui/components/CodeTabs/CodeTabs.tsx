@@ -16,7 +16,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   python: 'Python'
 };
 
-export function CodeTabs({ curl, javascript, python }: CodeTabsProps) {
+export const CodeTabs = ({ curl, javascript, python }: CodeTabsProps) => {
   const [tab, setTab] = useState<TabKey>('curl');
   const [copied, setCopied] = useState(false);
 
@@ -58,4 +58,4 @@ export function CodeTabs({ curl, javascript, python }: CodeTabsProps) {
       </pre>
     </div>
   );
-}
+};

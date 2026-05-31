@@ -29,22 +29,22 @@ const TIME_IN_RANGE_LAYOUT_OPTIONS = [
   { value: 'statistics', label: 'Statistics' },
 ] satisfies Array<{ value: TimeInRangePanelLayout; label: string }>;
 
-async function fetchHistory(hours: number): Promise<GlucoseApiResponse> {
+const fetchHistory = async (hours: number): Promise<GlucoseApiResponse> => {
   const to = new Date();
   const from = new Date(to.getTime() - hours * 60 * 60 * 1000);
   const url = `/api/dashboard/glucose/history?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch');
   return res.json() as Promise<GlucoseApiResponse>;
-}
+};
 
-function createDefaultSettings(layout: TimeInRangePanelLayout): TimeInRangePanelSettings {
+const createDefaultSettings = (layout: TimeInRangePanelLayout): TimeInRangePanelSettings => {
   return { layout };
-}
+};
 
-export function createTimeInRangePanelSettingsRegistration(
+export const createTimeInRangePanelSettingsRegistration = (
   defaultLayout: TimeInRangePanelLayout,
-): DashboardPanelSettingsRegistration {
+): DashboardPanelSettingsRegistration => {
   return {
     defaultSettings: createDefaultSettings(defaultLayout),
     render: ({ settings, updateSettings }) => {
@@ -67,7 +67,7 @@ export function createTimeInRangePanelSettingsRegistration(
       );
     },
   };
-}
+};
 
 interface TimeInRangePanelProps {
   defaultLayout?: TimeInRangePanelLayout;
@@ -77,13 +77,13 @@ interface TimeInRangePanelProps {
   isDark?: boolean;
 }
 
-export function TimeInRangePanel({
+export const TimeInRangePanel = ({
   defaultLayout = 'overview',
   dashboardRangeHours = DEFAULT_DASHBOARD_RANGE_HOURS,
   stats: providedStats,
   loading: providedLoading,
   isDark = true,
-}: TimeInRangePanelProps) {
+}: TimeInRangePanelProps) => {
   const defaultSettings = useMemo(() => createDefaultSettings(defaultLayout), [defaultLayout]);
   const [settings] = useDashboardPanelSettings(TIME_IN_RANGE_PANEL_ID, defaultSettings);
   const [fetchedStats, setFetchedStats] = useState<GlucoseStats | null>(null);
@@ -166,8 +166,8 @@ export function TimeInRangePanel({
             formatValue={(slice) => `${Math.round(slice.value)}%`}
           />
         </div>
-        {errorMessage ? <p className="ui_caption text-rose-300">{errorMessage}</p> : null}
+        {errorMessage ? <p className="ui_caption text-base-error-dark">{errorMessage}</p> : null}
       </div>
     </DashboardPanel>
   );
-}
+};

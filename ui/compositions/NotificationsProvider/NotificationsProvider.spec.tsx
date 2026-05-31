@@ -6,7 +6,7 @@ import { act } from '@testing-library/react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { NotificationsProvider, useNotifications } from './NotificationsProvider';
 
-function TriggerNotification() {
+const TriggerNotification = () => {
   const { notify } = useNotifications();
 
   return (
@@ -20,9 +20,9 @@ function TriggerNotification() {
       Show notification
     </button>
   );
-}
+};
 
-function TriggerVariantNotifications() {
+const TriggerVariantNotifications = () => {
   const { notifySuccess, notifyWarning, notifyError } = useNotifications();
 
   return (
@@ -38,9 +38,9 @@ function TriggerVariantNotifications() {
       </button>
     </>
   );
-}
+};
 
-function TriggerTimedNeutralNotification() {
+const TriggerTimedNeutralNotification = () => {
   const { notify } = useNotifications();
 
   return (
@@ -54,9 +54,9 @@ function TriggerTimedNeutralNotification() {
       Show timed neutral
     </button>
   );
-}
+};
 
-function TriggerDuplicateNotifications() {
+const TriggerDuplicateNotifications = () => {
   const { notifyError } = useNotifications();
 
   return (
@@ -74,9 +74,9 @@ function TriggerDuplicateNotifications() {
       Show duplicates
     </button>
   );
-}
+};
 
-function TriggerQueuedNotifications() {
+const TriggerQueuedNotifications = () => {
   const { notify } = useNotifications();
 
   return (
@@ -93,7 +93,7 @@ function TriggerQueuedNotifications() {
       Show queued notifications
     </button>
   );
-}
+};
 
 describe('NotificationsProvider', () => {
   afterEach(() => {

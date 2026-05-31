@@ -15,29 +15,29 @@ interface SettingsFormProps {
   initialProfile: ConsumerProfile;
 }
 
-function detectBrowserTimeZone(): string {
+const detectBrowserTimeZone = (): string => {
   try {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     return timeZone || 'UTC';
   } catch {
     return 'UTC';
   }
-}
+};
 
-function isValidTimeZone(value: string): boolean {
+const isValidTimeZone = (value: string): boolean => {
   try {
     new Intl.DateTimeFormat(undefined, { timeZone: value }).format(new Date());
     return true;
   } catch {
     return false;
   }
-}
+};
 
-function emptySound(): AlarmSound {
+const emptySound = (): AlarmSound => {
   return { id: '', name: '', url: '' };
-}
+};
 
-export function SettingsForm({ initialProfile }: SettingsFormProps) {
+export const SettingsForm = ({ initialProfile }: SettingsFormProps) => {
   const browserTimeZone = detectBrowserTimeZone();
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [profile, setProfile] = useState(initialProfile);
@@ -462,9 +462,9 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
       <p
         className={
           messageTone === 'error'
-            ? 'ui_helper_text mt-6 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-rose-200'
+            ? 'ui_helper_text mt-6 rounded-xl border border-base-error-border-dark bg-base-error-soft-dark px-4 py-3 text-base-error-dark'
             : messageTone === 'success'
-              ? 'ui_helper_text mt-6 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-emerald-200'
+              ? 'ui_helper_text mt-6 rounded-xl border border-base-success-border-dark bg-base-success-soft-dark px-4 py-3 text-base-success-dark'
               : 'ui_helper_text mt-6 rounded-xl border border-border bg-surface-muted px-4 py-3 text-text-dim'
         }
       >
@@ -472,4 +472,4 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
       </p>
     </div>
   );
-}
+};

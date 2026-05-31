@@ -110,10 +110,10 @@ vi.mock('react-grid-layout', () => ({
   noCompactor: () => [],
 }));
 
-function gridItem(
+const gridItem = (
   name: string,
   spec: Pick<GridLayoutItemKind['spec'], 'x' | 'y' | 'width' | 'height'>,
-): GridLayoutItemKind {
+): GridLayoutItemKind => {
   return {
     kind: 'GridLayoutItem',
     spec: {
@@ -124,9 +124,9 @@ function gridItem(
       },
     },
   };
-}
+};
 
-function createLayout(): GridLayoutKind {
+const createLayout = (): GridLayoutKind => {
   return {
     kind: 'GridLayout',
     spec: {
@@ -136,18 +136,18 @@ function createLayout(): GridLayoutKind {
       ],
     },
   };
-}
+};
 
-function createEmptyLayout(): GridLayoutKind {
+const createEmptyLayout = (): GridLayoutKind => {
   return {
     kind: 'GridLayout',
     spec: {
       items: [],
     },
   };
-}
+};
 
-function createPanel(group: string, title: string): PanelKind {
+const createPanel = (group: string, title: string): PanelKind => {
   return {
     kind: 'Panel',
     spec: {
@@ -175,16 +175,16 @@ function createPanel(group: string, title: string): PanelKind {
       },
     },
   };
-}
+};
 
-function CurrentGlucoseUnitReadout() {
+const CurrentGlucoseUnitReadout = () => {
   const [settings] = useDashboardPanelSettings(
     'panel-current-glucose',
     { unit: 'mmol/L' },
   );
 
   return <span>Unit: {settings.unit}</span>;
-}
+};
 
 describe('DashboardGrid', () => {
   afterEach(() => {

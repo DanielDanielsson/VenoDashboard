@@ -90,32 +90,32 @@ const TICK_INTERVALS_MS = [
   24 * 60 * 60 * 1000
 ];
 
-function clamp(value: number, min: number, max: number): number {
+const clamp = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(value, max));
-}
+};
 
-function formatTime(date: Date): string {
+const formatTime = (date: Date): string => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
+};
 
-function formatDate(date: Date): string {
+const formatDate = (date: Date): string => {
   return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-}
+};
 
-function getDayStartMs(timestampMs: number): number {
+const getDayStartMs = (timestampMs: number): number => {
   const date = new Date(timestampMs);
   date.setHours(0, 0, 0, 0);
   return date.getTime();
-}
+};
 
-function getNextDayStartMs(dayStartMs: number): number {
+const getNextDayStartMs = (dayStartMs: number): number => {
   const date = new Date(dayStartMs);
   date.setDate(date.getDate() + 1);
   date.setHours(0, 0, 0, 0);
   return date.getTime();
-}
+};
 
-function pickTickInterval(visibleDurationMs: number, chartWidth: number): number {
+const pickTickInterval = (visibleDurationMs: number, chartWidth: number): number => {
   const minLabelGap = 96;
 
   for (const interval of TICK_INTERVALS_MS) {
@@ -130,9 +130,9 @@ function pickTickInterval(visibleDurationMs: number, chartWidth: number): number
   }
 
   return TICK_INTERVALS_MS[TICK_INTERVALS_MS.length - 1];
-}
+};
 
-function findFirstIndexAtOrAfter(values: number[], target: number): number {
+const findFirstIndexAtOrAfter = (values: number[], target: number): number => {
   let low = 0;
   let high = values.length;
 
@@ -146,9 +146,9 @@ function findFirstIndexAtOrAfter(values: number[], target: number): number {
   }
 
   return low;
-}
+};
 
-function findLastIndexAtOrBefore(values: number[], target: number): number {
+const findLastIndexAtOrBefore = (values: number[], target: number): number => {
   let low = 0;
   let high = values.length;
 
@@ -162,9 +162,9 @@ function findLastIndexAtOrBefore(values: number[], target: number): number {
   }
 
   return low - 1;
-}
+};
 
-function findNearestIndex(values: number[], target: number): number {
+const findNearestIndex = (values: number[], target: number): number => {
   if (values.length === 0) {
     return -1;
   }
@@ -182,9 +182,9 @@ function findNearestIndex(values: number[], target: number): number {
   return Math.abs(values[nextIdx] - target) < Math.abs(values[prevIdx] - target)
     ? nextIdx
     : prevIdx;
-}
+};
 
-function getYAxisTicks(yMax: number): number[] {
+const getYAxisTicks = (yMax: number): number[] => {
   const range = yMax - Y_MIN;
   const targetTickCount = 8;
   const roughStep = range / targetTickCount;
@@ -215,26 +215,26 @@ function getYAxisTicks(yMax: number): number[] {
   }
 
   return ticks;
-}
+};
 
-function getBasalYMax(values: number[]): number {
+const getBasalYMax = (values: number[]): number => {
   const maxValue = values.length > 0 ? Math.max(...values) : 0;
   if (maxValue <= 0) {
     return 0;
   }
 
   return Math.max(1, Math.ceil(maxValue * 2) / 2);
-}
+};
 
-function getBasalTicks(yMax: number): number[] {
+const getBasalTicks = (yMax: number): number[] => {
   if (yMax <= 0) {
     return [];
   }
 
   return [0, yMax / 2, yMax].slice(0, BASAL_TICK_COUNT);
-}
+};
 
-function getStepYMax(values: number[]): number {
+const getStepYMax = (values: number[]): number => {
   const maxValue = values.length > 0 ? Math.max(...values) : 0;
   if (maxValue <= 0) {
     return 0;
@@ -249,51 +249,51 @@ function getStepYMax(values: number[]): number {
   }
 
   return Math.ceil(maxValue / 1000) * 1000;
-}
+};
 
-function getStepTicks(yMax: number): number[] {
+const getStepTicks = (yMax: number): number[] => {
   if (yMax <= 0) {
     return [];
   }
 
   return [0, yMax / 2, yMax];
-}
+};
 
-function snapStrokeCoord(value: number): number {
+const snapStrokeCoord = (value: number): number => {
   return Math.round(value) + 0.5;
-}
+};
 
-function snapFillCoord(value: number): number {
+const snapFillCoord = (value: number): number => {
   return Math.round(value);
-}
+};
 
-function hexToRgba(hex: string, alpha: number): string {
+const hexToRgba = (hex: string, alpha: number): string => {
   const normalized = hex.replace('#', '');
   const value = Number.parseInt(normalized, 16);
   const r = (value >> 16) & 255;
   const g = (value >> 8) & 255;
   const b = value & 255;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
+};
 
-function getRenderedReadingColor(
+const getRenderedReadingColor = (
   point: Pick<ChartPoint, 'valueMmolL' | 'isCorrected'> & { isPreviewCorrection?: boolean },
   colorMode: GlucoseColorMode,
   isDark: boolean,
   alpha = 1
-): string {
+): string => {
   if (point.isCorrected || point.isPreviewCorrection) {
     return hexToRgba(isDark ? CORRECTED_COLOR_DARK : CORRECTED_COLOR_LIGHT, alpha);
   }
 
   return getGlucoseColor(point.valueMmolL, colorMode, alpha, isDark);
-}
+};
 
-function getHoveredBasalPoint(
+const getHoveredBasalPoint = (
   hoveredTimestampMs: number,
   basalData: BasalChartPoint[],
   basalTimestamps: number[]
-): BasalChartPoint | null {
+): BasalChartPoint | null => {
   if (basalData.length < 2) {
     return null;
   }
@@ -310,12 +310,12 @@ function getHoveredBasalPoint(
   }
 
   return basalData[activeIndex] ?? null;
-}
+};
 
-function getHoveredTandemEvents(
+const getHoveredTandemEvents = (
   hoveredTimestampMs: number | null,
   eventData: TandemEventChartPoint[]
-): TandemEventChartPoint[] {
+): TandemEventChartPoint[] => {
   if (hoveredTimestampMs === null || eventData.length === 0) {
     return [];
   }
@@ -324,12 +324,12 @@ function getHoveredTandemEvents(
     const timestampMs = new Date(event.timestamp).getTime();
     return Math.abs(timestampMs - hoveredTimestampMs) <= EVENT_HOVER_WINDOW_MS;
   });
-}
+};
 
-function getHoveredIobValue(
+const getHoveredIobValue = (
   timestampMs: number | null,
   points: { timestamp: string; iob: number | null }[]
-): number | null {
+): number | null => {
   if (timestampMs === null || points.length === 0) return null;
   let closest: { timestamp: string; iob: number | null } | null = null;
   let closestDiff = Number.POSITIVE_INFINITY;
@@ -341,12 +341,12 @@ function getHoveredIobValue(
     }
   }
   return closest?.iob ?? null;
-}
+};
 
-function getHoveredSuspendInterval(
+const getHoveredSuspendInterval = (
   timestampMs: number | null,
   eventData: TandemEventChartPoint[]
-): { suspendMs: number; resumeMs: number | null } | null {
+): { suspendMs: number; resumeMs: number | null } | null => {
   if (timestampMs === null) return null;
   const sorted = [...eventData].sort(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -361,12 +361,12 @@ function getHoveredSuspendInterval(
     }
   }
   return null;
-}
+};
 
-function getHoveredStepBucket(
+const getHoveredStepBucket = (
   hoveredTimestampMs: number | null,
   stepData: HealthStepChartPoint[]
-): HealthStepChartPoint | null {
+): HealthStepChartPoint | null => {
   if (hoveredTimestampMs === null || stepData.length === 0) {
     return null;
   }
@@ -380,12 +380,12 @@ function getHoveredStepBucket(
   }
 
   return null;
-}
+};
 
-function getHoveredWorkouts(
+const getHoveredWorkouts = (
   hoveredTimestampMs: number | null,
   workoutData: WorkoutChartPoint[]
-): WorkoutChartPoint[] {
+): WorkoutChartPoint[] => {
   if (hoveredTimestampMs === null || workoutData.length === 0) {
     return [];
   }
@@ -395,9 +395,9 @@ function getHoveredWorkouts(
     const endAtMs = new Date(workout.endAt).getTime();
     return hoveredTimestampMs >= startAtMs && hoveredTimestampMs < endAtMs;
   });
-}
+};
 
-function buildVisibleStepDaySummaries({
+const buildVisibleStepDaySummaries = ({
   stepData,
   visibleStartMs,
   visibleEndMs,
@@ -413,7 +413,7 @@ function buildVisibleStepDaySummaries({
   chartWidth: number;
   pxPerMs: number;
   scroll: number;
-}): Array<{ dayStartMs: number; segmentLeft: number; segmentWidth: number; totalSteps: number }> {
+}): Array<{ dayStartMs: number; segmentLeft: number; segmentWidth: number; totalSteps: number }> => {
   if (stepData.length === 0 || chartWidth <= 0 || pxPerMs <= 0 || visibleEndMs <= visibleStartMs) {
     return [];
   }
@@ -465,9 +465,9 @@ function buildVisibleStepDaySummaries({
   }
 
   return summaries;
-}
+};
 
-function formatCompactStepTotal(stepCount: number): string {
+const formatCompactStepTotal = (stepCount: number): string => {
   if (stepCount < 1_000) {
     return stepCount.toString();
   }
@@ -483,11 +483,11 @@ function formatCompactStepTotal(stepCount: number): string {
 
   const compactValue = Math.round((stepCount / 1_000_000) * 10) / 10;
   return `${compactValue % 1 === 0 ? compactValue.toFixed(0) : compactValue.toFixed(1)}m`;
-}
+};
 
-function buildVisibleStepDayLabels(
+const buildVisibleStepDayLabels = (
   summaries: Array<{ dayStartMs: number; segmentLeft: number; segmentWidth: number; totalSteps: number }>
-): Array<{ dayStartMs: number; left: number; text: string }> {
+): Array<{ dayStartMs: number; left: number; text: string }> => {
   const labels: Array<{ dayStartMs: number; left: number; text: string }> = [];
   let previousRight = Number.NEGATIVE_INFINITY;
 
@@ -516,14 +516,14 @@ function buildVisibleStepDayLabels(
   }
 
   return labels;
-}
+};
 
-function getTandemEventVisual(eventName: string, isDark = true): {
+const getTandemEventVisual = (eventName: string, isDark = true): {
   label: string;
   fill: string;
   stroke: string;
   shape: 'circle' | 'ring' | 'diamond' | 'square' | 'triangle';
-} {
+} => {
   switch (eventName) {
     case 'CartridgeFilled':
       return {
@@ -583,9 +583,9 @@ function getTandemEventVisual(eventName: string, isDark = true): {
         shape: 'triangle'
       };
   }
-}
+};
 
-function formatTandemEventSummary(event: TandemEventChartPoint): string | null {
+const formatTandemEventSummary = (event: TandemEventChartPoint): string | null => {
   if (event.carbsGrams != null) {
     return `${Math.round(event.carbsGrams)} g`;
   }
@@ -603,7 +603,7 @@ function formatTandemEventSummary(event: TandemEventChartPoint): string | null {
   }
 
   return null;
-}
+};
 
 const SUPPRESSED_EVENT_NAMES = new Set([
   'BolusDelivery',
@@ -621,15 +621,15 @@ const GLUCOSE_ICON_PATH2 = 'M183.914 76.3893L127.872 20.3469C168.804 66.0228 146
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const GLUCOSE_POINT_HIT_RADIUS_PX = 14;
 
-function roundPreviewValue(value: number): number {
+const roundPreviewValue = (value: number): number => {
   return Number(value.toFixed(1));
-}
+};
 
-function clampPreviewValue(value: number, yMax: number): number {
+const clampPreviewValue = (value: number, yMax: number): number => {
   return clamp(roundPreviewValue(value), 0.1, Math.max(yMax, Y_MIN));
-}
+};
 
-function drawTandemMarker(
+const drawTandemMarker = (
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -638,7 +638,7 @@ function drawTandemMarker(
   visibleDurationMs: number,
   insulinDelivered: number | null,
   isDark: boolean
-): void {
+): void => {
   const visual = getTandemEventVisual(eventName, isDark);
   const detailed = visibleDurationMs <= THREE_DAYS_MS;
   const baseSize = detailed ? 28 : 14;
@@ -670,9 +670,9 @@ function drawTandemMarker(
     ctx.fillStyle = visual.fill;
     ctx.fillText(insulinDelivered.toFixed(1), circleCenterX, circleCenterY);
   }
-}
+};
 
-export function GlucoseChart({
+export const GlucoseChart = ({
   data,
   basalData = [],
   eventData = [],
@@ -693,7 +693,7 @@ export function GlucoseChart({
   onWorkoutAddRequest,
   onNoteSelect,
   onNoteAddRequest
-}: GlucoseChartProps) {
+}: GlucoseChartProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -2523,4 +2523,4 @@ export function GlucoseChart({
       )}
     </div>
   );
-}
+};

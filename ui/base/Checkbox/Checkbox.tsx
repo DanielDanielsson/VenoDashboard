@@ -2,7 +2,7 @@ import type { ReactElement } from 'react';
 import { twMerge } from 'tailwind-merge';
 import type { CheckboxProps } from './Checkbox.types';
 
-export function Checkbox({
+export const Checkbox = ({
   checked,
   className,
   disabled,
@@ -11,7 +11,7 @@ export function Checkbox({
   labelClassName,
   onCheckedChange,
   ...props
-}: CheckboxProps): ReactElement {
+}: CheckboxProps): ReactElement => {
   return (
     <label
       className={twMerge(
@@ -52,4 +52,4 @@ export function Checkbox({
       <span>{label}</span>
     </label>
   );
-}
+};

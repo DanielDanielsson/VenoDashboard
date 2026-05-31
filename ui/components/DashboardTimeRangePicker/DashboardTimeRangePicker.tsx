@@ -35,19 +35,19 @@ interface CalendarDay {
 const RECENT_STORAGE_KEY = 'veno-dashboard-time-range-recents';
 const WEEKDAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
-function startOfDay(date: Date): Date {
+const startOfDay = (date: Date): Date => {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
-}
+};
 
-function addMonths(date: Date, amount: number): Date {
+const addMonths = (date: Date, amount: number): Date => {
   return new Date(date.getFullYear(), date.getMonth() + amount, 1);
-}
+};
 
-function compareDay(a: Date, b: Date): number {
+const compareDay = (a: Date, b: Date): number => {
   return startOfDay(a).getTime() - startOfDay(b).getTime();
-}
+};
 
-function isSameDay(a: Date | null, b: Date | null): boolean {
+const isSameDay = (a: Date | null, b: Date | null): boolean => {
   return Boolean(
     a &&
     b &&
@@ -55,9 +55,9 @@ function isSameDay(a: Date | null, b: Date | null): boolean {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   );
-}
+};
 
-function createMonthDays(month: Date): CalendarDay[] {
+const createMonthDays = (month: Date): CalendarDay[] => {
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
   const firstOfMonth = new Date(year, monthIndex, 1);
@@ -74,9 +74,9 @@ function createMonthDays(month: Date): CalendarDay[] {
   }
 
   return days;
-}
+};
 
-function labelForSelection(selection: HistorySelection, timeZone: string): string {
+const labelForSelection = (selection: HistorySelection, timeZone: string): string => {
   if (selection.kind === 'preset') {
     const preset = GLUCOSE_TIME_RANGES.find((range) => range.key === selection.range);
     return preset ? `Last ${preset.label}` : 'Time range';
@@ -87,9 +87,9 @@ function labelForSelection(selection: HistorySelection, timeZone: string): strin
   }
 
   return formatTimeRangeLabel(selection.window, timeZone);
-}
+};
 
-function rawForSelection(selection: HistorySelection, timeZone: string): RawTimeRangeInput {
+const rawForSelection = (selection: HistorySelection, timeZone: string): RawTimeRangeInput => {
   if (selection.kind === 'preset') {
     const preset = GLUCOSE_TIME_RANGES.find((range) => range.key === selection.range);
     return {
@@ -106,9 +106,9 @@ function rawForSelection(selection: HistorySelection, timeZone: string): RawTime
     from: formatAbsoluteTimeInput(selection.window.from, timeZone),
     to: formatAbsoluteTimeInput(selection.window.to, timeZone)
   };
-}
+};
 
-function readRecents(): RawTimeRangeInput[] {
+const readRecents = (): RawTimeRangeInput[] => {
   try {
     const raw = localStorage.getItem(RECENT_STORAGE_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -126,9 +126,9 @@ function readRecents(): RawTimeRangeInput[] {
   } catch {
     return [];
   }
-}
+};
 
-function writeRecent(range: RawTimeRangeInput) {
+const writeRecent = (range: RawTimeRangeInput) => {
   try {
     const recents = readRecents();
     const next = [
@@ -139,9 +139,9 @@ function writeRecent(range: RawTimeRangeInput) {
   } catch {
     return;
   }
-}
+};
 
-function toSelection(raw: RawTimeRangeInput, timeZone: string, label?: string): HistorySelection | null {
+const toSelection = (raw: RawTimeRangeInput, timeZone: string, label?: string): HistorySelection | null => {
   const resolved = resolveRawTimeRange(raw, { timeZone, display: label });
   if (!resolved || resolved.exceedsSafetyCap) {
     return null;
@@ -153,20 +153,20 @@ function toSelection(raw: RawTimeRangeInput, timeZone: string, label?: string): 
     raw,
     label: resolved.display
   };
-}
+};
 
-function windowEndsInFuture(window: HistoryWindow, now = new Date()): boolean {
+const windowEndsInFuture = (window: HistoryWindow, now = new Date()): boolean => {
   return new Date(window.to).getTime() > now.getTime();
-}
+};
 
-export function DashboardTimeRangePicker({
+export const DashboardTimeRangePicker = ({
   selection,
   currentWindow,
   timeZone,
   onChange,
   presetOnly = false,
   toolbarControls
-}: DashboardTimeRangePickerProps) {
+}: DashboardTimeRangePickerProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [fromInput, setFromInput] = useState(() => rawForSelection(selection, timeZone).from);
   const [toInput, setToInput] = useState(() => rawForSelection(selection, timeZone).to);
@@ -667,4 +667,4 @@ export function DashboardTimeRangePicker({
       )}
     </div>
   );
-}
+};

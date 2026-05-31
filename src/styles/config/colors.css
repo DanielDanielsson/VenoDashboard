@@ -8,7 +8,7 @@
   --color-base-paper-elevated: rgb(234 228 219 / 0.96);
   --color-base-paper-surface: rgb(242 237 229 / 0.72);
   --color-base-paper-surface-strong: rgb(248 244 237 / 0.9);
-  --color-base-night: #11161f;
+  --color-base-night: rgb(30 37 48 / .4);
   --color-base-night-strong: #171d26;
   --color-base-panel-dark-bright: #1e2530;
   --color-base-panel-dark-warm: color-mix(in srgb,
@@ -60,6 +60,8 @@
   --color-base-warning-soft-dark: rgb(251 191 36 / 0.1);
   --color-base-error-soft-light: rgb(190 18 60 / 0.08);
   --color-base-error-soft-dark: rgb(251 113 133 / 0.08);
+  --color-base-error-border-dark: rgb(251 113 133 / 0.3);
+  --color-base-success-border-dark: rgb(97 197 148 / 0.3);
 
   --color-base-surface-panel-light: #e8e2d8;
   --color-base-surface-panel-light-strong: #ddd6ca;

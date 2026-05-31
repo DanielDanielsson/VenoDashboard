@@ -8,7 +8,7 @@ interface SignInButtonProps {
   callbackUrl?: string;
 }
 
-export function SignInButton({ callbackUrl = '/dashboard' }: SignInButtonProps) {
+export const SignInButton = ({ callbackUrl = '/dashboard' }: SignInButtonProps) => {
   const closeUrl = getLoginCloseUrl(callbackUrl);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -79,7 +79,7 @@ export function SignInButton({ callbackUrl = '/dashboard' }: SignInButtonProps) 
           />
         </label>
 
-        {error ? <p className="body_text text-rose-300">{error}</p> : null}
+        {error ? <p className="body_text text-base-error-dark">{error}</p> : null}
 
         <SecondaryButton
           isActive
@@ -92,4 +92,4 @@ export function SignInButton({ callbackUrl = '/dashboard' }: SignInButtonProps) 
       </div>
     </div>
   );
-}
+};

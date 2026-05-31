@@ -10,7 +10,7 @@ import {
   normalizeWysiwygDocument,
 } from './WysiwygEditor';
 
-function selectTextRange(textNode: Node, start: number, end: number) {
+const selectTextRange = (textNode: Node, start: number, end: number) => {
   const selection = window.getSelection();
   const range = document.createRange();
 
@@ -22,7 +22,7 @@ function selectTextRange(textNode: Node, start: number, end: number) {
   range.setEnd(textNode, end);
   selection.removeAllRanges();
   selection.addRange(range);
-}
+};
 
 describe('WysiwygEditor document model', () => {
   test('creates and normalizes a versioned paragraph document', () => {
@@ -212,11 +212,11 @@ describe('WysiwygEditor', () => {
   test('keeps typed text in order when the parent echoes each change', async () => {
     const user = userEvent.setup();
 
-    function ControlledEditor() {
+    const ControlledEditor = () => {
       const [value, setValue] = useState(createWysiwygDocument(''));
 
       return <WysiwygEditor value={value} onChange={setValue} />;
-    }
+    };
 
     render(<ControlledEditor />);
 

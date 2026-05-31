@@ -11,7 +11,7 @@ interface CtaLinkProps {
   eventName: string;
 }
 
-export function CtaLink({ href, label, className, eventName }: CtaLinkProps) {
+export const CtaLink = ({ href, label, className, eventName }: CtaLinkProps) => {
   return (
     <Link
       href={href}
@@ -21,4 +21,4 @@ export function CtaLink({ href, label, className, eventName }: CtaLinkProps) {
       {label}
     </Link>
   );
-}
+};

@@ -10,19 +10,19 @@ interface DashboardUrlStateBridgeProps {
   rejectTimeRange?: boolean;
 }
 
-function hasTimeRangeParams(searchParams: URLSearchParams): boolean {
+const hasTimeRangeParams = (searchParams: URLSearchParams): boolean => {
   return Boolean(
     searchParams.get('from') ||
     searchParams.get('to') ||
     searchParams.get('timezone'),
   );
-}
+};
 
-export function DashboardUrlStateBridge({
+export const DashboardUrlStateBridge = ({
   dashboardTitle,
   dashboardUid,
   rejectTimeRange = false,
-}: DashboardUrlStateBridgeProps) {
+}: DashboardUrlStateBridgeProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,4 +52,4 @@ export function DashboardUrlStateBridge({
   }, [dashboardTitle, notifyInvalidDashboardUrl, pathname, rejectTimeRange, router, searchParams]);
 
   return null;
-}
+};

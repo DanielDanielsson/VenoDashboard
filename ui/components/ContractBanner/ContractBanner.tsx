@@ -3,7 +3,7 @@ interface ContractBannerProps {
   stale: boolean;
 }
 
-export function ContractBanner({ lastUpdated, stale }: ContractBannerProps) {
+export const ContractBanner = ({ lastUpdated, stale }: ContractBannerProps) => {
   return (
     <aside className="contract-banner" data-state={stale ? 'stale' : 'live'}>
       <p className="ui_micro_label text-text-soft">Contract snapshot</p>
@@ -17,4 +17,4 @@ export function ContractBanner({ lastUpdated, stale }: ContractBannerProps) {
       </p>
     </aside>
   );
-}
+};

@@ -15,11 +15,11 @@ import {
 } from './dashboardTimerEvents';
 import { formatDurationLabel, getServerOffsetMs } from '@ui/compositions/SharedTimersPanel/sharedTimerUtils';
 
-function getExpiryDelayMs(timer: SharedTimer, serverOffsetMs: number): number {
+const getExpiryDelayMs = (timer: SharedTimer, serverOffsetMs: number): number => {
   return new Date(timer.fireAt).getTime() - (Date.now() + serverOffsetMs);
-}
+};
 
-export function DashboardTimersBridge() {
+export const DashboardTimersBridge = () => {
   const { notify, notifyWarning } = useNotifications();
   const timersRef = useRef<Map<string, SharedTimer>>(new Map());
   const expiryTimeoutsRef = useRef<Map<string, number>>(new Map());
@@ -196,4 +196,4 @@ export function DashboardTimersBridge() {
   }, [notify, notifyWarning]);
 
   return null;
-}
+};

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type CSSProperties } from 'react';
+import { twMerge } from 'tailwind-merge';
 import type { GlucoseColorMode } from '@/lib/glucose/tints';
 import {
   formatGlucoseDeltaValue,
@@ -40,7 +41,7 @@ interface ReadingState {
 
 let cachedReadingState: ReadingState | null = null;
 
-function normalizeStreamPayload(raw: string): LatestReading | null {
+const normalizeStreamPayload = (raw: string): LatestReading | null => {
   try {
     const parsed = JSON.parse(raw) as StreamEnvelope | LatestReading;
     if ('reading' in parsed && parsed.reading) {
@@ -55,21 +56,21 @@ function normalizeStreamPayload(raw: string): LatestReading | null {
   } catch {
     return null;
   }
-}
+};
 
-function getReadingKey(
+const getReadingKey = (
   reading: Pick<LatestReading, 'timestamp'> & {
     id?: string;
     readingId?: string;
   },
-): string {
+): string => {
   return reading.id ?? reading.readingId ?? reading.timestamp;
-}
+};
 
-function pickPreviousReading(
+const pickPreviousReading = (
   latest: LatestReading,
   items: ChartPoint[] | undefined,
-): ChartPoint | null {
+): ChartPoint | null => {
   const latestKey = getReadingKey(latest);
 
   return (
@@ -81,13 +82,13 @@ function pickPreviousReading(
           new Date(left.timestamp).getTime(),
       )[0] ?? null
   );
-}
+};
 
-function updateReadingStateWithLatest(
+const updateReadingStateWithLatest = (
   current: ReadingState | null,
   latest: LatestReading,
   previous: ChartPoint | LatestReading | null = current?.latest ?? null,
-): ReadingState {
+): ReadingState => {
   if (!current || getReadingKey(current.latest) !== getReadingKey(latest)) {
     return { latest, previous };
   }
@@ -96,19 +97,19 @@ function updateReadingStateWithLatest(
     latest,
     previous: current.previous,
   };
-}
+};
 
-function formatGlucoseDelta(
+const formatGlucoseDelta = (
   latest: LatestReading,
   previous: ChartPoint | LatestReading | null,
   unit: GlucoseUnit,
-): string {
+): string => {
   if (!previous) {
     return 'n/a';
   }
 
   return formatGlucoseDeltaValue(latest.valueMmolL - previous.valueMmolL, unit);
-}
+};
 
 interface DashboardGlucoseBadgeProps {
   contentAlignment?: 'horizontal' | 'vertical';
@@ -128,7 +129,7 @@ interface DashboardGlucoseBadgeProps {
 
 const CURRENT_GLUCOSE_SOURCE_LABEL = 'Dexcom Share API';
 
-export function DashboardGlucoseBadge({
+export const DashboardGlucoseBadge = ({
   contentAlignment = 'vertical',
   colorMode = 'standard',
   enableStream = true,
@@ -142,7 +143,7 @@ export function DashboardGlucoseBadge({
   },
   pollIntervalMs = 60_000,
   showDetails = false,
-}: DashboardGlucoseBadgeProps) {
+}: DashboardGlucoseBadgeProps) => {
   const [readingState, setReadingState] = useState<ReadingState | null>(() => cachedReadingState);
 
   useEffect(() => {
@@ -311,11 +312,11 @@ export function DashboardGlucoseBadge({
 
   return (
     <div
-      className={`grid h-full min-h-0 w-full min-w-0 gap-3 overflow-hidden ${layoutClassName}`}
+      className={twMerge('grid h-full min-h-0 w-full min-w-0 gap-3 overflow-hidden', layoutClassName)}
       style={rootStyle}
     >
       <dl
-        className={`z-10 grid min-w-0 gap-2 overflow-hidden text-left ${metadataClassName}`}
+        className={twMerge('z-10 grid min-w-0 gap-2 overflow-hidden text-left', metadataClassName)}
       >
         {metadataVisibility.showUnit ? (
           <div className="grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-4">
@@ -345,11 +346,11 @@ export function DashboardGlucoseBadge({
         ) : null}
       </dl>
       <div
-        className={`grid h-full min-h-0 w-full min-w-0 overflow-hidden ${indicatorContainerClassName}`}
+        className={twMerge('grid h-full min-h-0 w-full min-w-0 overflow-hidden', indicatorContainerClassName)}
         style={indicatorContainerStyle}
       >
         {indicator}
       </div>
     </div>
   );
-}
+};

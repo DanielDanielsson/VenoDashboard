@@ -26,6 +26,12 @@ Do not treat this repo as the source of truth for glucose ingestion or storage. 
 
 Use `ui/base` primitives over standard HTML elements when an equivalent exists, especially for buttons, links, inputs, checkboxes, layout grids, icons, segmented controls, and optimized images.
 
+## Code Style
+
+1. prefer arrow functions over function declarations for all components, hooks, and helpers
+2. use `export const Name = () => {}` for exported components, not `export function Name() {}`
+3. for generic arrow functions in `.tsx` files, add a trailing comma to avoid JSX ambiguity: `<T,>` not `<T>`
+
 ## Composition And Component File Structure
 
 When a composition or component file starts accumulating unrelated module level concerns, split those concerns into nearby sibling files before adding more bulk to the main component file.
@@ -329,6 +335,24 @@ Important chart rules:
 ## Styling Rules
 
 This repo uses centralized font utilities and component theme variables.
+
+### Class Composition
+
+Always use `twMerge` to compose dynamic class strings. Never use template literal interpolation to concatenate class names.
+
+Correct:
+
+```tsx
+className={twMerge('inline-flex items-center border', toneClass)}
+```
+
+Incorrect:
+
+```tsx
+className={`inline-flex items-center border ${toneClass}`}
+```
+
+This applies to both `className` and `twStyles` props. Using `twMerge` ensures conflicting utility classes resolve correctly and keeps class composition consistent across the codebase.
 
 ### Fonts
 

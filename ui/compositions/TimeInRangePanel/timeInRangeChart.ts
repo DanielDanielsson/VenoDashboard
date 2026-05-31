@@ -34,11 +34,11 @@ const TIME_IN_RANGE_SEGMENTS = [
   },
 ] as const;
 
-export function buildTimeInRangePieSlices(stats: GlucoseStats | null): PieChartSlice[] {
+export const buildTimeInRangePieSlices = (stats: GlucoseStats | null): PieChartSlice[] => {
   return TIME_IN_RANGE_SEGMENTS.map((segment) => ({
     id: segment.id,
     label: segment.label,
     value: stats ? segment.getValue(stats) : 0,
     color: segment.color,
   }));
-}
+};

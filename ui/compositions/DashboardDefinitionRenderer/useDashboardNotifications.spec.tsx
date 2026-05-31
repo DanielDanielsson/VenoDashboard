@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest';
 import { NotificationsProvider } from '@ui/compositions/NotificationsProvider';
 import { useDashboardNotifications } from './useDashboardNotifications';
 
-function TriggerDashboardNotifications() {
+const TriggerDashboardNotifications = () => {
   const {
     notifyDashboardSaveFailed,
     notifyDashboardSaveRequiresAdmin,
@@ -26,7 +26,7 @@ function TriggerDashboardNotifications() {
       </button>
     </>
   );
-}
+};
 
 describe('useDashboardNotifications', () => {
   test('shows a new toast for each dashboard save', () => {

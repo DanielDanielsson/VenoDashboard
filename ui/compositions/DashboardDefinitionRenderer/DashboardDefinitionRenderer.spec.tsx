@@ -12,11 +12,11 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-function render(ui: React.ReactElement) {
+const render = (ui: React.ReactElement) => {
   return rtlRender(<NotificationsProvider>{ui}</NotificationsProvider>);
-}
+};
 
-function createOverviewDashboardDefinition() {
+const createOverviewDashboardDefinition = () => {
   return parseDashboardDefinition({
     kind: 'Dashboard',
     spec: {
@@ -43,9 +43,9 @@ function createOverviewDashboardDefinition() {
       },
     },
   });
-}
+};
 
-function panel(id: number, title: string, group: string) {
+const panel = (id: number, title: string, group: string) => {
   return {
     kind: 'Panel',
     spec: {
@@ -58,9 +58,9 @@ function panel(id: number, title: string, group: string) {
       },
     },
   };
-}
+};
 
-function layoutItem(name: string, y: number) {
+const layoutItem = (name: string, y: number) => {
   return {
     kind: 'GridLayoutItem',
     spec: {
@@ -74,7 +74,7 @@ function layoutItem(name: string, y: number) {
       },
     },
   };
-}
+};
 
 describe('DashboardDefinitionRenderer', () => {
   test('renders panels from the dashboard layout in order', () => {

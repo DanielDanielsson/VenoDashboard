@@ -11,10 +11,10 @@ interface WorkoutTypePanelProps {
   loading?: boolean;
 }
 
-export function WorkoutTypePanel({
+export const WorkoutTypePanel = ({
   workouts,
   loading = false,
-}: WorkoutTypePanelProps): ReactElement {
+}: WorkoutTypePanelProps): ReactElement => {
   const slices = useMemo(() => buildWorkoutTypePieSlices(workouts), [workouts]);
   const totalWorkouts = workouts.length;
 
@@ -40,4 +40,4 @@ export function WorkoutTypePanel({
       )}
     </DashboardPanel>
   );
-}
+};

@@ -122,7 +122,7 @@ const COLOR_MODE_PREVIEW_BOUNDARIES = [
   COLOR_MODE_PREVIEW_LOW_Y,
 ] as const;
 
-function getColorModePreviewValue(y: number): number {
+const getColorModePreviewValue = (y: number): number => {
   const valuePerPixel =
     (COLOR_MODE_PREVIEW_HIGH_VALUE - COLOR_MODE_PREVIEW_LOW_VALUE) /
     (COLOR_MODE_PREVIEW_LOW_Y - COLOR_MODE_PREVIEW_HIGH_Y);
@@ -131,25 +131,25 @@ function getColorModePreviewValue(y: number): number {
     COLOR_MODE_PREVIEW_HIGH_VALUE +
     (COLOR_MODE_PREVIEW_HIGH_Y - y) * valuePerPixel
   );
-}
+};
 
-function interpolatePreviewPoint(
+const interpolatePreviewPoint = (
   start: ColorModePreviewPoint,
   end: ColorModePreviewPoint,
   y: number,
-): ColorModePreviewPoint {
+): ColorModePreviewPoint => {
   const ratio = (y - start.y) / (end.y - start.y);
 
   return {
     x: start.x + (end.x - start.x) * ratio,
     y,
   };
-}
+};
 
-function splitColorModePreviewSegment(
+const splitColorModePreviewSegment = (
   start: ColorModePreviewPoint,
   end: ColorModePreviewPoint,
-): Array<[ColorModePreviewPoint, ColorModePreviewPoint]> {
+): Array<[ColorModePreviewPoint, ColorModePreviewPoint]> => {
   const splitPoints = [
     start,
     ...COLOR_MODE_PREVIEW_BOUNDARIES
@@ -167,13 +167,13 @@ function splitColorModePreviewSegment(
     point,
     splitPoints[index + 1],
   ]);
-}
+};
 
-function AlignmentPreviewIcon({
+const AlignmentPreviewIcon = ({
   alignment,
 }: {
   alignment: CurrentGlucoseContentAlignment;
-}): ReactElement {
+}): ReactElement => {
   const lineBlock = (
     <svg
       aria-hidden
@@ -214,13 +214,13 @@ function AlignmentPreviewIcon({
       {glucoseIcon}
     </span>
   );
-}
+};
 
-function ColorModePreviewIcon({
+const ColorModePreviewIcon = ({
   colorMode,
 }: {
   colorMode: CurrentGlucoseColorMode;
-}): ReactElement {
+}): ReactElement => {
   return (
     <span
       aria-hidden
@@ -269,9 +269,9 @@ function ColorModePreviewIcon({
       </svg>
     </span>
   );
-}
+};
 
-export function createCurrentGlucosePanelSettingsRegistration(): DashboardPanelSettingsRegistration {
+export const createCurrentGlucosePanelSettingsRegistration = (): DashboardPanelSettingsRegistration => {
   return {
     defaultSettings: DEFAULT_CURRENT_GLUCOSE_PANEL_SETTINGS,
     render: ({ settings, updateSettings, resizeLayoutToAspectRatio }) => {
@@ -380,7 +380,7 @@ export function createCurrentGlucosePanelSettingsRegistration(): DashboardPanelS
       );
     },
   };
-}
+};
 
 export const LiveGlucosePanel = ({
   enableStream = true,

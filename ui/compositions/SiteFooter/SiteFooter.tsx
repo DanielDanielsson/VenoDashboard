@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export function SiteFooter() {
+export const SiteFooter = () => {
   const apiBaseUrl = (process.env.PULSE_API_BASE_URL || 'http://localhost:3101').replace(/\/$/, '');
 
   return (
@@ -20,4 +20,4 @@ export function SiteFooter() {
       </div>
     </footer>
   );
-}
+};

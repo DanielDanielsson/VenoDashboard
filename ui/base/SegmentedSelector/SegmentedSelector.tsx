@@ -2,13 +2,13 @@ import type { ReactElement } from 'react';
 import { twMerge } from 'tailwind-merge';
 import type { SegmentedSelectorProps } from './SegmentedSelector.types';
 
-export function SegmentedSelector<T extends string>({
+export const SegmentedSelector = <T extends string,>({
   ariaLabel,
   options,
   value,
   onChange,
   twStyles,
-}: SegmentedSelectorProps<T>): ReactElement {
+}: SegmentedSelectorProps<T>): ReactElement => {
   return (
     <div
       aria-label={ariaLabel}
@@ -40,4 +40,4 @@ export function SegmentedSelector<T extends string>({
       })}
     </div>
   );
-}
+};

@@ -18,26 +18,26 @@ const PIE_CHART_PALETTE = [
   'var(--color-pie-chart-palette-6)',
 ] as const;
 
-function clamp(value: number, min: number, max: number): number {
+const clamp = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(max, value));
-}
+};
 
-function polarToCartesian(cx: number, cy: number, radius: number, angleDeg: number) {
+const polarToCartesian = (cx: number, cy: number, radius: number, angleDeg: number) => {
   const angleRad = (angleDeg - 90) * (Math.PI / 180);
   return {
     x: cx + radius * Math.cos(angleRad),
     y: cy + radius * Math.sin(angleRad),
   };
-}
+};
 
-function buildSlicePath(
+const buildSlicePath = (
   cx: number,
   cy: number,
   innerRadius: number,
   outerRadius: number,
   startAngle: number,
   sweepAngle: number,
-): string {
+): string => {
   const sweep = clamp(sweepAngle, 0.001, 359.999);
   const outerStart = polarToCartesian(cx, cy, outerRadius, startAngle);
   const outerEnd = polarToCartesian(cx, cy, outerRadius, startAngle + sweep);
@@ -62,13 +62,13 @@ function buildSlicePath(
     `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${innerStart.x.toFixed(3)} ${innerStart.y.toFixed(3)}`,
     'Z',
   ].join(' ');
-}
+};
 
-function defaultFormatValue(slice: PieChartSlice): string {
+const defaultFormatValue = (slice: PieChartSlice): string => {
   return String(Math.round(slice.value));
-}
+};
 
-export function PieChart({
+export const PieChart = ({
   data,
   ariaLabel,
   size = DEFAULT_SIZE,
@@ -83,7 +83,7 @@ export function PieChart({
   activeSliceId: controlledActiveSliceId = null,
   onSliceHover,
   onSliceClick,
-}: PieChartProps): ReactElement {
+}: PieChartProps): ReactElement => {
   const targetValues = useMemo(() => data.map((slice) => Math.max(0, slice.value)), [data]);
   const [animatedValues, setAnimatedValues] = useState<number[]>(targetValues);
   const animatedValuesRef = useRef<number[]>(targetValues);
@@ -262,4 +262,4 @@ export function PieChart({
       </div>
     </div>
   );
-}
+};

@@ -44,7 +44,7 @@ interface DashboardGridRuntimeProps {
 const EMPTY_SETTINGS_REGISTRY: DashboardPanelSettingsRegistry = {};
 const DASHBOARD_SETTINGS_SAVE_TIMEOUT_MS = 15_000;
 
-async function fetchDashboardSettingsSave(url: string, init: RequestInit): Promise<Response> {
+const fetchDashboardSettingsSave = async (url: string, init: RequestInit): Promise<Response> => {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => {
     controller.abort();
@@ -64,9 +64,9 @@ async function fetchDashboardSettingsSave(url: string, init: RequestInit): Promi
   } finally {
     window.clearTimeout(timeoutId);
   }
-}
+};
 
-export function DashboardGridRuntime({
+export const DashboardGridRuntime = ({
   dashboardUid,
   dashboardType,
   dashboardVersion = null,
@@ -87,7 +87,7 @@ export function DashboardGridRuntime({
   timeInRangeDefaultLayout,
   editControlsPortalId,
   allowDashboardDelete = false,
-}: DashboardGridRuntimeProps): ReactElement {
+}: DashboardGridRuntimeProps): ReactElement => {
   const router = useRouter();
   const [savedVersion, setSavedVersion] = useState<number | null>(dashboardVersion);
   const {
@@ -199,4 +199,4 @@ export function DashboardGridRuntime({
       {children}
     </DashboardGrid>
   );
-}
+};

@@ -7,11 +7,11 @@ interface DashboardPageHeaderProps {
   description?: string | null;
 }
 
-export function DashboardPageHeader({
+export const DashboardPageHeader = ({
   dashboardUid,
   title,
   description,
-}: DashboardPageHeaderProps) {
+}: DashboardPageHeaderProps) => {
   const settingsHref = `/dashboards?${new URLSearchParams({ settings: dashboardUid }).toString()}`;
 
   return (
@@ -37,4 +37,4 @@ export function DashboardPageHeader({
       </div>
     </header>
   );
-}
+};

@@ -3,12 +3,12 @@ import { twMerge } from 'tailwind-merge';
 import { SecondaryButton } from '../SecondaryButton';
 import type { SegmentedControlProps } from './SegmentedControl.types';
 
-export function SegmentedControl<T extends string>({
+export const SegmentedControl = <T extends string,>({
   options,
   value,
   onChange,
   twStyles,
-}: SegmentedControlProps<T>): ReactElement {
+}: SegmentedControlProps<T>): ReactElement => {
   return (
     <div className={twMerge('inline-flex items-center gap-1', twStyles)}>
       {options.map((option) => (
@@ -22,4 +22,4 @@ export function SegmentedControl<T extends string>({
       ))}
     </div>
   );
-}
+};

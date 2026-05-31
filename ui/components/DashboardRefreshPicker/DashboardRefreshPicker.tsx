@@ -18,7 +18,7 @@ interface DashboardRefreshPickerProps {
   onRefresh: () => void | Promise<void>;
 }
 
-function refreshLabel(value: string): string {
+const refreshLabel = (value: string): string => {
   if (value === DASHBOARD_REFRESH_OFF) {
     return 'Off';
   }
@@ -28,15 +28,15 @@ function refreshLabel(value: string): string {
   }
 
   return value;
-}
+};
 
-export function DashboardRefreshPicker({
+export const DashboardRefreshPicker = ({
   value,
   intervals,
   currentWindow,
   onChange,
   onRefresh,
-}: DashboardRefreshPickerProps): ReactElement {
+}: DashboardRefreshPickerProps): ReactElement => {
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1440 : window.innerWidth || 1440,
   );
@@ -135,4 +135,4 @@ export function DashboardRefreshPicker({
       </label>
     </div>
   );
-}
+};

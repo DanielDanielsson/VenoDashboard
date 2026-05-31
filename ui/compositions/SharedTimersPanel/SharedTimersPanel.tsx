@@ -31,16 +31,16 @@ interface FetchErrorPayload {
   };
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
+const fetchJson = async <T,>(url: string): Promise<T> => {
   const response = await fetch(url, { cache: 'no-store' });
   const payload = (await response.json()) as T & FetchErrorPayload;
   if (!response.ok) {
     throw new Error(payload.error?.message || 'Request failed');
   }
   return payload;
-}
+};
 
-function formatCountdown(targetIso: string, nowMs: number): string {
+const formatCountdown = (targetIso: string, nowMs: number): string => {
   const remaining = Math.max(
     0,
     Math.ceil((new Date(targetIso).getTime() - nowMs) / 1000),
@@ -52,9 +52,9 @@ function formatCountdown(targetIso: string, nowMs: number): string {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
+};
 
-function parseDurationInput(value: string): number | null {
+const parseDurationInput = (value: string): number | null => {
   const trimmed = value.trim().toLowerCase();
   if (!trimmed) {
     return null;
@@ -101,13 +101,13 @@ function parseDurationInput(value: string): number | null {
   return Number.isFinite(minutes) && minutes > 0
     ? Math.round(minutes * 60)
     : null;
-}
+};
 
-export function SharedTimersPanel({
+export const SharedTimersPanel = ({
   readOnly = false,
 }: {
   readOnly?: boolean;
-}) {
+}) => {
   const [showStartForm, setShowStartForm] = useState(false);
   const [selectedMinutes, setSelectedMinutes] = useState<number>(
     TIMER_PRESETS[0],
@@ -345,7 +345,7 @@ export function SharedTimersPanel({
                     <p
                       className={
                         isDone
-                          ? 'ui_mono_text_strong tabular-nums text-amber-200'
+                          ? 'ui_mono_text_strong tabular-nums text-base-warning-dark'
                           : 'ui_mono_text_strong tabular-nums text-text'
                       }
                     >
@@ -384,10 +384,10 @@ export function SharedTimersPanel({
               className="ui_input_text w-full rounded-lg border border-border bg-surface-muted px-3 py-2 text-text outline-none placeholder:text-text-dim focus:border-border"
             />
             {customError && (
-              <p className="ui_caption text-rose-300">{customError}</p>
+              <p className="ui_caption text-base-error-dark">{customError}</p>
             )}
             {errorMessage && (
-              <p className="ui_caption text-rose-300">{errorMessage}</p>
+              <p className="ui_caption text-base-error-dark">{errorMessage}</p>
             )}
             <div className="flex gap-2">
               <SecondaryButton
@@ -427,4 +427,4 @@ export function SharedTimersPanel({
       </div>
     </DashboardPanel>
   );
-}
+};

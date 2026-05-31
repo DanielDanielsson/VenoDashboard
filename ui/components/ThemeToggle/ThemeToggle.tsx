@@ -7,20 +7,20 @@ const STORAGE_KEY = 'pulse-theme';
 type Theme = 'light' | 'dark';
 const THEME_EVENT = 'pulse-theme-change';
 
-function applyTheme(theme: Theme) {
+const applyTheme = (theme: Theme) => {
   document.documentElement.classList.toggle('theme-dark', theme === 'dark');
   document.documentElement.style.colorScheme = theme;
-}
+};
 
-function readThemeSnapshot(): Theme {
+const readThemeSnapshot = (): Theme => {
   if (typeof document === 'undefined') {
     return 'dark';
   }
 
   return document.documentElement.classList.contains('theme-dark') ? 'dark' : 'light';
-}
+};
 
-function subscribeToTheme(callback: () => void): () => void {
+const subscribeToTheme = (callback: () => void): () => void => {
   if (typeof window === 'undefined') {
     return () => undefined;
   }
@@ -38,13 +38,13 @@ function subscribeToTheme(callback: () => void): () => void {
     window.removeEventListener(THEME_EVENT, callback);
     window.removeEventListener('storage', handleStorage);
   };
-}
+};
 
-function subscribeToMount(): () => void {
+const subscribeToMount = (): () => void => {
   return () => undefined;
-}
+};
 
-export function ThemeToggle() {
+export const ThemeToggle = () => {
   const theme = useSyncExternalStore(subscribeToTheme, readThemeSnapshot, () => 'dark');
   const isMounted = useSyncExternalStore(subscribeToMount, () => true, () => false);
   const nextTheme: Theme = theme === 'dark' ? 'light' : 'dark';
@@ -73,4 +73,4 @@ export function ThemeToggle() {
       <span className="sr-only">{activeThemeLabel} theme active</span>
     </button>
   );
-}
+};

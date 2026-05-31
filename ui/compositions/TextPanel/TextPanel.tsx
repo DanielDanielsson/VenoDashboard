@@ -30,10 +30,10 @@ const DEFAULT_TEXT_PANEL_SETTINGS: TextPanelSettings = {
   content: createWysiwygDocument('Add descriptive text for this dashboard.'),
 };
 
-function normalizeTextPanelSettings(
+const normalizeTextPanelSettings = (
   value: unknown,
   fallbackTitle = DEFAULT_TEXT_PANEL_SETTINGS.title,
-): TextPanelSettings {
+): TextPanelSettings => {
   const record = value && typeof value === 'object'
     ? value as { title?: unknown; content?: unknown }
     : undefined;
@@ -45,9 +45,9 @@ function normalizeTextPanelSettings(
     title,
     content: normalizeWysiwygDocument(record?.content),
   };
-}
+};
 
-export function createTextPanelSettingsRegistration(): DashboardPanelSettingsRegistration<TextPanelSettings> {
+export const createTextPanelSettingsRegistration = (): DashboardPanelSettingsRegistration<TextPanelSettings> => {
   return {
     defaultSettings: DEFAULT_TEXT_PANEL_SETTINGS,
     render: ({ settings, updateSettings }) => {
@@ -79,12 +79,12 @@ export function createTextPanelSettingsRegistration(): DashboardPanelSettingsReg
       );
     },
   };
-}
+};
 
-export function TextPanel({
+export const TextPanel = ({
   panelId,
   title = 'Text',
-}: TextPanelProps): ReactElement {
+}: TextPanelProps): ReactElement => {
   const defaultSettings = useMemo(() => ({
     ...DEFAULT_TEXT_PANEL_SETTINGS,
     title,
@@ -101,4 +101,4 @@ export function TextPanel({
       />
     </DashboardPanel>
   );
-}
+};

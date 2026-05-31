@@ -1,6 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
+import { twMerge } from 'tailwind-merge';
 import {
   useCallback,
   createContext,
@@ -60,7 +61,7 @@ const DEFAULT_DURATION_MS: Record<NotificationVariant, number> = {
 };
 const MAX_VISIBLE_NOTIFICATIONS = 5;
 
-export function NotificationsProvider({ children }: { children: ReactNode }) {
+export const NotificationsProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<NotificationState>({
     exitWindowEndsAt: null,
     exitingCount: 0,
@@ -264,7 +265,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
               onMouseLeave={() => resumeNotification(item.id)}
             >
               <div className="flex">
-                <div aria-hidden="true" className={`w-1 self-stretch ${VARIANT_ACCENT_CLASS[item.variant]}`} />
+                <div aria-hidden="true" className={twMerge('w-1 self-stretch', VARIANT_ACCENT_CLASS[item.variant])} />
                 <div className="flex-1">
                   <header className="flex items-center justify-between gap-3 border-b border-dashboard-panel-border bg-dashboard-panel-header-bg pl-4 pr-1.5 py-1.5">
                     <h2 className="panel_title text-dashboard-panel-title">{item.title}</h2>
@@ -289,13 +290,13 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       </section>
     </NotificationsContext.Provider>
   );
-}
+};
 
-export function useNotifications(): NotificationsContextValue {
+export const useNotifications = (): NotificationsContextValue => {
   const context = useContext(NotificationsContext);
   if (!context) {
     throw new Error('useNotifications must be used within NotificationsProvider');
   }
 
   return context;
-}
+};

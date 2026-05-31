@@ -13,14 +13,14 @@ interface PieChartLegendProps {
   onSliceClick?: (slice: PieChartSlice) => void;
 }
 
-export function PieChartLegend({
+export const PieChartLegend = ({
   data,
   total,
   activeSliceId = null,
   formatValue,
   onSliceHover,
   onSliceClick,
-}: PieChartLegendProps): ReactElement {
+}: PieChartLegendProps): ReactElement => {
   const isInteractive = Boolean(onSliceHover || onSliceClick);
 
   return (
@@ -76,4 +76,4 @@ export function PieChartLegend({
       })}
     </ul>
   );
-}
+};

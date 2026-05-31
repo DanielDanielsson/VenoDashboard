@@ -3,14 +3,14 @@ import { twMerge } from 'tailwind-merge';
 import { Button } from '@ui/base/Button';
 import type { AlignmentOptionButtonProps } from './AlignmentOptionButton.types';
 
-export function AlignmentOptionButton({
+export const AlignmentOptionButton = ({
   children,
   className,
   disabled,
   label,
   selected = false,
   ...props
-}: AlignmentOptionButtonProps): ReactElement {
+}: AlignmentOptionButtonProps): ReactElement => {
   return (
     <Button
       {...props}
@@ -32,4 +32,4 @@ export function AlignmentOptionButton({
       </span>
     </Button>
   );
-}
+};

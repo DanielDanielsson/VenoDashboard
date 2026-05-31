@@ -15,11 +15,11 @@ const useSearchParamsMock = vi.fn();
 const replaceMock = vi.fn();
 const routerMock = { replace: replaceMock };
 
-function renderWithProviders(ui: React.ReactElement) {
+const renderWithProviders = (ui: React.ReactElement) => {
   return render(<NotificationsProvider>{ui}</NotificationsProvider>);
-}
+};
 
-function createStatisticsDashboardDefinition(): DashboardDefinition {
+const createStatisticsDashboardDefinition = (): DashboardDefinition => {
   return parseDashboardDefinition({
     kind: 'Dashboard',
     spec: {
@@ -50,9 +50,9 @@ function createStatisticsDashboardDefinition(): DashboardDefinition {
       },
     },
   });
-}
+};
 
-function createPanel(id: number, title: string, group: string, options: Record<string, unknown> = {}) {
+const createPanel = (id: number, title: string, group: string, options: Record<string, unknown> = {}) => {
   return {
     kind: 'Panel',
     spec: {
@@ -72,12 +72,12 @@ function createPanel(id: number, title: string, group: string, options: Record<s
       },
     },
   };
-}
+};
 
-function gridItem(
+const gridItem = (
   name: string,
   spec: { x: number; y: number; width: number; height: number },
-) {
+) => {
   return {
     kind: 'GridLayoutItem',
     spec: {
@@ -88,21 +88,21 @@ function gridItem(
       },
     },
   };
-}
+};
 
-function GlucoseAnalysisView({
+const GlucoseAnalysisView = ({
   dashboardDefinition,
   ...props
 }: Omit<ComponentProps<typeof BaseGlucoseAnalysisView>, 'dashboardDefinition'> & {
   dashboardDefinition?: DashboardDefinition;
-}) {
+}) => {
   return (
     <BaseGlucoseAnalysisView
       {...props}
       dashboardDefinition={dashboardDefinition ?? createStatisticsDashboardDefinition()}
     />
   );
-}
+};
 
 vi.mock('next/navigation', () => ({
   usePathname: () => usePathnameMock(),
@@ -315,7 +315,7 @@ vi.mock('@ui/components/GlucoseChart/GlucoseChart', () => ({
   )
 }));
 
-function createHistoryResponse() {
+const createHistoryResponse = () => {
   return {
     items: [
       {
@@ -371,9 +371,9 @@ function createHistoryResponse() {
       healthStepCount: 0
     }
   };
-}
+};
 
-function createHistoryResponseWithNote() {
+const createHistoryResponseWithNote = () => {
   return {
     ...createHistoryResponse(),
     noteItems: [
@@ -393,9 +393,9 @@ function createHistoryResponseWithNote() {
       }
     ]
   };
-}
+};
 
-function createHistoryResponseWithWorkout() {
+const createHistoryResponseWithWorkout = () => {
   return {
     ...createHistoryResponse(),
     workoutItems: [
@@ -413,9 +413,9 @@ function createHistoryResponseWithWorkout() {
       }
     ]
   };
-}
+};
 
-function createHistoryResponseWithManualWorkout() {
+const createHistoryResponseWithManualWorkout = () => {
   return {
     ...createHistoryResponse(),
     workoutItems: [
@@ -431,9 +431,9 @@ function createHistoryResponseWithManualWorkout() {
       }
     ]
   };
-}
+};
 
-function createTwoWeekHistoryResponse() {
+const createTwoWeekHistoryResponse = () => {
   return {
     items: [
       {
@@ -499,15 +499,15 @@ function createTwoWeekHistoryResponse() {
       healthStepCount: 0
     }
   };
-}
+};
 
-function createOwnerProfileResponse() {
+const createOwnerProfileResponse = () => {
   return {
     profile: {
       timezone: 'UTC'
     }
   };
-}
+};
 
 describe('GlucoseAnalysisView', () => {
   afterEach(() => {

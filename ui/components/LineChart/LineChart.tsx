@@ -8,11 +8,11 @@ const VIEWBOX_WIDTH = 480;
 const DEFAULT_HEIGHT = 240;
 const PADDING = { top: 20, right: 20, bottom: 36, left: 44 };
 
-function clamp(value: number, min: number, max: number): number {
+const clamp = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(max, value));
-}
+};
 
-function buildTicks(values: number[], fallbackCount: number): LineChartTick[] {
+const buildTicks = (values: number[], fallbackCount: number): LineChartTick[] => {
   if (values.length === 0) {
     return [];
   }
@@ -30,9 +30,9 @@ function buildTicks(values: number[], fallbackCount: number): LineChartTick[] {
       label: Number.isInteger(value) ? String(value) : value.toFixed(1),
     };
   });
-}
+};
 
-export function LineChart({
+export const LineChart = ({
   data,
   ariaLabel,
   height = DEFAULT_HEIGHT,
@@ -40,7 +40,7 @@ export function LineChart({
   yTicks,
   yDomain,
   showArea = true,
-}: LineChartProps): ReactElement {
+}: LineChartProps): ReactElement => {
   const chartWidth = VIEWBOX_WIDTH - PADDING.left - PADDING.right;
   const chartHeight = height - PADDING.top - PADDING.bottom;
   const xValues = data.map((point) => point.x);
@@ -122,4 +122,4 @@ export function LineChart({
       ))}
     </svg>
   );
-}
+};

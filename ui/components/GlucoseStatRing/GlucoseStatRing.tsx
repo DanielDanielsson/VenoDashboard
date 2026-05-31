@@ -1,5 +1,7 @@
 'use client';
 
+import { twMerge } from 'tailwind-merge';
+
 type GlucoseStatRingSize = 'sm' | 'md' | 'lg';
 
 interface GlucoseStatRingProps {
@@ -15,7 +17,7 @@ const SIZE_CONFIG: Record<GlucoseStatRingSize, { diameter: number; stroke: numbe
   lg: { diameter: 90, stroke: 7, valueClassName: 'ui_ring_value_lg', labelClassName: 'ui_ring_label' },
 };
 
-export function GlucoseStatRing({ label, percentage, color, size = 'md' }: GlucoseStatRingProps) {
+export const GlucoseStatRing = ({ label, percentage, color, size = 'md' }: GlucoseStatRingProps) => {
   const config = SIZE_CONFIG[size];
   const radius = (config.diameter - config.stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -57,15 +59,15 @@ export function GlucoseStatRing({ label, percentage, color, size = 'md' }: Gluco
           inset: 0,
           display: 'grid',
           placeItems: 'center',
-        }} className={`${config.valueClassName} text-text`}>
+        }} className={twMerge(config.valueClassName, 'text-text')}>
           {normalized}%
         </div>
       </div>
       <div style={{ display: 'grid', justifyItems: 'center', gap: 2 }}>
-        <div className={`${config.labelClassName} text-text-soft`} style={{ textAlign: 'center' }}>
+        <div className={twMerge(config.labelClassName, 'text-text-soft')} style={{ textAlign: 'center' }}>
           {label}
         </div>
       </div>
     </div>
   );
-}
+};

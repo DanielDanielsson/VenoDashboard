@@ -12,21 +12,21 @@ const STATUS_COLOR: Record<FreshnessStatus, string> = {
   inactive: 'var(--text-soft)',
 };
 
-function getStatus(ageMs: number): FreshnessStatus {
+const getStatus = (ageMs: number): FreshnessStatus => {
   const minutes = ageMs / 60_000;
   if (minutes < 5) return 'fresh';
   if (minutes < 10) return 'aging';
   return 'stale';
-}
+};
 
-function getAgeParts(ageMs: number): { prefix: string; seconds: number | null } {
+const getAgeParts = (ageMs: number): { prefix: string; seconds: number | null } => {
   const totalSeconds = Math.floor(ageMs / 1_000);
   const seconds = totalSeconds % 60;
   const minutes = Math.floor(totalSeconds / 60);
   if (minutes < 60) return { prefix: minutes > 0 ? `${minutes}m` : '', seconds };
   const hours = Math.floor(minutes / 60);
   return { prefix: `${hours}h ${minutes % 60}m`, seconds: null };
-}
+};
 
 interface DataFreshnessLightProps {
   timestamp?: string | null;
@@ -36,13 +36,13 @@ interface DataFreshnessLightProps {
   twStyles?: string;
 }
 
-export function DataFreshnessLight({
+export const DataFreshnessLight = ({
   timestamp,
   fallbackLabel = 'No signal yet',
   status,
   autoUpdateEventName = 'pulse-glucose-latest',
   twStyles,
-}: DataFreshnessLightProps) {
+}: DataFreshnessLightProps) => {
   const [nowMs, setNowMs] = useState(Date.now);
   const [readingTimestamp, setReadingTimestamp] = useState(timestamp);
 
@@ -113,4 +113,4 @@ export function DataFreshnessLight({
       />
     </div>
   );
-}
+};

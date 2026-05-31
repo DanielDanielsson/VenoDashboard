@@ -5,16 +5,16 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@ui/base/Button';
 import { useNotifications } from '@ui/compositions/NotificationsProvider';
 
-async function readErrorMessage(response: Response, fallback: string): Promise<string> {
+const readErrorMessage = async (response: Response, fallback: string): Promise<string> => {
   try {
     const payload = await response.json() as { error?: { message?: string } };
     return payload.error?.message || fallback;
   } catch {
     return fallback;
   }
-}
+};
 
-export function DashboardTitleEditor({
+export const DashboardTitleEditor = ({
   dashboardUid,
   initialTitle,
   dashboardVersion,
@@ -26,7 +26,7 @@ export function DashboardTitleEditor({
   dashboardVersion: number | null;
   isOwner: boolean;
   showActions?: boolean;
-}) {
+}) => {
   const router = useRouter();
   const { notifyError, notifySuccess } = useNotifications();
   const [title, setTitle] = useState(initialTitle);
@@ -161,4 +161,4 @@ export function DashboardTitleEditor({
       ) : null}
     </div>
   );
-}
+};

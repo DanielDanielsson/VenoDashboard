@@ -8,12 +8,12 @@ const currentWindow = {
   to: '2026-04-19T12:00:00.000Z',
 };
 
-function setDocumentHidden(hidden: boolean) {
+const setDocumentHidden = (hidden: boolean) => {
   Object.defineProperty(document, 'hidden', {
     configurable: true,
     value: hidden,
   });
-}
+};
 
 describe('DashboardRefreshPicker', () => {
   afterEach(() => {

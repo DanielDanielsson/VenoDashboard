@@ -52,7 +52,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-function createLayout(): GridLayoutKind {
+const createLayout = (): GridLayoutKind => {
   return {
     kind: 'GridLayout',
     spec: {
@@ -73,9 +73,9 @@ function createLayout(): GridLayoutKind {
       ],
     },
   };
-}
+};
 
-function createTwoPanelLayout(): GridLayoutKind {
+const createTwoPanelLayout = (): GridLayoutKind => {
   return {
     kind: 'GridLayout',
     spec: {
@@ -109,9 +109,9 @@ function createTwoPanelLayout(): GridLayoutKind {
       ],
     },
   };
-}
+};
 
-function createPanel(group: string, title: string): PanelKind {
+const createPanel = (group: string, title: string): PanelKind => {
   return {
     kind: 'Panel',
     spec: {
@@ -139,7 +139,7 @@ function createPanel(group: string, title: string): PanelKind {
       },
     },
   };
-}
+};
 
 describe('DashboardGridRuntime', () => {
   afterEach(() => {

@@ -2,7 +2,7 @@ import type { PieChartSlice } from '@ui/components/PieChart';
 import { getWorkoutTypeLabel } from '@/lib/glucose/workout-display';
 import type { WorkoutChartPoint } from '@/lib/glucose/types';
 
-export function buildWorkoutTypePieSlices(workouts: WorkoutChartPoint[]): PieChartSlice[] {
+export const buildWorkoutTypePieSlices = (workouts: WorkoutChartPoint[]): PieChartSlice[] => {
   const counts = new Map<string, number>();
 
   for (const workout of workouts) {
@@ -23,4 +23,4 @@ export function buildWorkoutTypePieSlices(workouts: WorkoutChartPoint[]): PieCha
 
       return left.label.localeCompare(right.label);
     });
-}
+};
