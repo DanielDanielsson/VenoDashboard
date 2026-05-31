@@ -64,6 +64,7 @@ describe('DashboardLibrary', () => {
     usePathnameMock.mockReturnValue('/dashboards');
     useSearchParamsMock.mockReturnValue(new URLSearchParams());
     window.history.replaceState(null, '', '/dashboards');
+    window.scrollTo = vi.fn();
     document.documentElement.style.setProperty('--duration-dashboard-order', '1ms');
   });
 
@@ -154,7 +155,7 @@ describe('DashboardLibrary', () => {
       'href',
       '/static_assets/iconSprite.svg#bookmark-filled',
     );
-    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(refresh).not.toHaveBeenCalled();
     let notifications = screen.getByRole('region', { name: 'Notifications' });
     expect(within(notifications).getByText('Dashboard pinned').closest('[data-variant="success"]')).toBeInTheDocument();
 
@@ -176,7 +177,7 @@ describe('DashboardLibrary', () => {
       'href',
       '/static_assets/iconSprite.svg#bookmark',
     );
-    expect(refresh).toHaveBeenCalledTimes(2);
+    expect(refresh).not.toHaveBeenCalled();
     notifications = screen.getByRole('region', { name: 'Notifications' });
     expect(within(notifications).getByText('Dashboard unpinned').closest('[data-variant="success"]')).toBeInTheDocument();
   });
@@ -462,7 +463,7 @@ describe('DashboardLibrary', () => {
     expect(screen.queryByRole('dialog', { name: 'Set home dashboard?' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Set Overview as home dashboard' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Statistics is home dashboard' })).toBeDisabled();
-    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(refresh).not.toHaveBeenCalled();
     const notifications = screen.getByRole('region', { name: 'Notifications' });
     expect(within(notifications).getByText('Home dashboard updated').closest('[data-variant="success"]')).toBeInTheDocument();
   });
@@ -638,7 +639,7 @@ describe('DashboardLibrary', () => {
     expect(within(notifications).getByText('Dashboard deleted').closest('[data-variant="success"]')).toBeInTheDocument();
   });
 
-  test('admin users can save dashboard metadata and keep the library page in place', async () => {
+  test('admin users can save dashboard metadata without refreshing the library page', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -691,7 +692,7 @@ describe('DashboardLibrary', () => {
 
     expect(screen.getByRole('link', { name: 'Open Reports dashboard' })).toHaveAttribute('href', '/dashboards/reports');
     expect(push).not.toHaveBeenCalled();
-    expect(refresh).toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
     const notifications = screen.getByRole('region', { name: 'Notifications' });
     expect(within(notifications).getByText('Dashboard settings saved').closest('[data-variant="success"]')).toBeInTheDocument();
   });

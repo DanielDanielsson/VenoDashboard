@@ -18,6 +18,7 @@ import { DASHBOARD_ICON_OPTIONS } from '@/lib/dashboard/metadata';
 import type { HistorySelection } from '@/lib/glucose/history-cache';
 import {
   applyDashboardMetadataSaveResult,
+  dispatchDashboardMetadataUpdated,
   isDashboardMetadataDirty,
   normalizeDashboardDescriptionDraft,
   serializeDashboardDescription,
@@ -33,23 +34,23 @@ interface DashboardMetadataSettingsProps {
   setItems: Dispatch<SetStateAction<DashboardLibraryItem[]>>;
 }
 
-async function readErrorMessage(response: Response, fallback: string): Promise<string> {
+const readErrorMessage = async (response: Response, fallback: string): Promise<string> => {
   try {
     const payload = await response.json() as { error?: { message?: string } };
     return payload.error?.message || fallback;
   } catch {
     return fallback;
   }
-}
+};
 
-export function DashboardMetadataSettings({
+export const DashboardMetadataSettings = ({
   dashboard,
   isOwner,
   onDirtyChange,
   onDeleted,
   onSaved,
   setItems,
-}: DashboardMetadataSettingsProps) {
+}: DashboardMetadataSettingsProps) => {
   const router = useRouter();
   const { notifyError, notifySuccess } = useNotifications();
   const [draftTitle, setDraftTitle] = useState(dashboard.title);
@@ -126,10 +127,11 @@ export function DashboardMetadataSettings({
       }
 
       const payload = await response.json() as DashboardMetadataSaveResult;
+      const nextUid = payload.dashboard?.uid ?? dashboard.uid;
       setItems((currentItems) => applyDashboardMetadataSaveResult(currentItems, dashboard.uid, payload));
-      onSaved(dashboard.uid, payload.dashboard?.uid ?? dashboard.uid);
+      dispatchDashboardMetadataUpdated(dashboard.uid, nextUid, payload);
+      onSaved(dashboard.uid, nextUid);
       notifySuccess('Dashboard settings saved');
-      router.refresh();
     } catch (error) {
       notifyError('Dashboard settings could not be saved', {
         message: error instanceof Error ? error.message : undefined,
@@ -344,4 +346,4 @@ export function DashboardMetadataSettings({
       </div>
     </section>
   );
-}
+};

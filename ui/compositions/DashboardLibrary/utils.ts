@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom';
 import {
   createWysiwygDocument,
   normalizeWysiwygDocument,
@@ -12,28 +13,43 @@ import type { DashboardMetadataSaveResult } from './types';
 
 export type DashboardDropPosition = 'before' | 'after';
 
-export function normalizeDashboardDescriptionDraft(
-  description: DashboardDescriptionDocument | null,
-): WysiwygDocument {
-  return normalizeWysiwygDocument(description ?? createWysiwygDocument());
-}
+export const DASHBOARD_METADATA_UPDATED_EVENT = 'veno:dashboard-metadata-updated';
+export const DASHBOARD_PREFERENCES_UPDATED_EVENT = 'veno:dashboard-preferences-updated';
 
-export function serializeDashboardDescription(
+export const runPreservingWindowScroll = (update: () => void) => {
+  const scrollLeft = window.scrollX;
+  const scrollTop = window.scrollY;
+  const scrollTo = window.scrollTo.bind(window);
+  const restoreScroll = () => scrollTo(scrollLeft, scrollTop);
+
+  flushSync(update);
+  restoreScroll();
+  window.requestAnimationFrame(restoreScroll);
+  window.setTimeout(restoreScroll, 50);
+};
+
+export const normalizeDashboardDescriptionDraft = (
+  description: DashboardDescriptionDocument | null,
+): WysiwygDocument => {
+  return normalizeWysiwygDocument(description ?? createWysiwygDocument());
+};
+
+export const serializeDashboardDescription = (
   description: WysiwygDocument,
-): DashboardDescriptionDocument | null {
+): DashboardDescriptionDocument | null => {
   const normalized = normalizeWysiwygDocument(description);
   const text = getDashboardDescriptionText(normalized);
 
   return text ? normalized : null;
-}
+};
 
-function normalizeDashboardTitle(value: string): string {
+const normalizeDashboardTitle = (value: string): string => {
   return value.trim().replace(/\s+/g, ' ');
-}
+};
 
-function canonicalizeDashboardDescription(
+const canonicalizeDashboardDescription = (
   description: DashboardDescriptionDocument | WysiwygDocument | null,
-) {
+) => {
   if (!description) {
     return null;
   }
@@ -53,27 +69,27 @@ function canonicalizeDashboardDescription(
       })),
     })),
   };
-}
+};
 
-export function isDashboardMetadataDirty(input: {
+export const isDashboardMetadataDirty = (input: {
   dashboard: DashboardLibraryItem;
   draftTitle: string;
   draftDescription: WysiwygDocument;
   draftIcon: DashboardLibraryItem['icon'];
   draftDefaultTimeRange: DashboardLibraryItem['defaultTimeRange'];
-}): boolean {
+}): boolean => {
   return normalizeDashboardTitle(input.dashboard.title) !== normalizeDashboardTitle(input.draftTitle)
     || JSON.stringify(canonicalizeDashboardDescription(input.dashboard.description))
       !== JSON.stringify(canonicalizeDashboardDescription(input.draftDescription))
     || (input.dashboard.icon ?? null) !== (input.draftIcon ?? null)
     || (input.dashboard.defaultTimeRange ?? null) !== (input.draftDefaultTimeRange ?? null);
-}
+};
 
-export function applyDashboardMetadataSaveResult(
+export const applyDashboardMetadataSaveResult = (
   currentItems: DashboardLibraryItem[],
   currentDashboardUid: string,
   payload: DashboardMetadataSaveResult,
-): DashboardLibraryItem[] {
+): DashboardLibraryItem[] => {
   const updatedDashboard = payload.dashboard;
   const previousUid = payload.previousUid ?? currentDashboardUid;
   const nextUid = updatedDashboard?.uid ?? currentDashboardUid;
@@ -104,20 +120,20 @@ export function applyDashboardMetadataSaveResult(
       isPinned: hasPinnedPreferences ? pinnedDashboardUids.has(nextUid) : item.isPinned,
     };
   });
-}
+};
 
-export function getDashboardPreferencePayload(items: DashboardLibraryItem[]) {
+export const getDashboardPreferencePayload = (items: DashboardLibraryItem[]) => {
   return {
     homeDashboardUid: items.find((dashboard) => dashboard.isHome)?.uid ?? items[0]?.uid ?? '',
     pinnedDashboardUids: items.filter((dashboard) => dashboard.isPinned).map((dashboard) => dashboard.uid),
     dashboardOrderUids: items.map((dashboard) => dashboard.uid),
   };
-}
+};
 
-export function orderDashboardItems(
+export const orderDashboardItems = (
   items: DashboardLibraryItem[],
   dashboardOrderUids: string[],
-): DashboardLibraryItem[] {
+): DashboardLibraryItem[] => {
   const currentIndex = new Map(items.map((dashboard, index) => [dashboard.uid, index]));
   const orderIndex = new Map(dashboardOrderUids.map((dashboardUid, index) => [dashboardUid, index]));
 
@@ -139,14 +155,14 @@ export function orderDashboardItems(
 
     return (currentIndex.get(left.uid) ?? 0) - (currentIndex.get(right.uid) ?? 0);
   });
-}
+};
 
-export function reorderDashboardItems(
+export const reorderDashboardItems = (
   items: DashboardLibraryItem[],
   draggedDashboardUid: string,
   targetDashboardUid: string,
   position: DashboardDropPosition,
-): DashboardLibraryItem[] {
+): DashboardLibraryItem[] => {
   if (draggedDashboardUid === targetDashboardUid) {
     return items;
   }
@@ -168,13 +184,13 @@ export function reorderDashboardItems(
     draggedDashboard,
     ...nextItems.slice(insertIndex),
   ];
-}
+};
 
-export function moveDashboardItem(
+export const moveDashboardItem = (
   items: DashboardLibraryItem[],
   dashboardUid: string,
   direction: -1 | 1,
-): DashboardLibraryItem[] {
+): DashboardLibraryItem[] => {
   const currentIndex = items.findIndex((dashboard) => dashboard.uid === dashboardUid);
   const nextIndex = currentIndex + direction;
 
@@ -186,4 +202,42 @@ export function moveDashboardItem(
   const [dashboard] = nextItems.splice(currentIndex, 1);
   nextItems.splice(nextIndex, 0, dashboard);
   return nextItems;
-}
+};
+
+export const dispatchDashboardMetadataUpdated = (
+  previousUid: string,
+  nextUid: string,
+  payload: DashboardMetadataSaveResult,
+) => {
+  const dashboard = payload.dashboard;
+
+  if (!dashboard) {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent(DASHBOARD_METADATA_UPDATED_EVENT, {
+    detail: {
+      previousUid,
+      dashboard: {
+        uid: nextUid,
+        title: dashboard.title,
+        icon: dashboard.icon,
+      },
+      preferences: payload.preferences,
+    },
+  }));
+};
+
+export const dispatchDashboardPreferencesUpdated = (preferences: {
+  homeDashboardUid?: string;
+  pinnedDashboardUids?: string[];
+  dashboards?: Array<{
+    uid: string;
+    title: string;
+    icon: DashboardLibraryItem['icon'];
+  }>;
+}) => {
+  window.dispatchEvent(new CustomEvent(DASHBOARD_PREFERENCES_UPDATED_EVENT, {
+    detail: preferences,
+  }));
+};
