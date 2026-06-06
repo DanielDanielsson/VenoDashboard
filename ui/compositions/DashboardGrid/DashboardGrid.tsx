@@ -1114,20 +1114,6 @@ export const DashboardGrid = ({
       return;
     }
 
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [shouldGuardUnsavedDashboardChanges]);
-
-  useEffect(() => {
-    if (!shouldGuardUnsavedDashboardChanges) {
-      return;
-    }
-
     const handleDocumentClick = (event: MouseEvent) => {
       if (
         event.defaultPrevented ||

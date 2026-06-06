@@ -148,20 +148,6 @@ export const DashboardLibrary = ({ dashboards, isOwner }: DashboardLibraryProps)
   }, [isOwner]);
 
   useEffect(() => {
-    if (!isOwner || !dirtyDashboardUid) {
-      return;
-    }
-
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [dirtyDashboardUid, isOwner]);
-
-  useEffect(() => {
     setSettingsDashboardUid(searchParams.get(DASHBOARD_SETTINGS_PARAM));
   }, [searchParams]);
 
