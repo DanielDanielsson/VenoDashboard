@@ -21,6 +21,7 @@ import {
   DashboardHomeConfirmationDialog,
   DashboardLibraryBadge,
   DashboardPinButton,
+  DashboardSettingsAccordion,
 } from './components';
 import { DashboardMetadataSettings } from './DashboardMetadataSettings';
 import type { DashboardDropPosition } from './utils';
@@ -36,7 +37,7 @@ const DASHBOARD_TYPE_ICON: Record<DashboardLibraryItem['type'], 'glucose' | 'clo
 };
 
 const DASHBOARD_LIBRARY_COLUMNS = {
-  owner: 'grid-cols-[2.25rem_minmax(0,1fr)] md:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)]',
+  owner: 'md:grid-cols-2',
   public: 'md:grid-cols-2',
 };
 
@@ -177,10 +178,9 @@ export const DashboardLibraryView = ({
         </Button>
       ) : null}
       <div
-        className={twMerge('hidden gap-6 rounded-[4px] border border-dashboard-panel-border bg-dashboard-library-header-bg px-5 py-3 md:grid md:items-center', dashboardLibraryColumns)}
+        className={twMerge('hidden gap-6 rounded-[4px] border border-dashboard-panel-border bg-dashboard-library-header-bg py-3 md:grid md:items-center', isOwner ? 'pl-9 pr-5' : 'px-5', dashboardLibraryColumns)}
         data-testid="dashboard-library-header"
       >
-        {isOwner ? <span aria-hidden="true" /> : null}
         <span className="body_text text-text-soft">Name</span>
         <span className={twMerge('grid gap-6 md:items-center', dashboardLibraryHeaderDetailColumns)}>
           <span className="body_text text-text-soft">Type</span>
@@ -234,7 +234,7 @@ export const DashboardLibraryView = ({
                 )}
               />
             ) : null}
-            <article className={twMerge('relative grid min-h-[4.5rem] gap-6 p-5', dashboardLibraryColumns)}>
+            <article className="relative flex min-h-[4.5rem] items-stretch">
               <Link
                 ariaLabel={`Open ${dashboard.title} dashboard`}
                 href={`/dashboards/${dashboard.uid}`}
@@ -244,83 +244,83 @@ export const DashboardLibraryView = ({
                 <span className="sr-only">Open {dashboard.title} dashboard</span>
               </Link>
               {isOwner ? (
-                <span className="z-[3] flex items-center justify-start">
-                  <Button
-                    ariaLabel={`Drag ${dashboard.title} to reorder`}
-                    disabled={isSavingOrder}
-                    draggable={!isSavingOrder}
-                    onDragStart={(event) => onDragStart(event, dashboard.uid)}
-                    onDragEnd={onDragEnd}
-                    onKeyDown={(event) => onGrabberKeyDown(event, dashboard.uid)}
-                    title={`Drag ${dashboard.title} to reorder`}
-                    twStyles="grid h-10 w-8 place-items-center rounded-[4px] text-text-soft transition-colors hover:bg-dashboard-time-picker-bg-hover hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong cursor-grab active:cursor-grabbing"
-                  >
-                    <Icon icon="grabber" twStyles="h-6 w-6" />
-                  </Button>
-                </span>
+                <Button
+                  ariaLabel={`Drag ${dashboard.title} to reorder`}
+                  disabled={isSavingOrder}
+                  draggable={!isSavingOrder}
+                  onDragStart={(event) => onDragStart(event, dashboard.uid)}
+                  onDragEnd={onDragEnd}
+                  onKeyDown={(event) => onGrabberKeyDown(event, dashboard.uid)}
+                  title={`Drag ${dashboard.title} to reorder`}
+                  twStyles="relative z-[3] grid w-8 shrink-0 place-items-center rounded-l-[6px] text-text-soft transition-colors hover:bg-dashboard-library-header-bg hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong cursor-grab active:cursor-grabbing"
+                >
+                  <Icon icon="grabber" twStyles="h-6 w-6" />
+                </Button>
               ) : null}
-              <span className="pointer-events-none z-[1] grid min-w-0 content-center gap-1">
-                <span className="flex min-w-0 items-center gap-3">
-                  <Icon
-                    icon={dashboard.icon ?? 'dashboard-grid'}
-                    twStyles="h-5 w-5 flex-none text-text-soft"
-                  />
-                  <span className="body_text min-w-0 truncate text-dashboard-panel-title">
-                    {dashboard.title}
+              <div className={twMerge('grid min-w-0 flex-1 gap-6 p-5', isOwner && 'pl-1', dashboardLibraryColumns)}>
+                <span className="pointer-events-none z-[1] grid min-w-0 content-center gap-1">
+                  <span className="flex min-w-0 items-center gap-3">
+                    <Icon
+                      icon={dashboard.icon ?? 'dashboard-grid'}
+                      twStyles="h-5 w-5 flex-none text-text-soft"
+                    />
+                    <span className="body_text min-w-0 truncate text-dashboard-panel-title">
+                      {dashboard.title}
+                    </span>
                   </span>
-                </span>
-                {getDashboardDescriptionText(dashboard.description) ? (
-                  <span className="body_text overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] text-text-soft">
-                    {getDashboardDescriptionText(dashboard.description)}
-                  </span>
-                ) : null}
-              </span>
-              <div className={twMerge('z-[1] grid min-w-0 gap-4 md:items-center md:gap-6', isOwner && 'col-start-2 md:col-start-auto', dashboardLibraryDetailColumns)}>
-                <span className="pointer-events-none flex items-center">
-                  <DashboardLibraryBadge icon={DASHBOARD_TYPE_ICON[dashboard.type]}>
-                    {DASHBOARD_TYPE_LABEL[dashboard.type]}
-                  </DashboardLibraryBadge>
-                </span>
-                <span className="pointer-events-none flex flex-wrap items-center gap-2">
-                  {dashboard.isHome ? (
-                    <DashboardLibraryBadge tone="success">Home</DashboardLibraryBadge>
-                  ) : null}
-                  {dashboard.isPinned ? (
-                    <DashboardLibraryBadge>Pinned</DashboardLibraryBadge>
+                  {getDashboardDescriptionText(dashboard.description) ? (
+                    <span className="body_text overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] text-text-soft">
+                      {getDashboardDescriptionText(dashboard.description)}
+                    </span>
                   ) : null}
                 </span>
+                <div className={twMerge('z-[1] grid min-w-0 gap-4 md:items-center md:gap-6', dashboardLibraryDetailColumns)}>
+                  <span className="pointer-events-none flex items-center">
+                    <DashboardLibraryBadge icon={DASHBOARD_TYPE_ICON[dashboard.type]}>
+                      {DASHBOARD_TYPE_LABEL[dashboard.type]}
+                    </DashboardLibraryBadge>
+                  </span>
+                  <span className="pointer-events-none flex flex-wrap items-center gap-2">
+                    {dashboard.isHome ? (
+                      <DashboardLibraryBadge tone="success">Home</DashboardLibraryBadge>
+                    ) : null}
+                    {dashboard.isPinned ? (
+                      <DashboardLibraryBadge>Pinned</DashboardLibraryBadge>
+                    ) : null}
+                  </span>
 
-                <div className="z-[2] flex flex-nowrap justify-end gap-2 md:items-center">
-                  {isOwner ? (
-                    <>
-                      <DashboardHomeButton
-                        dashboard={dashboard}
-                        isSaving={savingDashboardUid === dashboard.uid}
-                        onRequestHomeDashboard={onRequestHomeDashboard}
-                      />
-                      <DashboardPinButton
-                        dashboard={dashboard}
-                        homeDashboardUid={homeDashboardUid}
-                        pinnedDashboardUids={pinnedDashboardUids}
-                        dashboardOrderUids={dashboardOrderUids}
-                        isSaving={savingDashboardUid === dashboard.uid}
-                        setSavingDashboardUid={setSavingDashboardUid}
-                        setItems={setItems}
-                      />
-                    </>
-                  ) : null}
-                  <Button
-                    ariaLabel={`${expandedDashboardUid === dashboard.uid ? 'Close' : 'Open'} ${dashboard.title} settings`}
-                    title={`${expandedDashboardUid === dashboard.uid ? 'Close' : 'Open'} ${dashboard.title} settings`}
-                    twStyles="grid h-10 w-10 shrink-0 place-items-center rounded-[5px] border border-border text-text-soft transition-colors hover:border-text-soft hover:text-text"
-                    onClick={() => onSettingsToggle(dashboard.uid)}
-                  >
-                    <Icon icon="more-horizontal" twStyles="h-5 w-5" />
-                  </Button>
+                  <div className="z-[2] flex flex-nowrap justify-end gap-2 md:items-center">
+                    {isOwner ? (
+                      <>
+                        <DashboardHomeButton
+                          dashboard={dashboard}
+                          isSaving={savingDashboardUid === dashboard.uid}
+                          onRequestHomeDashboard={onRequestHomeDashboard}
+                        />
+                        <DashboardPinButton
+                          dashboard={dashboard}
+                          homeDashboardUid={homeDashboardUid}
+                          pinnedDashboardUids={pinnedDashboardUids}
+                          dashboardOrderUids={dashboardOrderUids}
+                          isSaving={savingDashboardUid === dashboard.uid}
+                          setSavingDashboardUid={setSavingDashboardUid}
+                          setItems={setItems}
+                        />
+                      </>
+                    ) : null}
+                    <Button
+                      ariaLabel={`${expandedDashboardUid === dashboard.uid ? 'Close' : 'Open'} ${dashboard.title} settings`}
+                      title={`${expandedDashboardUid === dashboard.uid ? 'Close' : 'Open'} ${dashboard.title} settings`}
+                      twStyles="grid h-10 w-10 shrink-0 place-items-center rounded-[5px] border border-border text-text-soft transition-colors hover:border-text-soft hover:text-text"
+                      onClick={() => onSettingsToggle(dashboard.uid)}
+                    >
+                      <Icon icon="more-horizontal" twStyles="h-5 w-5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </article>
-            {expandedDashboardUid === dashboard.uid ? (
+            <DashboardSettingsAccordion open={expandedDashboardUid === dashboard.uid}>
               <DashboardMetadataSettings
                 dashboard={dashboard}
                 isOwner={isOwner}
@@ -329,7 +329,7 @@ export const DashboardLibraryView = ({
                 onSaved={onMetadataSaved}
                 setItems={setItems}
               />
-            ) : null}
+            </DashboardSettingsAccordion>
           </li>
         ))}
       </ul>

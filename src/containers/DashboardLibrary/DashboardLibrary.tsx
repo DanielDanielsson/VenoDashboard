@@ -41,7 +41,9 @@ export const DashboardLibrary = ({ dashboards, isOwner }: DashboardLibraryProps)
   const searchParams = useSearchParams();
   const [items, setItems] = useState(dashboards);
   const [savingDashboardUid, setSavingDashboardUid] = useState<string | null>(null);
-  const [expandedDashboardUid, setExpandedDashboardUid] = useState<string | null>(null);
+  const [expandedDashboardUid, setExpandedDashboardUid] = useState<string | null>(
+    () => searchParams.get(DASHBOARD_SETTINGS_PARAM),
+  );
   const [settingsDashboardUid, setSettingsDashboardUid] = useState<string | null>(
     () => searchParams.get(DASHBOARD_SETTINGS_PARAM),
   );
