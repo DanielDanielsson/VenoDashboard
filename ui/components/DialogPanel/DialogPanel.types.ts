@@ -5,5 +5,6 @@ export type DialogPanelProps = Stylable & {
   title: string;
   children: ReactNode;
   widthClassName?: string;
+  contentClassName?: string;
   overlayTestId?: string;
 };

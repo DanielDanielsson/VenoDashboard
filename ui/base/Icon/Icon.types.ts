@@ -4,6 +4,7 @@ export type IconName =
   | 'sun'
   | 'moon'
   | 'home'
+  | 'home-filled'
   | 'activity'
   | 'workout-run'
   | 'workout-walk'

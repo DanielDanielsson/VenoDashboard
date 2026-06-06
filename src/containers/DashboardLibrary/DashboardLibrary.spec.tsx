@@ -437,7 +437,11 @@ describe('DashboardLibrary', () => {
       </NotificationsProvider>,
     );
 
-    expect(screen.getByRole('button', { name: 'Overview is home dashboard' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Overview is home dashboard' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Overview is home dashboard' }).querySelector('use')).toHaveAttribute(
+      'href',
+      '/static_assets/iconSprite.svg#home-filled',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Set Statistics as home dashboard' }));
 
@@ -462,7 +466,11 @@ describe('DashboardLibrary', () => {
 
     expect(screen.queryByRole('dialog', { name: 'Set home dashboard?' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Set Overview as home dashboard' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Statistics is home dashboard' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Statistics is home dashboard' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Statistics is home dashboard' }).querySelector('use')).toHaveAttribute(
+      'href',
+      '/static_assets/iconSprite.svg#home-filled',
+    );
     expect(refresh).not.toHaveBeenCalled();
     const notifications = screen.getByRole('region', { name: 'Notifications' });
     expect(within(notifications).getByText('Home dashboard updated').closest('[data-variant="success"]')).toBeInTheDocument();
@@ -543,23 +551,32 @@ describe('DashboardLibrary', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Create dashboard' }));
+    const dialog = screen.getByRole('dialog', { name: 'Create Dashboard' });
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create dashboard' }));
 
     let notifications = screen.getByRole('region', { name: 'Notifications' });
-    expect(within(notifications).getByText('Dashboard title is required').closest('[data-variant="error"]')).toBeInTheDocument();
+    expect(within(notifications).getByText('Dashboard name is required').closest('[data-variant="error"]')).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Select Time range dashboard type' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Select Live dashboard type' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(dialog).getByRole('button', { name: 'Select Time range dashboard type' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(dialog).getByRole('button', { name: 'Select Live dashboard type' })).toHaveAttribute('aria-pressed', 'false');
 
-    fireEvent.change(screen.getByLabelText('Dashboard title'), {
+    fireEvent.change(within(dialog).getByLabelText('Dashboard name'), {
       target: { value: 'Night view' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Create dashboard' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Activity' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Time range selected: Last 3 days' }));
+    fireEvent.click(screen.getByRole('button', { name: '7 days' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create dashboard' }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith('/api/dashboard/dashboards', expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
           title: 'Night view',
+          description: null,
+          icon: 'activity',
+          defaultTimeRange: '7d',
           type: 'timeRange',
         }),
       }));
@@ -571,14 +588,15 @@ describe('DashboardLibrary', () => {
   });
 
   test('failed dashboard creation shows an error notification', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       json: async () => ({
         error: {
           message: 'Dashboard type must be live or timeRange.',
         },
       }),
-    }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
 
     render(
       <NotificationsProvider>
@@ -586,13 +604,25 @@ describe('DashboardLibrary', () => {
       </NotificationsProvider>,
     );
 
-    fireEvent.change(screen.getByLabelText('Dashboard title'), {
+    fireEvent.click(screen.getByRole('button', { name: 'Create dashboard' }));
+    const dialog = screen.getByRole('dialog', { name: 'Create Dashboard' });
+
+    fireEvent.change(within(dialog).getByLabelText('Dashboard name'), {
       target: { value: 'Night view' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Select Live dashboard type' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Create dashboard' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Select Live dashboard type' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create dashboard' }));
 
     await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith('/api/dashboard/dashboards', expect.objectContaining({
+        body: JSON.stringify({
+          title: 'Night view',
+          description: null,
+          icon: 'dashboard-grid',
+          defaultTimeRange: null,
+          type: 'live',
+        }),
+      }));
       const notifications = screen.getByRole('region', { name: 'Notifications' });
       expect(within(notifications).getByText('Dashboard could not be created').closest('[data-variant="error"]')).toBeInTheDocument();
     });

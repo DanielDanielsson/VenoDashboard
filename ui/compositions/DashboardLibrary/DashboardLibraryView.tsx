@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type {
   CSSProperties,
   Dispatch,
@@ -15,7 +16,7 @@ import { SecondaryButton } from '@ui/components/SecondaryButton';
 import { getDashboardDescriptionText } from '@/lib/dashboard/metadata';
 import type { DashboardLibraryItem } from '@/lib/dashboard/library';
 import {
-  DashboardCreateForm,
+  DashboardCreateDialog,
   DashboardHomeButton,
   DashboardHomeConfirmationDialog,
   DashboardLibraryBadge,
@@ -42,6 +43,11 @@ const DASHBOARD_LIBRARY_COLUMNS = {
 const DASHBOARD_LIBRARY_DETAIL_COLUMNS = {
   owner: 'md:grid-cols-[10rem_minmax(0,1fr)_8.5rem]',
   public: 'md:grid-cols-[10rem_minmax(0,1fr)_4rem]',
+};
+
+const DASHBOARD_LIBRARY_HEADER_DETAIL_COLUMNS = {
+  owner: 'md:grid-cols-[10rem_minmax(0,1fr)_12rem]',
+  public: DASHBOARD_LIBRARY_DETAIL_COLUMNS.public,
 };
 
 const DASHBOARD_LIBRARY_LINK_RIGHT = {
@@ -127,23 +133,45 @@ export const DashboardLibraryView = ({
   setSavingDashboardUid,
   setItems,
 }: DashboardLibraryViewProps) => {
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const dashboardLibraryColumns = isOwner ? DASHBOARD_LIBRARY_COLUMNS.owner : DASHBOARD_LIBRARY_COLUMNS.public;
   const dashboardLibraryDetailColumns = isOwner ? DASHBOARD_LIBRARY_DETAIL_COLUMNS.owner : DASHBOARD_LIBRARY_DETAIL_COLUMNS.public;
+  const dashboardLibraryHeaderDetailColumns = isOwner ? DASHBOARD_LIBRARY_HEADER_DETAIL_COLUMNS.owner : DASHBOARD_LIBRARY_HEADER_DETAIL_COLUMNS.public;
   const dashboardLinkRightClass = isOwner ? DASHBOARD_LIBRARY_LINK_RIGHT.owner : DASHBOARD_LIBRARY_LINK_RIGHT.public;
 
   return (
-    <div className="relative grid gap-4">
-      {isOwner ? <DashboardCreateForm /> : null}
+    <div className="relative grid gap-2">
+      {isOwner ? (
+        <Button
+          ariaLabel="Create dashboard from compact header"
+          twStyles="ui_button_text w-full whitespace-nowrap rounded-[5px] border border-accent bg-accent px-4 py-3 text-base-white transition-colors hover:border-accent-strong hover:bg-accent-strong md:hidden"
+          onClick={() => setIsCreateDialogOpen(true)}
+        >
+          Create Dashboard
+        </Button>
+      ) : null}
       <div
-        className={twMerge('hidden gap-6 rounded-[4px] border border-dashboard-panel-border bg-dashboard-panel-header-bg p-5 md:grid md:items-center', dashboardLibraryColumns)}
+        className={twMerge('hidden gap-6 rounded-[4px] border border-dashboard-panel-border bg-dashboard-library-header-bg px-5 py-3 md:grid md:items-center', dashboardLibraryColumns)}
         data-testid="dashboard-library-header"
       >
         {isOwner ? <span aria-hidden="true" /> : null}
         <span className="body_text text-text-soft">Name</span>
-        <span className={twMerge('grid gap-6', dashboardLibraryDetailColumns)}>
+        <span className={twMerge('grid gap-6 md:items-center', dashboardLibraryHeaderDetailColumns)}>
           <span className="body_text text-text-soft">Type</span>
           <span className="body_text text-text-soft">Tag</span>
-          <span aria-hidden="true" />
+          {isOwner ? (
+            <span className="flex justify-end">
+              <Button
+                ariaLabel="Create dashboard"
+                twStyles="ui_button_text whitespace-nowrap rounded-[5px] border border-accent bg-accent px-4 py-2 text-base-white transition-colors hover:border-accent-strong hover:bg-accent-strong"
+                onClick={() => setIsCreateDialogOpen(true)}
+              >
+                Create Dashboard
+              </Button>
+            </span>
+          ) : (
+            <span aria-hidden="true" />
+          )}
         </span>
       </div>
       <ul
@@ -158,7 +186,7 @@ export const DashboardLibraryView = ({
             key={dashboard.uid}
             ref={(node) => onRowRef(dashboard.uid, node)}
             className={twMerge(
-              'dashboard-library-row relative overflow-hidden rounded-[6px] border border-dashboard-panel-border bg-dashboard-panel-bg shadow-sm hover:border-text-soft',
+              'dashboard-library-row relative overflow-hidden rounded-[6px] border border-dashboard-panel-border bg-dashboard-panel-header-bg shadow-sm hover:border-text-soft',
               draggedDashboardUid === dashboard.uid && 'opacity-60 ring-1 ring-text-soft',
             )}
             data-dashboard-order-state={settledDashboardUid === dashboard.uid ? 'settled' : undefined}
@@ -183,7 +211,7 @@ export const DashboardLibraryView = ({
                 ariaLabel={`Open ${dashboard.title} dashboard`}
                 href={`/dashboards/${dashboard.uid}`}
                 onClick={(event) => onDashboardLinkClick(event, `/dashboards/${dashboard.uid}`)}
-                twStyles={twMerge('absolute inset-y-0 left-0 z-0 hidden transition-colors hover:bg-dashboard-time-picker-bg-hover md:block', dashboardLinkRightClass)}
+                twStyles={twMerge('absolute inset-y-0 left-0 z-0 hidden md:block', dashboardLinkRightClass)}
               >
                 <span className="sr-only">Open {dashboard.title} dashboard</span>
               </Link>
@@ -311,6 +339,10 @@ export const DashboardLibraryView = ({
           setSavingDashboardUid={setSavingDashboardUid}
         />
       ) : null}
+      <DashboardCreateDialog
+        isOpen={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+      />
     </div>
   );
 };

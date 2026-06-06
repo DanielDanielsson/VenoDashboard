@@ -1,3 +1,25 @@
+@layer theme {
+  :root {
+    --color-dashboard-library-header-bg: color-mix(
+      in srgb,
+      var(--color-dashboard-panel-header-bg) 88%,
+      var(--color-base-white) 12%
+    );
+  }
+
+  .theme-dark {
+    --color-dashboard-library-header-bg: color-mix(
+      in srgb,
+      var(--color-dashboard-panel-header-bg) 88%,
+      var(--color-base-white) 12%
+    );
+  }
+}
+
+@theme inline {
+  --color-dashboard-library-header-bg: var(--color-dashboard-library-header-bg);
+}
+
 @keyframes dashboard-library-row-drop {
   0% {
     border-color: var(--accent);

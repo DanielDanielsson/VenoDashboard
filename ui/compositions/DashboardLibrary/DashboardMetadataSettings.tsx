@@ -2,20 +2,12 @@
 
 import { useEffect, useLayoutEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
-import { twMerge } from 'tailwind-merge';
 import { Button } from '@ui/base/Button';
 import { Icon } from '@ui/base/Icon';
-import { DashboardTimeRangePicker } from '@ui/components/DashboardTimeRangePicker';
 import { SecondaryButton } from '@ui/components/SecondaryButton';
-import { TextInput } from '@ui/components/TextInput';
-import {
-  WysiwygEditor,
-  type WysiwygDocument,
-} from '@ui/components/WysiwygEditor';
+import type { WysiwygDocument } from '@ui/components/WysiwygEditor';
 import { useNotifications } from '@ui/compositions/NotificationsProvider';
 import type { DashboardLibraryItem } from '@/lib/dashboard/library';
-import { DASHBOARD_ICON_OPTIONS } from '@/lib/dashboard/metadata';
-import type { HistorySelection } from '@/lib/glucose/history-cache';
 import {
   applyDashboardMetadataSaveResult,
   dispatchDashboardMetadataUpdated,
@@ -24,6 +16,7 @@ import {
   serializeDashboardDescription,
 } from './utils';
 import type { DashboardMetadataSaveResult } from './types';
+import { DashboardSettingsForm } from './DashboardSettingsForm';
 
 interface DashboardMetadataSettingsProps {
   dashboard: DashboardLibraryItem;
@@ -242,108 +235,57 @@ export const DashboardMetadataSettings = ({
     }
   }
 
-  function handleDefaultTimeRangeChange(selection: HistorySelection) {
-    if (selection.kind === 'preset') {
-      setDraftDefaultTimeRange(selection.range);
-    }
-  }
-
   return (
-    <section
-      aria-label={`${dashboard.title} settings`}
-      className="grid gap-6 border-t border-dashboard-panel-border bg-dashboard-panel-header-bg p-5"
+    <DashboardSettingsForm
+      ariaLabel={`${dashboard.title} settings`}
+      title={draftTitle}
+      description={draftDescription}
+      icon={draftIcon}
+      defaultTimeRange={draftDefaultTimeRange}
+      dashboardType={dashboard.type}
+      twStyles="border-t border-dashboard-panel-border"
+      onTitleChange={setDraftTitle}
+      onDescriptionChange={setDraftDescription}
+      onIconChange={setDraftIcon}
+      onDefaultTimeRangeChange={setDraftDefaultTimeRange}
     >
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-        <div className="grid gap-4">
-          <TextInput
-            label="Dashboard name"
-            value={draftTitle}
-            onChange={setDraftTitle}
-          />
-          <WysiwygEditor
-            label="Description"
-            value={draftDescription}
-            onChange={setDraftDescription}
-          />
-        </div>
-        <div className="grid gap-4">
-          <div className="grid gap-2">
-            <span className="ui_micro_label text-text-soft">Icon</span>
-            <div className="grid grid-cols-3 gap-2 xl:grid-cols-4">
-              {DASHBOARD_ICON_OPTIONS.map((option) => {
-                const isSelected = draftIcon === option.value;
-
-                return (
-                  <Button
-                    ariaLabel={option.label}
-                    aria-pressed={isSelected}
-                    key={option.value}
-                    title={option.label}
-                    twStyles={twMerge(
-                      'grid h-12 place-items-center rounded-[5px] border border-dashboard-time-picker-border bg-dashboard-time-picker-bg text-dashboard-time-picker-text-muted transition-colors hover:border-text-soft hover:bg-dashboard-time-picker-bg-hover hover:text-dashboard-time-picker-text',
-                      isSelected && 'border-accent bg-accent-soft text-accent hover:border-accent hover:text-accent',
-                    )}
-                    onClick={() => setDraftIcon(option.value)}
-                  >
-                    <Icon icon={option.value} twStyles="h-5 w-5" />
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-          {dashboard.type === 'timeRange' ? (
-            <div className="grid gap-2">
-              <span className="ui_micro_label text-text-soft">Default time range</span>
-              <DashboardTimeRangePicker
-                selection={{ kind: 'preset', range: draftDefaultTimeRange ?? '3d' }}
-                currentWindow={null}
-                timeZone="UTC"
-                presetOnly
-                onChange={handleDefaultTimeRangeChange}
-              />
-            </div>
-          ) : null}
-        </div>
+      {!isOwner ? (
+        <p className="ui_caption text-text-soft">Sign in to save dashboard settings.</p>
+      ) : (
+        <span aria-hidden="true" />
+      )}
+      <div className="flex flex-wrap justify-end gap-2">
+        {isOwner ? (
+          <>
+            <SecondaryButton
+              aria-label={`Duplicate ${dashboard.title}`}
+              disabled={isDuplicating}
+              twStyles="inline-flex items-center gap-2"
+              onClick={duplicateDashboard}
+            >
+              <Icon icon="dashboard-grid" twStyles="h-4 w-4" />
+              {isDuplicating ? 'Duplicating' : 'Duplicate'}
+            </SecondaryButton>
+            <SecondaryButton
+              aria-label={`Delete ${dashboard.title}`}
+              disabled={isDeleting}
+              twStyles="inline-flex items-center gap-2 border-error/40 text-error"
+              onClick={deleteDashboard}
+            >
+              <Icon icon="trash" twStyles="h-4 w-4" />
+              {isDeleting ? 'Deleting' : 'Delete'}
+            </SecondaryButton>
+          </>
+        ) : null}
+        <Button
+          ariaLabel="Save dashboard settings"
+          disabled={isSaving}
+          twStyles="ui_caption_strong rounded-[4px] bg-accent px-4 py-2 text-base-white transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={saveDashboardSettings}
+        >
+          {isSaving ? 'Saving' : 'Save settings'}
+        </Button>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-dashboard-panel-border pt-5">
-        {!isOwner ? (
-          <p className="ui_caption text-text-soft">Sign in to save dashboard settings.</p>
-        ) : (
-          <span aria-hidden="true" />
-        )}
-        <div className="flex flex-wrap justify-end gap-2">
-          {isOwner ? (
-            <>
-              <SecondaryButton
-                aria-label={`Duplicate ${dashboard.title}`}
-                disabled={isDuplicating}
-                twStyles="inline-flex items-center gap-2"
-                onClick={duplicateDashboard}
-              >
-                <Icon icon="dashboard-grid" twStyles="h-4 w-4" />
-                {isDuplicating ? 'Duplicating' : 'Duplicate'}
-              </SecondaryButton>
-              <SecondaryButton
-                aria-label={`Delete ${dashboard.title}`}
-                disabled={isDeleting}
-                twStyles="inline-flex items-center gap-2 border-error/40 text-error"
-                onClick={deleteDashboard}
-              >
-                <Icon icon="trash" twStyles="h-4 w-4" />
-                {isDeleting ? 'Deleting' : 'Delete'}
-              </SecondaryButton>
-            </>
-          ) : null}
-          <Button
-            ariaLabel="Save dashboard settings"
-            disabled={isSaving}
-            twStyles="ui_caption_strong rounded-[4px] bg-accent px-4 py-2 text-base-white transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={saveDashboardSettings}
-          >
-            {isSaving ? 'Saving' : 'Save settings'}
-          </Button>
-        </div>
-      </div>
-    </section>
+    </DashboardSettingsForm>
   );
 };

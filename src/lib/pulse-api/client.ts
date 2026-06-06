@@ -229,6 +229,9 @@ export interface DashboardResourceRedirectResponse {
 
 export interface DashboardCreatePayload {
   title: string;
+  description?: DashboardDescriptionDocument | null;
+  icon?: DashboardIconName | null;
+  defaultTimeRange?: TimeRange | null;
   type: DashboardType;
 }
 

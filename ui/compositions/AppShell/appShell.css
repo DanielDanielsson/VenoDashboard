@@ -900,7 +900,7 @@
   .dashboard-fullwidth-container {
     width: 100%;
     margin-inline: auto;
-    padding-inline: clamp(0.75rem, 2vw, 1.5rem);
+    padding-inline: 0;
     max-width: 100%;
   }
 

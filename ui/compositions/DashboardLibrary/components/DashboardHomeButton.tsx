@@ -1,4 +1,3 @@
-import { twMerge } from 'tailwind-merge';
 import { Button } from '@ui/base/Button';
 import { Icon } from '@ui/base/Icon';
 import type { DashboardLibraryItem } from '@/lib/dashboard/library';
@@ -15,20 +14,22 @@ export const DashboardHomeButton = ({
   const label = dashboard.isHome
     ? `${dashboard.title} is home dashboard`
     : `Set ${dashboard.title} as home dashboard`;
-  const activeClass = dashboard.isHome
-    ? 'border-success text-success'
-    : 'border-border text-text-soft hover:border-text-soft hover:text-text';
 
   return (
     <Button
       ariaLabel={label}
+      aria-disabled={dashboard.isHome}
       aria-pressed={dashboard.isHome}
-      disabled={isSaving || dashboard.isHome}
+      disabled={isSaving}
       title={label}
-      twStyles={twMerge('grid h-10 w-10 shrink-0 place-items-center rounded-[5px] border transition-colors', activeClass)}
-      onClick={() => onRequestHomeDashboard(dashboard)}
+      twStyles="grid h-10 w-10 shrink-0 place-items-center rounded-[5px] border border-border text-text-soft transition-colors hover:border-text-soft hover:text-text"
+      onClick={() => {
+        if (!dashboard.isHome) {
+          onRequestHomeDashboard(dashboard);
+        }
+      }}
     >
-      <Icon icon="home" twStyles="h-5 w-5" />
+      <Icon icon={dashboard.isHome ? 'home-filled' : 'home'} twStyles="h-5 w-5" />
     </Button>
   );
 };

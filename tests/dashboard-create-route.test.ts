@@ -80,6 +80,9 @@ describe('dashboard create route', () => {
       method: 'POST',
       body: JSON.stringify({
         title: 'Night view',
+        description: null,
+        icon: 'activity',
+        defaultTimeRange: '7d',
         type: 'timeRange',
       }),
     }));
@@ -89,6 +92,9 @@ describe('dashboard create route', () => {
     expect(json.dashboard.uid).toBe('night-view');
     expect(createDashboard).toHaveBeenCalledWith({
       title: 'Night view',
+      description: null,
+      icon: 'activity',
+      defaultTimeRange: '7d',
       type: 'timeRange',
     });
   });
