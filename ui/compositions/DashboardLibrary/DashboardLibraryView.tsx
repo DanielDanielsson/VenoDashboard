@@ -60,6 +60,31 @@ interface DashboardDropTarget {
   position: DashboardDropPosition;
 }
 
+const getDashboardDropIndicatorTarget = (
+  items: DashboardLibraryItem[],
+  dropTarget: DashboardDropTarget | null,
+  draggedDashboardUid: string | null,
+): DashboardDropTarget | null => {
+  if (!dropTarget || draggedDashboardUid === dropTarget.dashboardUid) {
+    return null;
+  }
+
+  const targetIndex = items.findIndex((dashboard) => dashboard.uid === dropTarget.dashboardUid);
+  if (targetIndex < 0) {
+    return null;
+  }
+
+  const nextDashboard = items[targetIndex + 1];
+  if (dropTarget.position === 'after' && nextDashboard && nextDashboard.uid !== draggedDashboardUid) {
+    return {
+      dashboardUid: nextDashboard.uid,
+      position: 'before',
+    };
+  }
+
+  return dropTarget;
+};
+
 export interface DashboardLibraryViewProps {
   items: DashboardLibraryItem[];
   isOwner: boolean;
@@ -138,6 +163,7 @@ export const DashboardLibraryView = ({
   const dashboardLibraryDetailColumns = isOwner ? DASHBOARD_LIBRARY_DETAIL_COLUMNS.owner : DASHBOARD_LIBRARY_DETAIL_COLUMNS.public;
   const dashboardLibraryHeaderDetailColumns = isOwner ? DASHBOARD_LIBRARY_HEADER_DETAIL_COLUMNS.owner : DASHBOARD_LIBRARY_HEADER_DETAIL_COLUMNS.public;
   const dashboardLinkRightClass = isOwner ? DASHBOARD_LIBRARY_LINK_RIGHT.owner : DASHBOARD_LIBRARY_LINK_RIGHT.public;
+  const dropIndicatorTarget = getDashboardDropIndicatorTarget(items, dropTarget, draggedDashboardUid);
 
   return (
     <div className="relative grid gap-2">
@@ -186,7 +212,7 @@ export const DashboardLibraryView = ({
             key={dashboard.uid}
             ref={(node) => onRowRef(dashboard.uid, node)}
             className={twMerge(
-              'dashboard-library-row relative overflow-hidden rounded-[6px] border border-dashboard-panel-border bg-dashboard-panel-header-bg shadow-sm hover:border-text-soft',
+              'dashboard-library-row relative overflow-visible rounded-[6px] border border-dashboard-panel-border bg-dashboard-panel-header-bg shadow-sm hover:border-text-soft',
               draggedDashboardUid === dashboard.uid && 'opacity-60 ring-1 ring-text-soft',
             )}
             data-dashboard-order-state={settledDashboardUid === dashboard.uid ? 'settled' : undefined}
@@ -197,12 +223,14 @@ export const DashboardLibraryView = ({
               }
             }}
           >
-            {dropTarget?.dashboardUid === dashboard.uid && draggedDashboardUid !== dashboard.uid ? (
+            {dropIndicatorTarget?.dashboardUid === dashboard.uid ? (
               <span
                 aria-hidden="true"
                 className={twMerge(
-                  'pointer-events-none absolute left-3 right-3 z-20 h-0.5 rounded-full bg-accent shadow-sm',
-                  dropTarget.position === 'before' ? 'top-0' : 'bottom-0',
+                  'dashboard-library-drop-indicator pointer-events-none absolute inset-x-0 z-20 bg-accent',
+                  dropIndicatorTarget.position === 'before'
+                    ? 'dashboard-library-drop-indicator-before'
+                    : 'dashboard-library-drop-indicator-after',
                 )}
               />
             ) : null}

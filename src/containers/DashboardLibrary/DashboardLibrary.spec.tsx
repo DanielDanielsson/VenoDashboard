@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { createEvent, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { NotificationsProvider } from '@ui/compositions/NotificationsProvider';
 import { DashboardLibrary } from './DashboardLibrary';
@@ -51,6 +51,22 @@ const dashboards = [
     updatedAt: '2026-04-20T00:00:00.000Z',
     isHome: false,
     isPinned: true,
+  },
+];
+
+const dashboardsWithThreeRows = [
+  ...dashboards,
+  {
+    uid: 'agp',
+    title: 'AGP',
+    description: null,
+    icon: 'clock' as const,
+    defaultTimeRange: '7d' as const,
+    type: 'timeRange' as const,
+    version: 1,
+    updatedAt: '2026-04-30T00:00:00.000Z',
+    isHome: false,
+    isPinned: false,
   },
 ];
 
@@ -361,6 +377,73 @@ describe('DashboardLibrary', () => {
       const statisticsRow = screen.getByRole('link', { name: 'Open Statistics dashboard' }).closest('li');
 
       expect(statisticsRow?.querySelector('span[aria-hidden="true"]')).toBeInTheDocument();
+    });
+  });
+
+  test('renders equivalent adjacent drop positions on the same row boundary', async () => {
+    render(
+      <NotificationsProvider>
+        <DashboardLibrary dashboards={dashboardsWithThreeRows} isOwner />
+      </NotificationsProvider>,
+    );
+
+    const library = screen.getByRole('list', { name: 'Dashboards' });
+    const setRowRect = (dashboardTitle: string, rect: { top: number; bottom: number; height: number }) => {
+      const row = screen.getByRole('link', { name: `Open ${dashboardTitle} dashboard` }).closest('li');
+
+      Object.defineProperty(row, 'getBoundingClientRect', {
+        value: vi.fn(() => ({
+          ...rect,
+          left: 0,
+          right: 400,
+          width: 400,
+          x: 0,
+          y: rect.top,
+          toJSON: () => ({}),
+        } as DOMRect)),
+      });
+    };
+
+    setRowRect('Overview', { top: 100, bottom: 180, height: 80 });
+    setRowRect('Statistics', { top: 188, bottom: 268, height: 80 });
+    setRowRect('AGP', { top: 276, bottom: 356, height: 80 });
+
+    const dataTransfer = {
+      dropEffect: 'move',
+      effectAllowed: 'move',
+      setData: vi.fn(),
+      setDragImage: vi.fn(),
+    };
+
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Drag Overview to reorder' }), {
+      dataTransfer,
+    });
+    const dragOverStatisticsBottom = createEvent.dragOver(library);
+    Object.defineProperty(dragOverStatisticsBottom, 'clientY', { value: 250 });
+    Object.defineProperty(dragOverStatisticsBottom, 'dataTransfer', { value: dataTransfer });
+    fireEvent(library, dragOverStatisticsBottom);
+
+    await waitFor(() => {
+      const statisticsRow = screen.getByRole('link', { name: 'Open Statistics dashboard' }).closest('li');
+      const agpRow = screen.getByRole('link', { name: 'Open AGP dashboard' }).closest('li');
+      const indicator = agpRow?.querySelector('.dashboard-library-drop-indicator');
+
+      expect(statisticsRow?.querySelector('.dashboard-library-drop-indicator')).not.toBeInTheDocument();
+      expect(indicator).toBeInTheDocument();
+      expect(indicator).toHaveClass('dashboard-library-drop-indicator-before');
+    });
+
+    const dragOverAgpGap = createEvent.dragOver(library);
+    Object.defineProperty(dragOverAgpGap, 'clientY', { value: 272 });
+    Object.defineProperty(dragOverAgpGap, 'dataTransfer', { value: dataTransfer });
+    fireEvent(library, dragOverAgpGap);
+
+    await waitFor(() => {
+      const agpRow = screen.getByRole('link', { name: 'Open AGP dashboard' }).closest('li');
+      const indicator = agpRow?.querySelector('.dashboard-library-drop-indicator');
+
+      expect(indicator).toBeInTheDocument();
+      expect(indicator).toHaveClass('dashboard-library-drop-indicator-before');
     });
   });
 
