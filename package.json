@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:ci": "PLAYWRIGHT_MOCK_API=1 PULSE_API_BASE_URL=http://127.0.0.1:3101 playwright test",
     "test:links": "node scripts/check-links.mjs",
     "contracts:validate": "node scripts/validate-contracts.mjs",
     "ci:local": "bash scripts/run-local-ci.sh"
