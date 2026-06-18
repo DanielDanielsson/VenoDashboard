@@ -5,8 +5,12 @@ export interface DashboardPanelCatalogEntry {
   elementName: string;
   title: string;
   group: string;
+  category?: {
+    kind: 'device';
+    label: string;
+  };
   compatibleDashboardTypes: DashboardType[];
-  allowMultiple: boolean;
+  allowMultiple?: boolean;
   defaultLayout: {
     width: number;
     height: number;
@@ -52,7 +56,6 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     title: 'Current Glucose',
     group: 'veno.live-glucose',
     compatibleDashboardTypes: ['live'],
-    allowMultiple: false,
     defaultLayout: { width: 4, height: 8, aspectRatio: 1.35 },
     defaultDefinition: panel(1, 'Current Glucose', 'veno.live-glucose'),
   },
@@ -62,7 +65,6 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     title: 'Connections',
     group: 'veno.connections-map',
     compatibleDashboardTypes: ['live'],
-    allowMultiple: false,
     defaultLayout: { width: 12, height: 17, aspectRatio: 2.2 },
     defaultDefinition: panel(4, 'Connections', 'veno.connections-map'),
   },
@@ -72,7 +74,6 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     title: 'Timers',
     group: 'veno.shared-timers',
     compatibleDashboardTypes: ['live'],
-    allowMultiple: false,
     defaultLayout: { width: 4, height: 8, aspectRatio: 1.35 },
     defaultDefinition: panel(2, 'Timers', 'veno.shared-timers'),
   },
@@ -82,7 +83,6 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     title: 'Average Glucose',
     group: 'veno.average-glucose',
     compatibleDashboardTypes: ['timeRange'],
-    allowMultiple: false,
     defaultLayout: { width: 4, height: 6, aspectRatio: 1.45 },
     defaultDefinition: panel(101, 'Average Glucose', 'veno.average-glucose'),
   },
@@ -92,7 +92,6 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     title: 'Time in Range',
     group: 'veno.time-in-range',
     compatibleDashboardTypes: ['timeRange'],
-    allowMultiple: false,
     defaultLayout: { width: 4, height: 6, aspectRatio: 1.45 },
     defaultDefinition: panel(103, 'Time in Range', 'veno.time-in-range', { layout: 'statistics' }),
   },
@@ -102,9 +101,21 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     title: 'Workout Types',
     group: 'veno.workout-types',
     compatibleDashboardTypes: ['timeRange'],
-    allowMultiple: false,
     defaultLayout: { width: 4, height: 6, aspectRatio: 1.45 },
     defaultDefinition: panel(106, 'Workout Types', 'veno.workout-types'),
+  },
+  {
+    id: 'dexcom-glucose-readings',
+    elementName: 'panel-dexcom-glucose-readings',
+    title: 'Glucose Readings',
+    group: 'veno.dexcom-glucose-readings',
+    category: {
+      kind: 'device',
+      label: 'Dexcom G7',
+    },
+    compatibleDashboardTypes: ['timeRange'],
+    defaultLayout: { width: 12, height: 12, aspectRatio: 2.4 },
+    defaultDefinition: panel(107, 'Glucose Readings', 'veno.dexcom-glucose-readings'),
   },
   {
     id: 'glucose-timeline',
@@ -112,7 +123,6 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     title: 'Glucose Timeline',
     group: 'veno.glucose-timeline',
     compatibleDashboardTypes: ['timeRange'],
-    allowMultiple: false,
     defaultLayout: { width: 12, height: 24, aspectRatio: 1.6 },
     defaultDefinition: panel(104, 'Glucose Timeline', 'veno.glucose-timeline'),
   },
@@ -122,7 +132,6 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     title: 'Ambulatory Glucose Profile',
     group: 'veno.glucose-agp',
     compatibleDashboardTypes: ['timeRange'],
-    allowMultiple: false,
     defaultLayout: { width: 12, height: 14, aspectRatio: 1.8 },
     defaultDefinition: panel(105, 'Ambulatory Glucose Profile', 'veno.glucose-agp'),
   },
@@ -132,7 +141,6 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     title: 'Text',
     group: 'veno.text',
     compatibleDashboardTypes: ['live', 'timeRange'],
-    allowMultiple: true,
     defaultLayout: { width: 4, height: 6, aspectRatio: 1.45 },
     defaultDefinition: panel(201, 'Text', 'veno.text', {
       content: {
@@ -152,6 +160,10 @@ export const DASHBOARD_PANEL_CATALOG: DashboardPanelCatalogEntry[] = [
     }),
   },
 ];
+
+export function allowsMultiplePanelInstances(entry: DashboardPanelCatalogEntry): boolean {
+  return entry.allowMultiple !== false;
+}
 
 export function getPanelCatalogEntry(group: string): DashboardPanelCatalogEntry | null {
   return DASHBOARD_PANEL_CATALOG.find((entry) => entry.group === group) ?? null;
