@@ -1,5 +1,5 @@
-import { fetchDashboardResource, fetchDashboardSettings, PulseApiClientError } from '@/lib/pulse-api/client';
-import { hasAdminApiToken } from '@/lib/pulse-api/env';
+import { fetchDashboardResource, fetchDashboardSettings, VenoApiClientError } from '@/lib/veno-api/client';
+import { hasAdminApiToken } from '@/lib/veno-api/env';
 import type { TimeRange } from '@/lib/glucose/time-ranges';
 import type { DashboardDescriptionDocument, DashboardIconName } from './metadata';
 import { validateDashboardPanelCompatibility } from './panel-catalog';
@@ -34,7 +34,7 @@ async function loadPersistedDashboardSettings(dashboardUid: string): Promise<Das
     const response = await fetchDashboardSettings(dashboardUid);
     return parseDashboardDefinition(response.dashboardSettings.dashboard);
   } catch (error) {
-    if (error instanceof PulseApiClientError && error.status === 404) {
+    if (error instanceof VenoApiClientError && error.status === 404) {
       return null;
     }
 

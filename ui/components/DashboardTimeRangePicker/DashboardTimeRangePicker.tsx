@@ -16,6 +16,10 @@ import {
 } from '@/lib/glucose/time-range-expressions';
 import { GLUCOSE_TIME_RANGES, type TimeRange } from '@/lib/glucose/time-ranges';
 import type { HistorySelection, HistoryWindow } from '@/lib/glucose/history-cache';
+import {
+  parseTimeRangeClipboardValue,
+  serializeTimeRangeClipboardValue,
+} from '@/lib/glucose/time-range-clipboard';
 import './dashboardTimeRangePicker.css';
 
 interface DashboardTimeRangePickerProps {
@@ -345,7 +349,7 @@ export const DashboardTimeRangePicker = ({
 
   async function copyRange() {
     try {
-      await navigator.clipboard.writeText(JSON.stringify({ from: fromInput, to: toInput }));
+      await navigator.clipboard.writeText(serializeTimeRangeClipboardValue({ from: fromInput, to: toInput }));
     } catch {
       setError('Could not copy the time range.');
     }
@@ -354,8 +358,8 @@ export const DashboardTimeRangePicker = ({
   async function pasteRange() {
     try {
       const text = await navigator.clipboard.readText();
-      const parsed = JSON.parse(text) as Partial<RawTimeRangeInput>;
-      if (typeof parsed.from !== 'string' || typeof parsed.to !== 'string') {
+      const parsed = parseTimeRangeClipboardValue(text);
+      if (!parsed) {
         throw new Error('Invalid range');
       }
       setFromInput(parsed.from);
@@ -654,7 +658,11 @@ export const DashboardTimeRangePicker = ({
                           }}
                         >
                           <span>{option.display}</span>
-                          {disabled && <span className="ml-2 text-dashboard-time-picker-warning">90d</span>}
+                          {disabled && (
+                            <span className="ml-2 text-dashboard-time-picker-warning">
+                              {TIME_RANGE_SAFETY_CAP_DAYS}d
+                            </span>
+                          )}
                         </Button>
                       );
                     })}

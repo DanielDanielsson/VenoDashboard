@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { parseDashboardDefinition } from '@/lib/dashboard/schema';
 import {
+  allowsMultiplePanelInstances,
   getPanelCatalogEntriesForDashboardType,
   getPanelCatalogEntry,
   validateDashboardPanelCompatibility,
@@ -18,21 +19,42 @@ describe('dashboard panel catalog', () => {
       'veno.average-glucose',
       'veno.time-in-range',
       'veno.workout-types',
+      'veno.dexcom-glucose-readings',
       'veno.glucose-timeline',
       'veno.glucose-agp',
       'veno.text',
     ]);
   });
 
-  test('catalog entries declare compatible dashboard types and multiple instance support', () => {
+  test('marks the new Dexcom glucose readings panel as grouped while the old timeline stays top level', () => {
+    const dexcomReadings = getPanelCatalogEntry('veno.dexcom-glucose-readings');
+    const oldTimeline = getPanelCatalogEntry('veno.glucose-timeline');
+
+    expect(dexcomReadings).toMatchObject({
+      id: 'dexcom-glucose-readings',
+      elementName: 'panel-dexcom-glucose-readings',
+      title: 'Glucose Readings',
+      category: {
+        kind: 'device',
+        label: 'Dexcom G7',
+      },
+      compatibleDashboardTypes: ['timeRange'],
+      defaultLayout: { width: 12, height: 12, aspectRatio: 2.4 },
+    });
+    expect(oldTimeline?.category).toBeUndefined();
+  });
+
+  test('supports multiple readings and text panel instances', () => {
     const timeInRange = getPanelCatalogEntry('veno.time-in-range');
+    const dexcomReadings = getPanelCatalogEntry('veno.dexcom-glucose-readings');
     const text = getPanelCatalogEntry('veno.text');
 
     expect(timeInRange?.compatibleDashboardTypes).toEqual(['timeRange']);
-    expect(timeInRange?.allowMultiple).toBe(false);
+    expect(timeInRange && allowsMultiplePanelInstances(timeInRange)).toBe(true);
     expect(timeInRange?.defaultDefinition.spec.vizConfig.group).toBe('veno.time-in-range');
+    expect(dexcomReadings && allowsMultiplePanelInstances(dexcomReadings)).toBe(true);
     expect(text?.compatibleDashboardTypes).toEqual(['live', 'timeRange']);
-    expect(text?.allowMultiple).toBe(true);
+    expect(text && allowsMultiplePanelInstances(text)).toBe(true);
   });
 
   test('text panel default content uses the WYSIWYG document schema', () => {

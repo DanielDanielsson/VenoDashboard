@@ -303,6 +303,11 @@ describe('DashboardGridRuntime', () => {
             'panel-current-glucose': createPanel('veno.live-glucose', 'Current Glucose'),
           }}
           isOwner
+          renderPanel={(panelId, panel) => (
+            <DashboardGridPanel key={panelId} panelId={panelId} title={panel.spec.title}>
+              {panelId} panel
+            </DashboardGridPanel>
+          )}
         >
           <DashboardGridPanel key="panel-current-glucose" panelId="panel-current-glucose" title="Current Glucose">
             Current glucose panel
@@ -316,10 +321,14 @@ describe('DashboardGridRuntime', () => {
 
     const drawer = screen.getByRole('complementary', { name: 'Add panel' });
 
-    expect(within(drawer).queryByRole('button', { name: 'Current Glucose' })).not.toBeInTheDocument();
+    expect(within(drawer).getByRole('button', { name: 'Current Glucose' })).toBeInTheDocument();
     expect(within(drawer).getByRole('button', { name: 'Connections' })).toBeInTheDocument();
     expect(within(drawer).getByRole('button', { name: 'Timers' })).toBeInTheDocument();
     expect(within(drawer).queryByRole('button', { name: 'Time in Range' })).not.toBeInTheDocument();
+
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Current Glucose' }));
+
+    expect(screen.getByText('panel-current-glucose-2 panel')).toBeInTheDocument();
   });
 
   test('shows live panel options for an empty live dashboard', async () => {
@@ -430,16 +439,18 @@ describe('DashboardGridRuntime', () => {
       },
       layout: [
         {
-          element: 'panel-current-glucose',
-          x: 0,
-          y: 0,
-          width: 4,
-          height: 6,
-        },
-        {
           element: 'panel-connections',
           x: 0,
-          y: 6,
+          y: 0,
+          width: 12,
+          height: 12,
+        },
+        {
+          element: 'panel-current-glucose',
+          x: 0,
+          y: 12,
+          width: 4,
+          height: 6,
         },
       ],
     });

@@ -3,11 +3,17 @@ import type { ComponentProps, ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { formatWorkoutTimeRange } from '@/lib/glucose/workout-display';
-import { parseDashboardDefinition, type DashboardDefinition } from '@/lib/dashboard/schema';
+import {
+  parseDashboardDefinition,
+  type DashboardDefinition,
+  type GridLayoutItemKind,
+  type PanelKind,
+} from '@/lib/dashboard/schema';
 import { NotificationsProvider } from '@ui/compositions/NotificationsProvider';
 import { GlucoseAnalysisView as BaseGlucoseAnalysisView } from './GlucoseAnalysisView';
 
 const historyMutateMock = vi.fn();
+const dexcomPanelPropsMock = vi.hoisted(() => vi.fn());
 const useSWRMock = vi.fn();
 const swrCache = new Map<string, { data?: unknown }>();
 const usePathnameMock = vi.fn();
@@ -52,12 +58,20 @@ const createStatisticsDashboardDefinition = (): DashboardDefinition => {
   });
 };
 
-const createPanel = (id: number, title: string, group: string, options: Record<string, unknown> = {}) => {
+const createPanel = (id: number, title: string, group: string, options: Record<string, unknown> = {}): PanelKind => {
   return {
     kind: 'Panel',
     spec: {
       id,
       title,
+      data: {
+        kind: 'QueryGroup',
+        spec: {
+          queries: [],
+          transformations: [],
+          queryOptions: {},
+        },
+      },
       vizConfig: {
         kind: 'VizConfig',
         group,
@@ -77,7 +91,7 @@ const createPanel = (id: number, title: string, group: string, options: Record<s
 const gridItem = (
   name: string,
   spec: { x: number; y: number; width: number; height: number },
-) => {
+): GridLayoutItemKind => {
   return {
     kind: 'GridLayoutItem',
     spec: {
@@ -218,6 +232,20 @@ vi.mock('@ui/components/GlucoseStatRing', () => ({
 
 vi.mock('@ui/components/GlucoseAgpChart', () => ({
   GlucoseAgpChart: () => <div>AGP chart</div>
+}));
+
+vi.mock('@ui/compositions/DexcomGlucoseReadingsPanel', () => ({
+  DexcomGlucoseReadingsPanel: (props: { refreshRevision?: number }) => {
+    dexcomPanelPropsMock(props);
+    return <div>Dexcom refresh {props.refreshRevision ?? 0}</div>;
+  },
+  createDexcomGlucoseReadingsPanelSettingsRegistration: () => ({
+    defaultSettings: {
+      colorMode: 'single',
+      yAxisMax: 18,
+    },
+    render: () => null,
+  }),
 }));
 
 vi.mock('@ui/components/GlucoseChart/GlucoseChart', () => ({
@@ -620,12 +648,40 @@ describe('GlucoseAnalysisView', () => {
     expect(screen.queryByText('Loading glucose data...')).not.toBeInTheDocument();
   });
 
-  test('refreshes the dashboard history query from the refresh picker', () => {
+  test('refreshes the dashboard history query from the refresh picker', async () => {
     renderWithProviders(<GlucoseAnalysisView isOwner />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh dashboard' }));
+    });
+
+    expect(historyMutateMock).toHaveBeenCalled();
+  });
+
+  test('refreshes optimized Dexcom glucose readings from the dashboard refresh picker', async () => {
+    const dashboardDefinition = structuredClone(createStatisticsDashboardDefinition());
+    dashboardDefinition.spec.elements['panel-dexcom-glucose-readings'] = createPanel(
+      107,
+      'Glucose Readings',
+      'veno.dexcom-glucose-readings',
+    );
+    dashboardDefinition.spec.layout.spec.items.push(
+      gridItem('panel-dexcom-glucose-readings', { x: 0, y: 44, width: 12, height: 12 }),
+    );
+
+    renderWithProviders(<GlucoseAnalysisView isOwner dashboardDefinition={dashboardDefinition} />);
+
+    expect(await screen.findByText('Dexcom refresh 0')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh dashboard' }));
 
-    expect(historyMutateMock).toHaveBeenCalled();
+    await waitFor(() => expect(historyMutateMock).toHaveBeenCalled());
+    expect(await screen.findByText('Dexcom refresh 1')).toBeInTheDocument();
+    expect(dexcomPanelPropsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        refreshRevision: 1,
+      }),
+    );
   });
 
   test('uses saved dashboard auto refresh settings to refresh history', async () => {
@@ -635,7 +691,7 @@ describe('GlucoseAnalysisView', () => {
 
     renderWithProviders(<GlucoseAnalysisView isOwner dashboardDefinition={dashboardDefinition} />);
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(5_000);
     });
 

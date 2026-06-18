@@ -5,7 +5,7 @@
     --color-dashboard-panel-menu-text: var(--color-base-ink);
     --color-dashboard-panel-menu-text-muted: var(--color-base-ink-muted);
     --color-dashboard-panel-menu-hover-bg: var(--color-base-surface-panel-light-muted);
-    --color-dashboard-settings-drawer-bg: var(--bg);
+    --color-dashboard-settings-drawer-bg: var(--color-base-paper);
     --color-dashboard-settings-drawer-header-bg: var(--color-base-paper-strong);
     --color-dashboard-settings-drawer-border: var(--border);
     --color-dashboard-settings-control-bg: var(--color-base-surface-panel-light);
@@ -19,7 +19,7 @@
     --color-dashboard-panel-menu-text: var(--color-base-white-soft);
     --color-dashboard-panel-menu-text-muted: var(--color-base-white-muted);
     --color-dashboard-panel-menu-hover-bg: var(--color-base-panel-dark-bright);
-    --color-dashboard-settings-drawer-bg: var(--bg);
+    --color-dashboard-settings-drawer-bg: var(--color-base-night-strong);
     --color-dashboard-settings-drawer-header-bg: var(--color-base-night-strong);
     --color-dashboard-settings-drawer-border: var(--border);
     --color-dashboard-settings-control-bg: var(--color-base-panel-dark-bright);

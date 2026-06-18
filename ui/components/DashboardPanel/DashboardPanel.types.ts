@@ -9,5 +9,6 @@ export type DashboardPanelProps = Stylable &
     children: ReactNode;
     headerRight?: ReactNode;
     headerClassName?: string;
+    bodyClassName?: string;
     headerRightClassName?: string;
   };

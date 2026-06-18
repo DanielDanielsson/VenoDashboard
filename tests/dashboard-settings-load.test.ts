@@ -1,28 +1,28 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => {
-  class MockPulseApiClientError extends Error {
+  class MockVenoApiClientError extends Error {
     status: number;
 
     constructor(status: number, message: string) {
       super(message);
-      this.name = 'PulseApiClientError';
+      this.name = 'VenoApiClientError';
       this.status = status;
     }
   }
 
   return {
     fetchDashboardSettings: vi.fn(),
-    PulseApiClientError: MockPulseApiClientError,
+    VenoApiClientError: MockVenoApiClientError,
   };
 });
 
-vi.mock('@/lib/pulse-api/client', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/pulse-api/client')>();
+vi.mock('@/lib/veno-api/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/veno-api/client')>();
   return {
     ...actual,
     fetchDashboardSettings: mocks.fetchDashboardSettings,
-    PulseApiClientError: mocks.PulseApiClientError,
+    VenoApiClientError: mocks.VenoApiClientError,
   };
 });
 
@@ -100,7 +100,7 @@ describe('dashboard settings loading', () => {
 
   test('rejects when persisted dashboard settings are missing', async () => {
     mocks.fetchDashboardSettings.mockRejectedValue(
-      new mocks.PulseApiClientError(404, 'Dashboard settings were not found.'),
+      new mocks.VenoApiClientError(404, 'Dashboard settings were not found.'),
     );
 
     const { loadDashboardDefinition } = await import('@/lib/dashboard/settings');

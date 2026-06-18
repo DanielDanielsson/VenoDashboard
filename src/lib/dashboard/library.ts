@@ -1,4 +1,4 @@
-import { fetchDashboardList } from '@/lib/pulse-api/client';
+import { fetchDashboardList } from '@/lib/veno-api/client';
 import type { TimeRange } from '@/lib/glucose/time-ranges';
 import type { DashboardType } from './schema';
 import type { DashboardDescriptionDocument, DashboardIconName } from './metadata';

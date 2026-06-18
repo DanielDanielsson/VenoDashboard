@@ -31,6 +31,7 @@
     "react-grid-layout": "^2.2.3",
     "swr": "^2.4.1",
     "tailwind-merge": "^3.5.0",
+    "uplot": "^1.6.32",
     "zod": "^4.3.6"
   },
   "devDependencies": {

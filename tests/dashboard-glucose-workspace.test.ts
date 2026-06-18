@@ -3,9 +3,9 @@ import {
   createDashboardGlucoseWorkspace,
   type DashboardGlucoseWorkspaceDeps
 } from '@/lib/glucose/dashboard-workspace';
-import type { GlucoseCorrectionBatchPayload, PulseApiReading } from '@/lib/pulse-api/types';
+import type { GlucoseCorrectionBatchPayload, VenoApiReading } from '@/lib/veno-api/types';
 
-function reading(overrides: Partial<PulseApiReading> = {}): PulseApiReading {
+function reading(overrides: Partial<VenoApiReading> = {}): VenoApiReading {
   return {
     id: overrides.id ?? 'reading-1',
     timestamp: overrides.timestamp ?? '2026-03-07T10:00:00.000Z',
@@ -30,7 +30,9 @@ describe('dashboard glucose workspace', () => {
     deps = {
       glucosePort: {
         fetchLatest: vi.fn().mockResolvedValue(null),
-        fetchHistory: vi.fn().mockResolvedValue([])
+        fetchHistory: vi.fn().mockResolvedValue([]),
+        // Reject by default so existing tests exercise the chunked fallback path.
+        fetchSeries: vi.fn().mockRejectedValue(new Error('readings-series unavailable'))
       },
       tandemPort: {
         fetchBasal: vi.fn().mockResolvedValue([]),

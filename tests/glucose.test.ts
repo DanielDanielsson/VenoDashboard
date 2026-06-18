@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'vitest';
 import { convertGlucoseValue } from '@/lib/glucose/units';
-import { mergeGlucoseReadings, pickLatestGlucoseReading } from '@/lib/pulse-api/glucose';
-import type { PulseApiReading } from '@/lib/pulse-api/types';
+import { mergeGlucoseReadings, pickLatestGlucoseReading } from '@/lib/veno-api/glucose';
+import type { VenoApiReading } from '@/lib/veno-api/types';
 
 function reading(
   timestamp: string,
   valueMmolL: number,
   source: 'official' | 'share'
-): PulseApiReading {
+): VenoApiReading {
   return {
     timestamp,
     valueMmolL,
@@ -89,7 +89,7 @@ describe('glucose helpers', () => {
   });
 
   test('pickLatestGlucoseReading prefers available share reading over unavailable official placeholder', () => {
-    const officialUnavailable: PulseApiReading = {
+    const officialUnavailable: VenoApiReading = {
       timestamp: '2026-03-07T10:30:00.000Z',
       valueMmolL: 0,
       valueMgDl: 0,

@@ -15,9 +15,10 @@ export interface LiveDashboardContext {
 export const liveDashboardRegistry = createPanelRegistry<LiveDashboardContext>([
   {
     group: 'veno.live-glucose',
-    render: ({ context }) => (
+    render: ({ context, panelId }) => (
       <LiveGlucosePanel
         enableStream={context.isOwner}
+        panelId={panelId}
         latestReadingTimestamp={context.latestReadingTimestamp}
       />
     ),
@@ -28,7 +29,7 @@ export const liveDashboardRegistry = createPanelRegistry<LiveDashboardContext>([
   },
   {
     group: 'veno.time-in-range',
-    render: () => <TimeInRangePanel defaultLayout="overview" />,
+    render: ({ panelId }) => <TimeInRangePanel panelId={panelId} defaultLayout="overview" />,
   },
   {
     group: 'veno.connections-map',

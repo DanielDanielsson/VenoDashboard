@@ -36,10 +36,10 @@ type DateMathUnit = 'm' | 'h' | 'd' | 'w' | 'M' | 'Q' | 'y' | 'fQ' | 'fy';
 
 const DATE_MATH_PATTERN = /^now((?:[+-]\d+(?:fQ|fy|[mhdwMQy]))*)(?:\/(fQ|fy|[dhwMQy]))?$/;
 const DATE_MATH_OPERATION_PATTERN = /([+-])(\d+)(fQ|fy|[mhdwMQy])/g;
-const SAFETY_CAP_MS = 90 * 24 * 60 * 60 * 1000;
+const SAFETY_CAP_MS = 366 * 24 * 60 * 60 * 1000;
 const COMMON_DATE_TIME_FORMAT = /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/;
 
-export const TIME_RANGE_SAFETY_CAP_DAYS = 90;
+export const TIME_RANGE_SAFETY_CAP_DAYS = 366;
 
 export const DASHBOARD_QUICK_RANGES: QuickRangeOption[] = [
   { from: 'now-5m', to: 'now', display: 'Last 5 minutes' },

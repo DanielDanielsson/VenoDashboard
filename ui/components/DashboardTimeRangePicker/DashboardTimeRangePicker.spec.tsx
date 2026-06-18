@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import { serializeTimeRangeClipboardValue } from '@/lib/glucose/time-range-clipboard';
 import { DashboardTimeRangePicker } from './DashboardTimeRangePicker';
 
 describe('DashboardTimeRangePicker', () => {
@@ -86,7 +87,7 @@ describe('DashboardTimeRangePicker', () => {
     });
   });
 
-  test('disables quick ranges above the safety cap', () => {
+  test('allows one year quick ranges and disables ranges above the safety cap', () => {
     render(
       <DashboardTimeRangePicker
         selection={{ kind: 'preset', range: '3d' }}
@@ -101,7 +102,9 @@ describe('DashboardTimeRangePicker', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Time range selected/i }));
 
-    expect(screen.getByRole('button', { name: /Last 1 year/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Last 1 year/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Last 2 years/i })).toBeDisabled();
+    expect(screen.getAllByText('366d')).not.toHaveLength(0);
   });
 
   test('disables moving forward when the next window would end in the future', () => {
@@ -187,5 +190,51 @@ describe('DashboardTimeRangePicker', () => {
     const panel = screen.getByTestId('dashboard-time-range-picker-panel');
     expect(panel).toContainElement(screen.getByText('Absolute time range'));
     expect(panel).toContainElement(screen.getByText('UTC'));
+  });
+
+  test('pastes a standardized time range clipboard value into the custom range fields', async () => {
+    const onChange = vi.fn();
+    Object.assign(navigator, {
+      clipboard: {
+        readText: vi.fn().mockResolvedValue(serializeTimeRangeClipboardValue({
+          from: '2026-03-07T10:30:00.000Z',
+          to: '2026-03-07T11:00:00.000Z',
+        })),
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+
+    render(
+      <DashboardTimeRangePicker
+        selection={{ kind: 'preset', range: '3d' }}
+        currentWindow={{
+          from: '2026-04-14T08:00:00.000Z',
+          to: '2026-04-17T08:00:00.000Z'
+        }}
+        timeZone="UTC"
+        onChange={onChange}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Time range selected/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Paste' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('textbox')[0]).toHaveValue('2026-03-07T10:30:00.000Z');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply time range' }));
+
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'custom',
+      raw: {
+        from: '2026-03-07T10:30:00.000Z',
+        to: '2026-03-07T11:00:00.000Z',
+      },
+      window: {
+        from: '2026-03-07T10:30:00.000Z',
+        to: '2026-03-07T11:00:00.000Z',
+      },
+    }));
   });
 });

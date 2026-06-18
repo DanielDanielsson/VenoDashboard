@@ -7,9 +7,9 @@ import {
   type TandemActivityPort,
   type TimelineNotesPort
 } from '@/lib/glucose/dashboard-service';
-import type { PulseApiReading } from '@/lib/pulse-api/types';
+import type { VenoApiReading } from '@/lib/veno-api/types';
 
-function reading(overrides: Partial<PulseApiReading> = {}): PulseApiReading {
+function reading(overrides: Partial<VenoApiReading> = {}): VenoApiReading {
   return {
     id: overrides.id ?? 'reading-1',
     timestamp: overrides.timestamp ?? '2026-03-07T10:00:00.000Z',
@@ -35,7 +35,9 @@ describe('dashboard glucose service', () => {
   beforeEach(() => {
     glucosePort = {
       fetchLatest: vi.fn().mockResolvedValue(null),
-      fetchHistory: vi.fn().mockResolvedValue([])
+      fetchHistory: vi.fn().mockResolvedValue([]),
+      // Reject by default so existing tests exercise the chunked fallback path.
+      fetchSeries: vi.fn().mockRejectedValue(new Error('readings-series unavailable'))
     };
     tandemPort = {
       fetchBasal: vi.fn().mockResolvedValue([]),
@@ -221,6 +223,103 @@ describe('dashboard glucose service', () => {
     expect(response.meta.tandemEventCount).toBe(3);
     expect(response.meta.healthStepCount).toBe(1);
     expect(response.noteItems).toEqual([]);
+  });
+
+  test('getHistory loads glucose through readings-series without touching the chunked history path', async () => {
+    vi.mocked(glucosePort.fetchLatest).mockResolvedValue(null);
+    vi.mocked(glucosePort.fetchSeries).mockResolvedValue({
+      items: [
+        {
+          readingId: 'official-1',
+          timestamp: '2026-03-01T00:00:00.000Z',
+          valueMmolL: 5.1,
+          valueMgDl: 92,
+          trend: 'flat',
+          source: 'official'
+        },
+        {
+          timestamp: '2026-03-02T00:00:00.000Z',
+          valueMmolL: 9.4,
+          valueMgDl: 169,
+          trend: 'flat',
+          source: 'share'
+        }
+      ],
+      meta: {
+        from: '2026-03-01T00:00:00.000Z',
+        to: '2026-03-04T00:00:00.000Z',
+        officialCount: 412,
+        shareCount: 388,
+        returned: 2,
+        source: 'merged',
+        resolution: {
+          mode: 'reduced',
+          intervalMs: 600_000,
+          maxDataPoints: 800,
+          returnedPoints: 2
+        },
+        capabilities: {
+          correctionsAllowed: false
+        }
+      }
+    });
+
+    const service = createDashboardGlucoseService({
+      glucosePort,
+      tandemPort,
+      healthPort,
+      workoutPort,
+      notesPort,
+      clock: () => new Date('2026-03-04T00:00:00.000Z')
+    });
+
+    const response = await service.getHistory({ range: '3d', maxDataPoints: 800 });
+
+    expect(glucosePort.fetchSeries).toHaveBeenCalledTimes(1);
+    expect(glucosePort.fetchSeries).toHaveBeenCalledWith(
+      expect.objectContaining({ from: expect.any(String), to: expect.any(String) }),
+      800
+    );
+    expect(glucosePort.fetchHistory).not.toHaveBeenCalled();
+    expect(response.meta.officialCount).toBe(412);
+    expect(response.meta.shareCount).toBe(388);
+    expect(response.meta.mergedCount).toBe(2);
+    expect(response.items.map((item) => item.readingId)).toEqual(['official-1', undefined]);
+  });
+
+  test('getHistory bounds the deploy-order fallback to the requested point budget', async () => {
+    vi.mocked(glucosePort.fetchLatest).mockResolvedValue(null);
+    vi.mocked(glucosePort.fetchHistory).mockImplementation(async (source) => {
+      return Array.from({ length: 10 }, (_, index) => reading({
+        id: `${source}-${index}`,
+        timestamp: new Date(Date.UTC(2026, 2, 1, 0, index * 5)).toISOString(),
+        valueMmolL: index === 3 ? 3 : index === 5 ? 14 : 5 + index / 10,
+        valueMgDl: index === 3 ? 54 : index === 5 ? 252 : 90 + index,
+        source
+      }));
+    });
+
+    const service = createDashboardGlucoseService({
+      glucosePort,
+      tandemPort,
+      healthPort,
+      workoutPort,
+      notesPort
+    });
+
+    const response = await service.getHistory({
+      from: '2026-03-01T00:00:00.000Z',
+      to: '2026-03-01T01:00:00.000Z',
+      maxDataPoints: 4
+    });
+
+    expect(glucosePort.fetchSeries).toHaveBeenCalledTimes(1);
+    expect(glucosePort.fetchHistory).toHaveBeenCalledTimes(2);
+    expect(response.items).toHaveLength(4);
+    expect(response.items.map((item) => item.valueMmolL)).toEqual([5, 3, 14, 5.9]);
+    expect(response.meta.officialCount).toBe(10);
+    expect(response.meta.shareCount).toBe(10);
+    expect(response.meta.mergedCount).toBe(4);
   });
 
   test('getUpdatesSince counts glucose and tandem updates using the service boundary', async () => {

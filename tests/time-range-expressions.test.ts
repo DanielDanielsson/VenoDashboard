@@ -40,13 +40,26 @@ describe('time range expression helpers', () => {
     });
   });
 
-  test('marks ranges above the dashboard cap', () => {
+  test('allows one year ranges inside the dashboard cap', () => {
     const resolved = resolveRawTimeRange(
       { from: 'now-1y', to: 'now' },
       {
         now: new Date('2026-04-17T08:30:00.000Z'),
         timeZone: 'UTC',
         display: 'Last 1 year'
+      }
+    );
+
+    expect(resolved?.exceedsSafetyCap).toBe(false);
+  });
+
+  test('marks ranges above the dashboard cap', () => {
+    const resolved = resolveRawTimeRange(
+      { from: 'now-2y', to: 'now' },
+      {
+        now: new Date('2026-04-17T08:30:00.000Z'),
+        timeZone: 'UTC',
+        display: 'Last 2 years'
       }
     );
 

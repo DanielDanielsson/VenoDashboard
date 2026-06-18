@@ -2,19 +2,22 @@ import {
   compressTandemBasalHistory,
   fetchGlucoseHistory,
   fetchGlucoseLatest,
+  fetchGlucoseReadingsSeries,
   fetchHealthStepHistory,
   fetchWorkoutHistory,
   fetchTandemBasalHistory,
   fetchTandemEventHistory,
   mergeGlucoseReadings,
   pickLatestGlucoseReading,
+  type GlucoseReadingsSeriesPoint,
+  type GlucoseReadingsSeriesResponse,
   type HealthStepHistoryPoint,
   type MergedGlucosePoint,
   type TandemBasalHistoryPoint,
   type TandemEventHistoryPoint
-} from '@/lib/pulse-api/glucose';
-import type { PulseApiReading } from '@/lib/pulse-api/types';
-import { fetchTimelineNotes, fetchTimelineUpdatesSince } from '@/lib/pulse-api/timeline-notes';
+} from '@/lib/veno-api/glucose';
+import type { VenoApiReading } from '@/lib/veno-api/types';
+import { fetchTimelineNotes, fetchTimelineUpdatesSince } from '@/lib/veno-api/timeline-notes';
 import type {
   ChartPoint,
   GlucoseApiResponse,
@@ -29,6 +32,8 @@ const API_MAX_LIMIT = 1000;
 const RESPONSE_MAX_LIMIT = 5000;
 const GLUCOSE_CHUNK_MS = 2.5 * 24 * 60 * 60 * 1000;
 const TANDEM_CHUNK_MS = 24 * 60 * 60 * 1000;
+const TIMELINE_MAX_DATA_POINTS = 2000;
+const SERIES_POINTS_PER_BUCKET = 4;
 
 export interface GlucoseFetchWindow {
   from: string;
@@ -37,11 +42,15 @@ export interface GlucoseFetchWindow {
 }
 
 export interface GlucoseTimelinePort {
-  fetchLatest(source: 'official' | 'share'): Promise<PulseApiReading | null>;
+  fetchLatest(source: 'official' | 'share'): Promise<VenoApiReading | null>;
   fetchHistory(
     source: 'official' | 'share',
     window: GlucoseFetchWindow
-  ): Promise<PulseApiReading[]>;
+  ): Promise<VenoApiReading[]>;
+  fetchSeries(
+    window: Pick<GlucoseFetchWindow, 'from' | 'to'>,
+    maxDataPoints: number
+  ): Promise<GlucoseReadingsSeriesResponse>;
 }
 
 export interface TandemActivityPort {
@@ -67,6 +76,7 @@ export interface DashboardGlucoseHistoryInput {
   from?: string | null;
   to?: string | null;
   limit?: number | null;
+  maxDataPoints?: number | null;
   now?: Date;
 }
 
@@ -92,8 +102,8 @@ interface ResolvedHistoryWindow {
 }
 
 interface MergedWindowData {
-  officialItems: PulseApiReading[];
-  shareItems: PulseApiReading[];
+  officialCount: number;
+  shareCount: number;
   tandemBasalItems: TandemBasalHistoryPoint[];
   tandemEventItems: TandemEventHistoryPoint[];
   healthStepItems: HealthStepHistoryPoint[];
@@ -107,9 +117,17 @@ interface AttemptResult<T> {
   error: Error | null;
 }
 
-export const pulseApiGlucosePort: GlucoseTimelinePort = {
+export const venoApiGlucosePort: GlucoseTimelinePort = {
   async fetchLatest(source) {
     return fetchGlucoseLatest(source);
+  },
+  async fetchSeries(window, maxDataPoints) {
+    return fetchGlucoseReadingsSeries({
+      from: window.from,
+      to: window.to,
+      maxDataPoints,
+      intervalMs: null
+    });
   },
   async fetchHistory(source, window) {
     const response = await fetchGlucoseHistory(source, window.from, window.to, window.limit);
@@ -117,7 +135,7 @@ export const pulseApiGlucosePort: GlucoseTimelinePort = {
   }
 };
 
-export const pulseApiTandemPort: TandemActivityPort = {
+export const venoApiTandemPort: TandemActivityPort = {
   async fetchBasal(window) {
     const response = await fetchTandemBasalHistory(window.from, window.to, window.limit);
     return response.items;
@@ -128,14 +146,14 @@ export const pulseApiTandemPort: TandemActivityPort = {
   }
 };
 
-export const pulseApiHealthPort: HealthStepsPort = {
+export const venoApiHealthPort: HealthStepsPort = {
   async fetchSteps(window) {
     const response = await fetchHealthStepHistory(window.from, window.to);
     return response.items;
   }
 };
 
-export const pulseApiNotesPort: TimelineNotesPort = {
+export const venoApiNotesPort: TimelineNotesPort = {
   async fetchNotes(window) {
     return fetchTimelineNotes(window.from, window.to);
   },
@@ -148,7 +166,7 @@ export const pulseApiNotesPort: TimelineNotesPort = {
   }
 };
 
-export const pulseApiWorkoutPort: WorkoutTimelinePort = {
+export const venoApiWorkoutPort: WorkoutTimelinePort = {
   async fetchWorkouts(window) {
     const response = await fetchWorkoutHistory(window.from, window.to);
     return response.items;
@@ -212,7 +230,7 @@ async function fetchChunked<T>(
   return results.flat();
 }
 
-function toLatestReading(reading: PulseApiReading, source: 'official' | 'share'): LatestReading {
+function toLatestReading(reading: VenoApiReading, source: 'official' | 'share'): LatestReading {
   return {
     id: reading.id,
     timestamp: reading.timestamp,
@@ -244,6 +262,84 @@ function toChartPoint(reading: LatestReading): ChartPoint {
 
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
+}
+
+function seriesPointToMergedPoint(point: GlucoseReadingsSeriesPoint): MergedGlucosePoint {
+  return {
+    readingId: point.readingId,
+    timestamp: point.timestamp,
+    valueMmolL: point.valueMmolL,
+    valueMgDl: point.valueMgDl,
+    trend: point.trend,
+    source: point.source,
+    originalValueMmolL: point.originalValueMmolL ?? null,
+    originalValueMgDl: point.originalValueMgDl ?? null,
+    isCorrected: point.isCorrected ?? false,
+    correctionReason: point.correctionReason ?? null
+  };
+}
+
+function normalizeMaxDataPoints(maxDataPoints: number | null | undefined): number {
+  if (!Number.isFinite(maxDataPoints) || maxDataPoints == null || maxDataPoints < 1) {
+    return TIMELINE_MAX_DATA_POINTS;
+  }
+
+  return Math.min(Math.trunc(maxDataPoints), TIMELINE_MAX_DATA_POINTS);
+}
+
+function resolveFallbackSeriesIntervalMs(from: string, to: string, maxDataPoints: number): number {
+  const fromMs = new Date(from).getTime();
+  const toMs = new Date(to).getTime();
+  const bucketBudget = Math.max(1, Math.floor(maxDataPoints / SERIES_POINTS_PER_BUCKET));
+
+  return Math.max(1, Math.ceil((toMs - fromMs) / bucketBudget));
+}
+
+function reduceMergedGlucoseByExcursions(
+  points: MergedGlucosePoint[],
+  intervalMs: number
+): MergedGlucosePoint[] {
+  const buckets = new Map<number, MergedGlucosePoint[]>();
+
+  for (const point of points) {
+    const bucketKey = Math.floor(new Date(point.timestamp).getTime() / intervalMs) * intervalMs;
+    const bucket = buckets.get(bucketKey) ?? [];
+    bucket.push(point);
+    buckets.set(bucketKey, bucket);
+  }
+
+  const selected = new Map<string, MergedGlucosePoint>();
+  const selectPoint = (point: MergedGlucosePoint) => {
+    selected.set(new Date(point.timestamp).toISOString(), point);
+  };
+
+  for (const bucket of buckets.values()) {
+    const sorted = [...bucket].sort(
+      (left, right) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime()
+    );
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    let min = first;
+    let max = first;
+
+    for (const point of sorted) {
+      if (point.valueMmolL < min.valueMmolL) {
+        min = point;
+      }
+      if (point.valueMmolL > max.valueMmolL) {
+        max = point;
+      }
+    }
+
+    selectPoint(first);
+    selectPoint(min);
+    selectPoint(max);
+    selectPoint(last);
+  }
+
+  return [...selected.values()].sort(
+    (left, right) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime()
+  );
 }
 
 function maxIsoDate(...values: Array<string | null | undefined>): string | null {
@@ -343,21 +439,54 @@ export function createDashboardGlucoseService({
     return toLatestReading(latest, latest === latestOfficial ? 'official' : 'share');
   }
 
-  async function fetchMergedWindow(from: string, to: string): Promise<MergedWindowData> {
-    const [officialResult, shareResult] = await Promise.all([
-      attempt(
-        () => fetchChunked(from, to, GLUCOSE_CHUNK_MS, (window) => glucosePort.fetchHistory('official', window)),
-        [] as PulseApiReading[]
-      ),
-      attempt(
-        () => fetchChunked(from, to, GLUCOSE_CHUNK_MS, (window) => glucosePort.fetchHistory('share', window)),
-        [] as PulseApiReading[]
-      )
-    ]);
-    throwIfAllFailed('Failed to load glucose history', [officialResult, shareResult]);
+  async function fetchGlucoseWindow(
+    from: string,
+    to: string,
+    maxDataPoints: number
+  ): Promise<Pick<MergedWindowData, 'officialCount' | 'shareCount' | 'merged'>> {
+    try {
+      const series = await glucosePort.fetchSeries({ from, to }, maxDataPoints);
+      return {
+        officialCount: series.meta.officialCount,
+        shareCount: series.meta.shareCount,
+        merged: series.items.map(seriesPointToMergedPoint)
+      };
+    } catch {
+      // Deploy-ordering fallback: an older API without readings-series still
+      // serves the timeline through the chunked per-source history endpoints.
+      const [officialResult, shareResult] = await Promise.all([
+        attempt(
+          () => fetchChunked(from, to, GLUCOSE_CHUNK_MS, (window) => glucosePort.fetchHistory('official', window)),
+          [] as VenoApiReading[]
+        ),
+        attempt(
+          () => fetchChunked(from, to, GLUCOSE_CHUNK_MS, (window) => glucosePort.fetchHistory('share', window)),
+          [] as VenoApiReading[]
+        )
+      ]);
+      throwIfAllFailed('Failed to load glucose history', [officialResult, shareResult]);
 
-    const officialItems = officialResult.data;
-    const shareItems = shareResult.data;
+      const merged = mergeGlucoseReadings(officialResult.data, shareResult.data);
+
+      return {
+        officialCount: officialResult.data.length,
+        shareCount: shareResult.data.length,
+        merged: merged.length > maxDataPoints
+          ? reduceMergedGlucoseByExcursions(
+              merged,
+              resolveFallbackSeriesIntervalMs(from, to, maxDataPoints)
+            )
+          : merged
+      };
+    }
+  }
+
+  async function fetchMergedWindow(
+    from: string,
+    to: string,
+    maxDataPoints: number
+  ): Promise<MergedWindowData> {
+    const { officialCount, shareCount, merged } = await fetchGlucoseWindow(from, to, maxDataPoints);
 
     const [tandemBasal, tandemEvents, healthStepItems, workoutItems, noteItems] = await Promise.all([
       fetchChunked(from, to, TANDEM_CHUNK_MS, (window) => tandemPort.fetchBasal(window)).catch(
@@ -372,14 +501,14 @@ export function createDashboardGlucoseService({
     ]);
 
     return {
-      officialItems,
-      shareItems,
+      officialCount,
+      shareCount,
       tandemBasalItems: compressTandemBasalHistory(tandemBasal),
       tandemEventItems: tandemEvents,
       healthStepItems,
       workoutItems,
       noteItems,
-      merged: mergeGlucoseReadings(officialItems, shareItems)
+      merged
     };
   }
 
@@ -402,15 +531,15 @@ export function createDashboardGlucoseService({
       }
 
       const {
-        officialItems,
-        shareItems,
+        officialCount,
+        shareCount,
         tandemBasalItems,
         tandemEventItems,
         healthStepItems,
         workoutItems,
         noteItems,
         merged
-      } = await fetchMergedWindow(window.from, window.to);
+      } = await fetchMergedWindow(window.from, window.to, normalizeMaxDataPoints(input.maxDataPoints));
       const items = requestedLimit ? merged.slice(-requestedLimit) : merged;
       const resolvedLatest =
         latest ||
@@ -440,8 +569,8 @@ export function createDashboardGlucoseService({
         meta: {
           from: window.from,
           to: window.to,
-          officialCount: officialItems.length,
-          shareCount: shareItems.length,
+          officialCount,
+          shareCount,
           mergedCount: items.length,
           tandemBasalCount: tandemBasalItems.length,
           tandemEventCount: tandemEventItems.length,
@@ -477,7 +606,11 @@ export function createDashboardGlucoseService({
       }
 
       const from = new Date(sinceMs + 1).toISOString();
-      const { merged, tandemBasalItems, tandemEventItems, workoutItems } = await fetchMergedWindow(from, nowIso);
+      const { merged, tandemBasalItems, tandemEventItems, workoutItems } = await fetchMergedWindow(
+        from,
+        nowIso,
+        TIMELINE_MAX_DATA_POINTS
+      );
       const noteMutations = await notesPort.fetchMutationSummary(since);
       const newTandemBasalCount = tandemBasalItems.filter(
         (item) => new Date(item.timestamp).getTime() > sinceMs
@@ -512,9 +645,9 @@ export function createDashboardGlucoseService({
 }
 
 export const dashboardGlucoseService = createDashboardGlucoseService({
-  glucosePort: pulseApiGlucosePort,
-  tandemPort: pulseApiTandemPort,
-  healthPort: pulseApiHealthPort,
-  workoutPort: pulseApiWorkoutPort,
-  notesPort: pulseApiNotesPort
+  glucosePort: venoApiGlucosePort,
+  tandemPort: venoApiTandemPort,
+  healthPort: venoApiHealthPort,
+  workoutPort: venoApiWorkoutPort,
+  notesPort: venoApiNotesPort
 });

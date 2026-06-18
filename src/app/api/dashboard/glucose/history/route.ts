@@ -6,7 +6,8 @@ import type { TimeRange } from '@/lib/glucose/time-ranges';
 
 export const dynamic = 'force-dynamic';
 
-const CUSTOM_HISTORY_MAX_RANGE_MS = 90 * 24 * 60 * 60 * 1000;
+const CUSTOM_HISTORY_MAX_RANGE_DAYS = 366;
+const CUSTOM_HISTORY_MAX_RANGE_MS = CUSTOM_HISTORY_MAX_RANGE_DAYS * 24 * 60 * 60 * 1000;
 
 function parseLimit(value: string | null): number | null {
   if (!value) {
@@ -39,7 +40,7 @@ function validateCustomWindow(from: string, to: string): string | null {
   }
 
   if (toMs - fromMs > CUSTOM_HISTORY_MAX_RANGE_MS) {
-    return 'Custom glucose history ranges are limited to 90 days.';
+    return `Custom glucose history ranges are limited to ${CUSTOM_HISTORY_MAX_RANGE_DAYS} days.`;
   }
 
   return null;
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest) {
   const from = params.get('from');
   const to = params.get('to');
   const limit = parseLimit(params.get('limit'));
+  const maxDataPoints = parseLimit(params.get('maxDataPoints'));
 
   try {
     if (from && to) {
@@ -81,6 +83,7 @@ export async function GET(request: NextRequest) {
     if (range) {
       const session = await dashboardGlucoseWorkspace.open({
         range: range as TimeRange,
+        maxDataPoints,
         now
       });
 
@@ -97,6 +100,7 @@ export async function GET(request: NextRequest) {
           from,
           to
         },
+        maxDataPoints,
         now
       });
 
@@ -112,6 +116,7 @@ export async function GET(request: NextRequest) {
       from,
       to,
       limit,
+      maxDataPoints,
       now
     });
 

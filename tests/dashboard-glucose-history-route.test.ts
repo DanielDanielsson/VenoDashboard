@@ -81,6 +81,7 @@ describe('dashboard glucose history route', () => {
       from: null,
       to: null,
       limit: 1,
+      maxDataPoints: null,
       now: expect.any(Date)
     });
     expect(json).toEqual(payload);
@@ -170,6 +171,7 @@ describe('dashboard glucose history route', () => {
       from: '2026-03-07T09:00:00.000Z',
       to: '2026-03-07T10:10:00.000Z',
       limit: 2,
+      maxDataPoints: null,
       now: expect.any(Date)
     });
     expect(json).toEqual(payload);
@@ -221,6 +223,7 @@ describe('dashboard glucose history route', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(open).toHaveBeenCalledWith({
       range: '3d',
+      maxDataPoints: null,
       now: expect.any(Date)
     });
     expect(getHistory).not.toHaveBeenCalled();
@@ -278,9 +281,50 @@ describe('dashboard glucose history route', () => {
         from: '2026-03-07T09:00:00.000Z',
         to: '2026-03-07T10:10:00.000Z'
       },
+      maxDataPoints: null,
       now: expect.any(Date)
     });
     expect(getHistory).not.toHaveBeenCalled();
+    expect(json).toEqual(snapshot);
+  });
+
+  test('accepts custom windows up to the dashboard range cap', async () => {
+    const snapshot = {
+      items: [],
+      basalItems: [],
+      eventItems: [],
+      stepItems: [],
+      latest: null,
+      meta: {
+        from: '2025-04-15T00:00:00.000Z',
+        to: '2026-04-15T00:00:00.000Z',
+        officialCount: 0,
+        shareCount: 0,
+        mergedCount: 0,
+        tandemBasalCount: 0,
+        tandemEventCount: 0,
+        healthStepCount: 0
+      }
+    };
+    open.mockResolvedValue({ snapshot });
+
+    const { GET } = await import('@/app/api/dashboard/glucose/history/route');
+    const response = await GET(
+      new NextRequest(
+        'http://localhost/api/dashboard/glucose/history?from=2025-04-15T00:00:00.000Z&to=2026-04-15T00:00:00.000Z'
+      )
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(open).toHaveBeenCalledWith({
+      window: {
+        from: '2025-04-15T00:00:00.000Z',
+        to: '2026-04-15T00:00:00.000Z'
+      },
+      maxDataPoints: null,
+      now: expect.any(Date)
+    });
     expect(json).toEqual(snapshot);
   });
 
@@ -288,7 +332,7 @@ describe('dashboard glucose history route', () => {
     const { GET } = await import('@/app/api/dashboard/glucose/history/route');
     const response = await GET(
       new NextRequest(
-        'http://localhost/api/dashboard/glucose/history?from=2026-01-01T00:00:00.000Z&to=2026-04-15T00:00:00.000Z'
+        'http://localhost/api/dashboard/glucose/history?from=2025-01-01T00:00:00.000Z&to=2026-04-15T00:00:00.000Z'
       )
     );
     const json = await response.json();
@@ -296,7 +340,7 @@ describe('dashboard glucose history route', () => {
     expect(response.status).toBe(400);
     expect(json).toEqual({
       error: {
-        message: 'Custom glucose history ranges are limited to 90 days.'
+        message: 'Custom glucose history ranges are limited to 366 days.'
       }
     });
     expect(open).not.toHaveBeenCalled();

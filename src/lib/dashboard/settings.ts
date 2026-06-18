@@ -1,5 +1,5 @@
 import type { DashboardTimeSettingsKind, GridLayoutItemKind, PanelKind } from './schema';
-import { fetchDashboardSettings } from '@/lib/pulse-api/client';
+import { fetchDashboardSettings } from '@/lib/veno-api/client';
 import { parseDashboardDefinition, type DashboardDefinition } from './schema';
 
 export const DASHBOARD_SETTINGS_SCHEMA_VERSION = 'veno.dashboard-settings.v2';

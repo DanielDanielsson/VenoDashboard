@@ -1187,7 +1187,7 @@ describe('DashboardGrid', () => {
     ]);
   });
 
-  test('creates unique element keys for addable panels that allow multiple instances', () => {
+  test('adds new panels at the top of a new row', () => {
     const panelCatalogEntries = [
       {
         id: 'text',
@@ -1195,7 +1195,116 @@ describe('DashboardGrid', () => {
         title: 'Text',
         group: 'veno.text',
         compatibleDashboardTypes: ['live'],
+        defaultLayout: { width: 4, height: 6, aspectRatio: 1.45 },
+        defaultDefinition: createPanel('veno.text', 'Text'),
+      },
+    ] satisfies DashboardPanelCatalogEntry[];
+
+    render(
+      <DashboardGrid
+        layout={createLayout()}
+        dashboardType="live"
+        isOwner
+        initialElements={{
+          'panel-current-glucose': createPanel('veno.live-glucose', 'Current Glucose'),
+          'panel-connections': createPanel('veno.connections-map', 'Connections'),
+        }}
+        panelCatalogEntries={panelCatalogEntries}
+        renderPanel={(panelId, panel) => (
+          <div key={panelId}>{panelId}: {panel.spec.title}</div>
+        )}
+      >
+        <div key="panel-current-glucose">Current glucose panel</div>
+        <div key="panel-connections">Connections panel</div>
+      </DashboardGrid>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add panel' }));
+    fireEvent.click(within(screen.getByRole('complementary', { name: 'Add panel' })).getByRole('button', { name: 'Text' }));
+
+    expect(screen.getByText('panel-text: Text')).toBeInTheDocument();
+    expect(gridLayoutMock.layout).toEqual([
+      { i: 'panel-text', x: 0, y: 0, w: 4, h: 6 },
+      { i: 'panel-current-glucose', x: 0, y: 6, w: 4, h: 6 },
+      { i: 'panel-connections', x: 0, y: 12, w: 12, h: 8 },
+    ]);
+  });
+
+  test('groups device panel options above plain top level panel options', () => {
+    const panelCatalogEntries = [
+      {
+        id: 'dexcom-glucose-readings',
+        elementName: 'panel-dexcom-glucose-readings',
+        title: 'Glucose Readings',
+        group: 'veno.dexcom-glucose-readings',
+        category: {
+          kind: 'device',
+          label: 'Dexcom G7',
+        },
+        compatibleDashboardTypes: ['timeRange'],
+        allowMultiple: false,
+        defaultLayout: { width: 12, height: 12, aspectRatio: 2.4 },
+        defaultDefinition: createPanel('veno.dexcom-glucose-readings', 'Glucose Readings'),
+      },
+      {
+        id: 'glucose-timeline',
+        elementName: 'panel-glucose-timeline',
+        title: 'Glucose Timeline',
+        group: 'veno.glucose-timeline',
+        compatibleDashboardTypes: ['timeRange'],
+        allowMultiple: false,
+        defaultLayout: { width: 12, height: 24, aspectRatio: 1.6 },
+        defaultDefinition: createPanel('veno.glucose-timeline', 'Glucose Timeline'),
+      },
+      {
+        id: 'text',
+        elementName: 'panel-text',
+        title: 'Text',
+        group: 'veno.text',
+        compatibleDashboardTypes: ['timeRange'],
         allowMultiple: true,
+        defaultLayout: { width: 4, height: 6, aspectRatio: 1.45 },
+        defaultDefinition: createPanel('veno.text', 'Text'),
+      },
+    ] satisfies DashboardPanelCatalogEntry[];
+
+    render(
+      <DashboardGrid
+        layout={createEmptyLayout()}
+        dashboardType="timeRange"
+        isOwner
+        panelCatalogEntries={panelCatalogEntries}
+        renderPanel={(panelId, panel) => (
+          <div key={panelId}>{panel.spec.title} panel</div>
+        )}
+      >
+        {null}
+      </DashboardGrid>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add panel' }));
+
+    const drawer = screen.getByRole('complementary', { name: 'Add panel' });
+    const group = within(drawer).getByRole('group', { name: 'Dexcom G7' });
+    expect(within(group).getByRole('button', { name: 'Glucose Readings' })).toBeInTheDocument();
+    expect(within(drawer).getByRole('button', { name: 'Glucose Timeline' })).toBeInTheDocument();
+    expect(within(drawer).getByRole('button', { name: 'Text' })).toBeInTheDocument();
+    expect(within(drawer).queryByText('Other')).not.toBeInTheDocument();
+
+    const labels = Array.from(drawer.querySelectorAll('h3, button')).map((node) => node.textContent);
+    expect(labels).toEqual(['Close', 'Dexcom G7', 'Glucose Readings', 'Glucose Timeline', 'Text']);
+  });
+
+  test('creates unique element keys for addable panels by default', () => {
+    const panelCatalogEntries = [
+      {
+        id: 'text',
+        elementName: 'panel-text',
+        title: 'Text',
+        group: 'veno.text',
+        compatibleDashboardTypes: ['live'],
         defaultLayout: { width: 4, height: 6, aspectRatio: 1.45 },
         defaultDefinition: createPanel('veno.text', 'Text'),
       },
@@ -1223,7 +1332,47 @@ describe('DashboardGrid', () => {
 
     expect(screen.getByText('panel-text: Text')).toBeInTheDocument();
     expect(screen.getByText('panel-text-2: Text')).toBeInTheDocument();
-    expect(gridLayoutMock.layout.map((item) => item.i)).toEqual(['panel-text', 'panel-text-2']);
+    expect(gridLayoutMock.layout.map((item) => item.i)).toEqual(['panel-text-2', 'panel-text']);
+  });
+
+  test('hides addable panels when multiple instances are disabled', () => {
+    const panelCatalogEntries = [
+      {
+        id: 'current-glucose',
+        elementName: 'panel-current-glucose',
+        title: 'Current Glucose',
+        group: 'veno.live-glucose',
+        compatibleDashboardTypes: ['live'],
+        allowMultiple: false,
+        defaultLayout: { width: 4, height: 6, aspectRatio: 1.45 },
+        defaultDefinition: createPanel('veno.live-glucose', 'Current Glucose'),
+      },
+    ] satisfies DashboardPanelCatalogEntry[];
+
+    render(
+      <DashboardGrid
+        layout={createLayout()}
+        dashboardType="live"
+        isOwner
+        initialElements={{
+          'panel-current-glucose': createPanel('veno.live-glucose', 'Current Glucose'),
+        }}
+        panelCatalogEntries={panelCatalogEntries}
+        renderPanel={(panelId, panel) => (
+          <div key={panelId}>{panelId}: {panel.spec.title}</div>
+        )}
+      >
+        {null}
+      </DashboardGrid>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add panel' }));
+
+    const drawer = screen.getByRole('complementary', { name: 'Add panel' });
+
+    expect(within(drawer).queryByRole('button', { name: 'Current Glucose' })).not.toBeInTheDocument();
+    expect(within(drawer).getByText('No compatible panels available.')).toBeInTheDocument();
   });
 
   test('uses one group settings registration for multiple panel instances', async () => {

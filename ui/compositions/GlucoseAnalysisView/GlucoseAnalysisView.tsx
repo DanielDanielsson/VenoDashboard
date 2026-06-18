@@ -11,6 +11,7 @@ import { DashboardPanel } from '@ui/components/DashboardPanel';
 import { DialogPanel } from '@ui/components/DialogPanel';
 import { FloatingPanel } from '@ui/components/FloatingPanel';
 import { DashboardViewPanelUrlStateBridge } from '@ui/compositions/DashboardViewPanelUrlStateBridge/DashboardViewPanelUrlStateBridge';
+import { createDexcomGlucoseReadingsPanelSettingsRegistration } from '@ui/compositions/DexcomGlucoseReadingsPanel';
 import { TimeInRangePanel, createTimeInRangePanelSettingsRegistration } from '@ui/compositions/TimeInRangePanel';
 import { WorkoutTypePanel } from '@ui/compositions/WorkoutTypePanel';
 import {
@@ -78,7 +79,8 @@ import type {
   TimelineNote,
   WorkoutChartPoint
 } from '@/lib/glucose/types';
-import type { ConsumerProfileResponse } from '@/lib/pulse-api/types';
+import type { GlucoseUnit } from '@/lib/glucose/units';
+import type { ConsumerProfileResponse } from '@/lib/veno-api/types';
 import { useDashboardNotifications } from '@ui/compositions/DashboardDefinitionRenderer/useDashboardNotifications';
 import { timeRangeDashboardRegistry } from './TimeRangeDashboardRegistry';
 
@@ -124,6 +126,26 @@ const getSelectionTargetWindow = (
   }
 
   return buildPresetWindow(sourceData.meta.to, selection.range);
+};
+
+const getReadingsTimeWindowCacheKey = (
+  selection: HistorySelection,
+  targetWindow: HistoryWindow | null,
+  timeZone: string,
+): string | null => {
+  if (!targetWindow) {
+    return null;
+  }
+
+  if (selection.kind === 'preset') {
+    return `preset:${selection.range}:${timeZone}`;
+  }
+
+  if (selection.raw) {
+    return `raw:${selection.raw.from}:${selection.raw.to}:${timeZone}`;
+  }
+
+  return `window:${targetWindow.from}:${targetWindow.to}`;
 };
 
 const parseChartYMax = (yAxisMax: number): number => {
@@ -199,11 +221,14 @@ const GlucoseTimelineSettingsFields = ({
   );
 };
 
-const GlucoseTimelineChart = (
-  props: Omit<ComponentProps<typeof GlucoseChart>, 'colorMode' | 'yMax'>,
-): ReactElement => {
+const GlucoseTimelineChart = ({
+  panelId = GLUCOSE_TIMELINE_PANEL_ID,
+  ...props
+}: Omit<ComponentProps<typeof GlucoseChart>, 'colorMode' | 'yMax'> & {
+  panelId?: string;
+}): ReactElement => {
   const [settings] = useDashboardPanelSettings(
-    GLUCOSE_TIMELINE_PANEL_ID,
+    panelId,
     DEFAULT_GLUCOSE_TIMELINE_PANEL_SETTINGS,
   );
 
@@ -299,6 +324,7 @@ export const GlucoseAnalysisView = ({
     initialTimeZone === 'UTC' ? 'utc' : null,
   );
   const [autoRefresh, setAutoRefresh] = useState(dashboardDefinition.spec.timeSettings.autoRefresh);
+  const [dashboardRefreshRevision, setDashboardRefreshRevision] = useState(0);
   const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
@@ -422,6 +448,8 @@ export const GlucoseAnalysisView = ({
       : initialTimeZone ||
         profileResponse?.profile?.timezone ||
         browserTimeZone;
+  const globalGlucoseUnit: GlucoseUnit = profileResponse?.profile?.glucoseUnit ?? 'mmol/L';
+  const readingsTimeWindowCacheKey = getReadingsTimeWindowCacheKey(selection, targetWindow, ownerTimeZone);
 
   const displayedTimelineRevision = selection.kind === 'preset'
     ? displayData?.meta.timelineRevision ?? displayData?.latest?.timestamp ?? null
@@ -459,6 +487,7 @@ export const GlucoseAnalysisView = ({
           />
         ),
       },
+      'veno.dexcom-glucose-readings': createDexcomGlucoseReadingsPanelSettingsRegistration(),
       'veno.time-in-range': createTimeInRangePanelSettingsRegistration('statistics'),
     }),
     [],
@@ -466,6 +495,7 @@ export const GlucoseAnalysisView = ({
 
   const refreshDashboard = useCallback(async () => {
     await mutate();
+    setDashboardRefreshRevision((current) => current + 1);
   }, [mutate]);
 
   useEffect(() => {
@@ -1240,6 +1270,11 @@ export const GlucoseAnalysisView = ({
         editControlsPortalId={STATISTICS_DASHBOARD_EDIT_CONTROLS_ID}
         allowDashboardDelete={allowDashboardDelete}
         context={{
+          isOwner,
+          refreshRevision: dashboardRefreshRevision,
+          timeWindow: targetWindow ?? null,
+          timeWindowCacheKey: readingsTimeWindowCacheKey,
+          globalGlucoseUnit,
           renderAverageGlucosePanel: () => (
           <DashboardPanel
             title="Average Glucose"
@@ -1283,8 +1318,9 @@ export const GlucoseAnalysisView = ({
           )}
           </DashboardPanel>
           ),
-          renderTimeInRangePanel: () => (
+          renderTimeInRangePanel: (panelId) => (
           <TimeInRangePanel
+            panelId={panelId}
             defaultLayout="statistics"
             stats={hasData ? stats : null}
             loading={isTransitioning}
@@ -1297,13 +1333,10 @@ export const GlucoseAnalysisView = ({
             loading={isTransitioning}
           />
           ),
-          renderGlucoseTimelinePanel: () => (
+          renderGlucoseTimelinePanel: (panelId) => (
           <DashboardPanel
             title="Glucose Timeline"
             twStyles="overflow-visible"
-            headerRight={
-              <span className="ui_caption tracking-wide text-text-soft">⌘ + Scroll to zoom · Drag to pan</span>
-            }
           >
         <div style={{ position: 'relative', minHeight: chartHeight, margin: '-1.5rem' }}>
           {isFirstLoad && (
@@ -1804,6 +1837,7 @@ export const GlucoseAnalysisView = ({
               )}
               <div style={{ opacity: isTransitioning ? 0.35 : 1, transition: 'opacity 200ms ease' }}>
                 <GlucoseTimelineChart
+                  panelId={panelId}
                   data={data.items}
                   basalData={data.basalItems}
                   eventData={data.eventItems}

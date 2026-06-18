@@ -34,6 +34,7 @@ import { HoverPanel } from '../HoverPanel';
 export type { ChartPoint } from '@/lib/glucose/types';
 
 interface GlucoseChartProps {
+  ariaLabel?: string;
   data: ChartPoint[];
   basalData?: BasalChartPoint[];
   eventData?: TandemEventChartPoint[];
@@ -54,12 +55,15 @@ interface GlucoseChartProps {
   onWorkoutAddRequest?: (hoveredAt: string | null) => void;
   onNoteSelect?: (note: TimelineNote) => void;
   onNoteAddRequest?: (hoveredAt: string | null) => void;
+  showWorkoutBand?: boolean;
+  showNoteBand?: boolean;
 }
 
 const LOW_THRESHOLD = 4.0;
 const HIGH_THRESHOLD = 10.0;
 const Y_MIN = 2.0;
-const PADDING = { top: 32, right: 16, bottom: 48, left: 96 };
+const PADDING = { top: 32, right: 24, bottom: 48, left: 48 };
+const Y_AXIS_LABEL_OFFSET = 24;
 const BASAL_BAND_HEIGHT = 120;
 const BASAL_BAND_GAP = 20;
 const BASAL_TICK_COUNT = 3;
@@ -73,8 +77,7 @@ const EVENT_TRACK_HEIGHT = 120;
 const EVENT_TRACK_GAP = 20;
 const EVENT_LANE_COUNT = 3;
 const EVENT_HOVER_WINDOW_MS = 3 * 60 * 1000;
-const MAX_PX_PER_MS = 0.04;
-const FIT_ALL_EPSILON = 0.001;
+const MIN_GLUCOSE_PLOT_HEIGHT = 160;
 const STEP_TOTAL_FULL_LABEL_MIN_WIDTH_PX = 72;
 const STEP_TOTAL_SUFFIX_MIN_WIDTH_PX = 58;
 const STEP_TOTAL_LABEL_GAP_PX = 6;
@@ -99,7 +102,14 @@ const formatTime = (date: Date): string => {
 };
 
 const formatDate = (date: Date): string => {
-  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+const formatDateLines = (date: Date): [string, string] => {
+  return [
+    date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    date.toLocaleDateString([], { year: 'numeric' }),
+  ];
 };
 
 const getDayStartMs = (timestampMs: number): number => {
@@ -113,6 +123,18 @@ const getNextDayStartMs = (dayStartMs: number): number => {
   date.setDate(date.getDate() + 1);
   date.setHours(0, 0, 0, 0);
   return date.getTime();
+};
+
+const canPlaceAxisLabel = (
+  x: number,
+  width: number,
+  bounds: Array<{ left: number; right: number }>,
+  minGap = 8,
+): boolean => {
+  const left = x - width / 2;
+  const right = x + width / 2;
+
+  return bounds.every((bound) => right + minGap <= bound.left || left - minGap >= bound.right);
 };
 
 const pickTickInterval = (visibleDurationMs: number, chartWidth: number): number => {
@@ -659,7 +681,7 @@ const drawTandemMarker = (
 
   ctx.restore();
 
-  // Draw units label centred inside the circle when zoomed in enough
+  // Draw units label centred inside the circle for short visible ranges.
   if (insulinDelivered !== null && size >= 26) {
     const circleCenterX = x - 0.5 * scale;
     const circleCenterY = y + 16 * scale;
@@ -673,6 +695,7 @@ const drawTandemMarker = (
 };
 
 export const GlucoseChart = ({
+  ariaLabel = 'Glucose timeline chart',
   data,
   basalData = [],
   eventData = [],
@@ -692,7 +715,9 @@ export const GlucoseChart = ({
   onWorkoutSelect,
   onWorkoutAddRequest,
   onNoteSelect,
-  onNoteAddRequest
+  onNoteAddRequest,
+  showWorkoutBand = true,
+  showNoteBand = true
 }: GlucoseChartProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -700,10 +725,9 @@ export const GlucoseChart = ({
   const scrollRef = useRef(0);
   const pxPerMsRef = useRef(0);
   const isDraggingRef = useRef(false);
-  const dragModeRef = useRef<'pan' | 'edit' | null>(null);
+  const dragModeRef = useRef<'edit' | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef(0);
-  const dragScrollRef = useRef(0);
   const dragMovedRef = useRef(false);
   const editDragRef = useRef<{ readingId: string; baselineValueMmolL: number; index: number } | null>(null);
   const rafRef = useRef<number>(0);
@@ -716,7 +740,6 @@ export const GlucoseChart = ({
   const [isEditDragging, setIsEditDragging] = useState(false);
   const viewportFrameRef = useRef<number>(0);
   const [, setViewportVersion] = useState(0);
-  const dataSignatureRef = useRef('');
   const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
@@ -773,10 +796,13 @@ export const GlucoseChart = ({
   const hasBasalBand = basalData.length > 0;
   const hasEventTrack = eventData.length > 0;
   const hasStepBand = stepData.length > 0;
-  const hasWorkoutBand = true;
+  const hasWorkoutBand = showWorkoutBand;
   const iobPoints = eventData
     .filter((e) => e.iob !== null)
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  const assignedNoteItems = assignTimelineNoteLanes(noteData);
+  const hasNoteBand = showNoteBand;
+  const noteBandHeight = hasNoteBand ? getTimelineNoteBandHeight(noteData) : 0;
   const basalBandHeight = hasBasalBand ? Math.min(BASAL_BAND_HEIGHT, Math.max(64, chartHeight * 0.4)) : 0;
   const basalGap = hasBasalBand ? BASAL_BAND_GAP : 0;
   const stepBandHeight = hasStepBand ? STEP_BAND_HEIGHT : 0;
@@ -785,9 +811,18 @@ export const GlucoseChart = ({
   const workoutGap = hasWorkoutBand ? WORKOUT_BAND_GAP : 0;
   const eventTrackHeight = hasEventTrack ? EVENT_TRACK_HEIGHT : 0;
   const eventGap = hasEventTrack ? EVENT_TRACK_GAP : 0;
-  const assignedNoteItems = assignTimelineNoteLanes(noteData);
-  const noteBandHeight = getTimelineNoteBandHeight(noteData);
-  const glucosePlotHeight = 240;
+  const reservedBandHeight =
+    eventTrackHeight +
+    eventGap +
+    basalBandHeight +
+    basalGap +
+    stepBandHeight +
+    stepGap +
+    workoutBandHeight +
+    workoutGap +
+    noteBandHeight +
+    (hasNoteBand ? NOTE_BAND_GAP : 0);
+  const glucosePlotHeight = Math.max(MIN_GLUCOSE_PLOT_HEIGHT, chartHeight - reservedBandHeight);
   const eventTrackTop = PADDING.top + glucosePlotHeight + eventGap;
   const basalBandTop = eventTrackTop + eventTrackHeight + basalGap;
   const stepBandTop = basalBandTop + basalBandHeight + stepGap;
@@ -801,9 +836,8 @@ export const GlucoseChart = ({
       : hasEventTrack
         ? eventTrackTop + eventTrackHeight
         : PADDING.top + glucosePlotHeight;
-  const noteBandTop = noteAnchorBottom + NOTE_BAND_GAP;
+  const noteBandTop = noteAnchorBottom + (hasNoteBand ? NOTE_BAND_GAP : 0);
   const fitAllPxPerMs = chartWidth > 0 ? chartWidth / totalDurationMs : 0;
-  const minPxPerMs = fitAllPxPerMs > 0 ? fitAllPxPerMs : 0;
   const hoveredPoint = hoveredIndex === null ? null : renderedData[hoveredIndex] ?? null;
   const selectedReadingIdSet = new Set(selectedReadingIds);
   const hoveredBasalPoint =
@@ -824,11 +858,8 @@ export const GlucoseChart = ({
   const hoveredNotes = hoveredTimestampMs === null
     ? []
     : getTimelineNotesAtTimestamp(assignedNoteItems, hoveredTimestampMs);
-  const viewportPxPerMs = pxPerMsRef.current > 0 ? pxPerMsRef.current : fitAllPxPerMs;
-  const viewportTotalContentWidth = totalDurationMs * viewportPxPerMs;
-  const viewportScroll = viewportPxPerMs > 0
-    ? clamp(scrollRef.current, 0, Math.max(0, viewportTotalContentWidth - chartWidth))
-    : 0;
+  const viewportPxPerMs = fitAllPxPerMs;
+  const viewportScroll = 0;
   const visibleStartMs = viewportPxPerMs > 0
     ? timeStartMs + viewportScroll / viewportPxPerMs
     : timeStartMs;
@@ -861,19 +892,9 @@ export const GlucoseChart = ({
   }, []);
 
   useEffect(() => {
-    if (data.length > 1 && chartWidth > 0 && fitAllPxPerMs > 0) {
-      const signature = `${timeStartMs}:${timeEndMs}:${data.length}`;
-      if (signature !== dataSignatureRef.current) {
-        dataSignatureRef.current = signature;
-        pxPerMsRef.current = fitAllPxPerMs;
-        scrollRef.current = 0;
-      } else if (pxPerMsRef.current <= fitAllPxPerMs * (1 + FIT_ALL_EPSILON)) {
-        pxPerMsRef.current = fitAllPxPerMs;
-        scrollRef.current = 0;
-      } else if (pxPerMsRef.current < fitAllPxPerMs) {
-        pxPerMsRef.current = fitAllPxPerMs;
-      }
-
+    if (data.length > 0 && chartWidth > 0 && fitAllPxPerMs > 0) {
+      pxPerMsRef.current = fitAllPxPerMs;
+      scrollRef.current = 0;
       syncViewportOverlay();
     }
   }, [data.length, chartWidth, fitAllPxPerMs, syncViewportOverlay, timeEndMs, timeStartMs]);
@@ -920,11 +941,6 @@ export const GlucoseChart = ({
     }
   }
 
-  const clampScroll = useCallback(() => {
-    const maxAllowed = Math.max(0, totalDurationMs * pxPerMsRef.current - chartWidth);
-    scrollRef.current = clamp(scrollRef.current, 0, maxAllowed);
-  }, [chartWidth, totalDurationMs]);
-
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !data.length || chartWidth <= 0 || chartHeight <= 0 || pxPerMsRef.current <= 0) return;
@@ -942,10 +958,8 @@ export const GlucoseChart = ({
     ctx.clearRect(0, 0, containerWidth, height);
 
     const pxPerMs = pxPerMsRef.current;
-    const totalContentWidth = totalDurationMs * pxPerMs;
-    const maxVisibleScroll = Math.max(0, totalContentWidth - chartWidth);
-    const scroll = clamp(scrollRef.current, 0, maxVisibleScroll);
-    scrollRef.current = scroll;
+    const scroll = 0;
+    scrollRef.current = 0;
 
     const visibleStartMs = timeStartMs + scroll / pxPerMs;
     const visibleEndMs = Math.min(timeEndMs, visibleStartMs + chartWidth / pxPerMs);
@@ -1034,7 +1048,7 @@ export const GlucoseChart = ({
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
     ctx.fillStyle = textSoft;
-    ctx.fillText('mmol/L', 8, PADDING.top - 4);
+    ctx.fillText('mmol/L', PADDING.left - Y_AXIS_LABEL_OFFSET, PADDING.top - 10);
 
     ctx.font = '11px var(--font-plex-mono), monospace';
     ctx.textAlign = 'right';
@@ -1043,7 +1057,7 @@ export const GlucoseChart = ({
     for (const tick of yTicks) {
       const y = yForValue(tick);
       ctx.fillStyle = tick === LOW_THRESHOLD || tick === HIGH_THRESHOLD ? 'rgba(255,255,255,0.5)' : textSoft;
-      ctx.fillText(tick.toString(), PADDING.left - 10, y);
+      ctx.fillText(tick.toString(), PADDING.left - Y_AXIS_LABEL_OFFSET / 2, y);
 
       ctx.strokeStyle = border;
       ctx.lineWidth = 0.5;
@@ -1453,7 +1467,11 @@ export const GlucoseChart = ({
     const visibleDurationMs = Math.max(1, visibleEndMs - visibleStartMs);
     const tickIntervalMs = pickTickInterval(visibleDurationMs, chartWidth);
     const firstTickMs = Math.ceil(visibleStartMs / tickIntervalMs) * tickIntervalMs;
-    let previousDateLabel = '';
+    const timeLabelY = height - PADDING.bottom + 8;
+    const dateLineOneY = height - PADDING.bottom + 24;
+    const dateLineTwoY = height - PADDING.bottom + 36;
+    const timeLabelBounds: Array<{ left: number; right: number }> = [];
+    const dateLabelBounds: Array<{ left: number; right: number }> = [];
 
     for (let dayStartMs = firstDayStartMs; dayStartMs <= visibleEndMs; dayStartMs = getNextDayStartMs(dayStartMs)) {
       if (dayStartMs < visibleStartMs || dayStartMs > visibleEndMs) {
@@ -1476,26 +1494,89 @@ export const GlucoseChart = ({
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
+    for (let dayStartMs = firstDayStartMs; dayStartMs <= visibleEndMs; dayStartMs = getNextDayStartMs(dayStartMs)) {
+      const dayEndMs = getNextDayStartMs(dayStartMs);
+      const segmentStartMs = Math.max(dayStartMs, visibleStartMs);
+      const segmentEndMs = Math.min(dayEndMs, visibleEndMs);
+
+      if (segmentEndMs <= segmentStartMs) {
+        continue;
+      }
+
+      const centerX = xForTimestamp(segmentStartMs + (segmentEndMs - segmentStartMs) / 2);
+      if (centerX < PADDING.left || centerX > PADDING.left + chartWidth) {
+        continue;
+      }
+
+      const segmentWidth = Math.abs(xForTimestamp(segmentEndMs) - xForTimestamp(segmentStartMs));
+      const dateLabel = formatDate(new Date(dayStartMs));
+      const [dateLineOne, dateLineTwo] = formatDateLines(new Date(dayStartMs));
+      ctx.fillStyle = textSoft;
+      ctx.font = '10px var(--font-plex-mono), monospace';
+      const dateLabelWidth = ctx.measureText(dateLabel).width;
+      const dateLineWidth = Math.max(
+        ctx.measureText(dateLineOne).width,
+        ctx.measureText(dateLineTwo).width,
+      );
+
+      if (dateLabelWidth <= Math.max(0, segmentWidth - 12) && canPlaceAxisLabel(centerX, dateLabelWidth, dateLabelBounds, 10)) {
+        dateLabelBounds.push({
+          left: centerX - dateLabelWidth / 2,
+          right: centerX + dateLabelWidth / 2,
+        });
+        ctx.fillText(dateLabel, centerX, dateLineOneY);
+      } else if (dateLineWidth <= Math.max(0, segmentWidth - 12) && canPlaceAxisLabel(centerX, dateLineWidth, dateLabelBounds, 10)) {
+        dateLabelBounds.push({
+          left: centerX - dateLineWidth / 2,
+          right: centerX + dateLineWidth / 2,
+        });
+        ctx.fillText(dateLineOne, centerX, dateLineOneY);
+        ctx.fillText(dateLineTwo, centerX, dateLineTwoY);
+      }
+    }
+
+    ctx.fillStyle = textDim;
+    ctx.font = '11px var(--font-plex-mono), monospace';
+
+    for (let dayStartMs = firstDayStartMs; dayStartMs <= visibleEndMs; dayStartMs = getNextDayStartMs(dayStartMs)) {
+      if (dayStartMs < visibleStartMs || dayStartMs > visibleEndMs) {
+        continue;
+      }
+
+      const x = xForTimestamp(dayStartMs);
+      if (x < PADDING.left || x > PADDING.left + chartWidth) {
+        continue;
+      }
+
+      const midnightLabel = formatTime(new Date(dayStartMs));
+      const labelWidth = ctx.measureText(midnightLabel).width;
+      timeLabelBounds.push({
+        left: x - labelWidth / 2,
+        right: x + labelWidth / 2,
+      });
+      ctx.fillText(midnightLabel, x, timeLabelY);
+    }
+
     for (let tickMs = firstTickMs; tickMs <= visibleEndMs; tickMs += tickIntervalMs) {
       const x = xForTimestamp(tickMs);
       if (x < PADDING.left || x > PADDING.left + chartWidth) continue;
 
       const date = new Date(tickMs);
-      ctx.fillStyle = textDim;
-      ctx.font = '11px var(--font-plex-mono), monospace';
-      ctx.fillText(formatTime(date), x, height - PADDING.bottom + 8);
-
-      const currentDateLabel = formatDate(date);
-      const shouldShowDate =
-        previousDateLabel !== currentDateLabel &&
-        (date.getHours() === 0 || tickIntervalMs >= 12 * 60 * 60 * 1000);
-
-      if (shouldShowDate) {
-        ctx.fillStyle = textSoft;
-        ctx.font = '10px var(--font-plex-mono), monospace';
-        ctx.fillText(currentDateLabel, x, height - PADDING.bottom + 24);
-        previousDateLabel = currentDateLabel;
+      if (date.getHours() === 0 && date.getMinutes() === 0) {
+        continue;
       }
+
+      const tickLabel = formatTime(date);
+      const labelWidth = ctx.measureText(tickLabel).width;
+      if (!canPlaceAxisLabel(x, labelWidth, timeLabelBounds, 10)) {
+        continue;
+      }
+
+      timeLabelBounds.push({
+        left: x - labelWidth / 2,
+        right: x + labelWidth / 2,
+      });
+      ctx.fillText(tickLabel, x, timeLabelY);
     }
 
     ctx.save();
@@ -1619,24 +1700,12 @@ export const GlucoseChart = ({
     }
 
     ctx.restore();
-
-    if (totalContentWidth > chartWidth + 1) {
-      const barWidth = Math.max(40, (chartWidth / totalContentWidth) * chartWidth);
-      const barX = maxVisibleScroll > 0
-        ? PADDING.left + (scroll / maxVisibleScroll) * (chartWidth - barWidth)
-        : PADDING.left;
-      const barY = height - 4;
-
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.15)';
-      ctx.beginPath();
-      ctx.roundRect(barX, barY, barWidth, 3, 1.5);
-      ctx.fill();
-    }
   }, [
     basalBandHeight,
     basalBandTop,
     basalData,
     hasStepBand,
+    hasNoteBand,
     chartHeight,
     chartWidth,
     colorMode,
@@ -1649,6 +1718,7 @@ export const GlucoseChart = ({
     glucosePlotHeight,
     hasBasalBand,
     hasEventTrack,
+    hasWorkoutBand,
     height,
     hoveredIndex,
     hoveredEventItems,
@@ -1675,39 +1745,6 @@ export const GlucoseChart = ({
     rafRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(rafRef.current);
   }, [draw]);
-
-  const handleWheel = useCallback((e: WheelEvent) => {
-    if (chartWidth <= 0 || totalDurationMs <= 0 || pxPerMsRef.current <= 0) {
-      return;
-    }
-
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-      const mouseX = clamp(e.offsetX - PADDING.left, 0, chartWidth);
-      const oldPxPerMs = pxPerMsRef.current;
-      const targetTimeMs = timeStartMs + (scrollRef.current + mouseX) / oldPxPerMs;
-      const newPxPerMs = clamp(oldPxPerMs * zoomFactor, minPxPerMs, MAX_PX_PER_MS);
-
-      if (newPxPerMs <= fitAllPxPerMs * (1 + FIT_ALL_EPSILON)) {
-        pxPerMsRef.current = fitAllPxPerMs;
-        scrollRef.current = 0;
-      } else {
-        pxPerMsRef.current = newPxPerMs;
-        scrollRef.current = (targetTimeMs - timeStartMs) * newPxPerMs - mouseX;
-      }
-    } else if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 0) {
-      e.preventDefault();
-      scrollRef.current += e.deltaX;
-    } else {
-      return;
-    }
-
-    clampScroll();
-    cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(draw);
-    syncViewportOverlay();
-  }, [chartWidth, clampScroll, draw, fitAllPxPerMs, minPxPerMs, timeStartMs, totalDurationMs]);
 
   function getSelectablePointIndexAtClientPosition(clientX: number, clientY: number): number | null {
     const canvas = canvasRef.current;
@@ -1777,11 +1814,11 @@ export const GlucoseChart = ({
     const selectedIndex = getSelectablePointIndexAtClientPosition(e.clientX, e.clientY);
     const selectedPoint = selectedIndex === null ? null : renderedData[selectedIndex];
 
-    isDraggingRef.current = true;
-    setIsDragging(true);
     dragMovedRef.current = false;
 
     if (editable && selectedPoint?.readingId && selectedReadingIdSet.has(selectedPoint.readingId)) {
+      isDraggingRef.current = true;
+      setIsDragging(true);
       dragModeRef.current = 'edit';
       dragStartRef.current = e.clientY;
       editDragRef.current = {
@@ -1797,16 +1834,16 @@ export const GlucoseChart = ({
       if (rect) {
         setHoverPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
       }
-    } else {
-      dragModeRef.current = 'pan';
-      dragStartRef.current = e.clientX;
-      dragScrollRef.current = scrollRef.current;
-      editDragRef.current = null;
-      setDraggedReadingId(null);
-      setIsEditDragging(false);
+      e.preventDefault();
+      return;
     }
 
-    e.preventDefault();
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    dragModeRef.current = null;
+    editDragRef.current = null;
+    setDraggedReadingId(null);
+    setIsEditDragging(false);
   }, [chartHeight, chartWidth, editable, glucosePlotHeight, renderedData, selectedReadingIdSet, timeStartMs, timestamps, yMax]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -1833,22 +1870,11 @@ export const GlucoseChart = ({
         setHoveredIndex(editDragRef.current.index);
         setHoveredTimestampMs(new Date(renderedData[editDragRef.current.index]?.timestamp ?? '').getTime() || null);
         setHoverPos({ x: mouseX, y: mouseY });
-      } else {
-        const delta = dragStartRef.current - e.clientX;
-        if (Math.abs(delta) > 4) {
-          dragMovedRef.current = true;
-        }
-        scrollRef.current = dragScrollRef.current + delta;
-        clampScroll();
       }
 
       cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(draw);
       syncViewportOverlay();
-      if (dragModeRef.current !== 'edit') {
-        setHoveredIndex(null);
-        setHoveredTimestampMs(null);
-      }
       return;
     }
 
@@ -1872,7 +1898,7 @@ export const GlucoseChart = ({
     setHoveredWorkoutAddTimestampMs(null);
     setHoveredNoteAddTimestampMs(null);
     updateHoverAtPosition(mouseX, mouseY);
-  }, [chartHeight, chartWidth, clampScroll, data.length, draw, glucosePlotHeight, onCorrectionPreviewChange, timestamps, yMax]);
+  }, [chartHeight, chartWidth, data.length, draw, glucosePlotHeight, onCorrectionPreviewChange, timestamps, yMax]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     if (dragModeRef.current === 'edit') {
@@ -1915,39 +1941,6 @@ export const GlucoseChart = ({
     setHoveredWorkoutAddTimestampMs(null);
     setHoveredNoteAddTimestampMs(null);
     dragMovedRef.current = false;
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    canvas.addEventListener('wheel', handleWheel, { passive: false });
-    return () => canvas.removeEventListener('wheel', handleWheel);
-  }, [handleWheel]);
-
-  const touchStartRef = useRef<{ x: number; scroll: number } | null>(null);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      touchStartRef.current = { x: e.touches[0].clientX, scroll: scrollRef.current };
-    }
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 1 && touchStartRef.current) {
-      const delta = touchStartRef.current.x - e.touches[0].clientX;
-      scrollRef.current = touchStartRef.current.scroll + delta;
-      clampScroll();
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(draw);
-      syncViewportOverlay();
-      setHoveredIndex(null);
-      setHoveredTimestampMs(null);
-    }
-  }, [clampScroll, draw, syncViewportOverlay]);
-
-  const handleTouchEnd = useCallback(() => {
-    touchStartRef.current = null;
   }, []);
 
   function handleNoteBandMouseMove(event: React.MouseEvent<HTMLDivElement>) {
@@ -2069,51 +2062,51 @@ export const GlucoseChart = ({
           </div>
         </div>
       ) : null}
-      <div
-        style={{
-          position: 'absolute',
-          left: 8,
-          top: noteBandTop + 4,
-          zIndex: 12,
-          display: 'inline-flex',
-          alignItems: 'flex-start',
-          pointerEvents: 'none'
-        }}
-      >
-        <span className="ui_chart_axis_unit" style={{ color: 'var(--text-soft)', lineHeight: 1, whiteSpace: 'nowrap' }}>
-          Notes
-        </span>
-        <div style={{ pointerEvents: 'auto' }}>
-          <HoverPanel
-            title="Notes"
-            body="Plain text timeline annotations. Hover the notes band to add a note. Click a note to inspect or edit it."
-            sourceValue="Timeline notes"
-            twStyles="-ml-0.5 -mt-2"
-          />
+      {hasNoteBand ? (
+        <div
+          style={{
+            position: 'absolute',
+            left: 8,
+            top: noteBandTop + 4,
+            zIndex: 12,
+            display: 'inline-flex',
+            alignItems: 'flex-start',
+            pointerEvents: 'none'
+          }}
+        >
+          <span className="ui_chart_axis_unit" style={{ color: 'var(--text-soft)', lineHeight: 1, whiteSpace: 'nowrap' }}>
+            Notes
+          </span>
+          <div style={{ pointerEvents: 'auto' }}>
+            <HoverPanel
+              title="Notes"
+              body="Plain text timeline annotations. Hover the notes band to add a note. Click a note to inspect or edit it."
+              sourceValue="Timeline notes"
+              twStyles="-ml-0.5 -mt-2"
+            />
+          </div>
         </div>
-      </div>
+      ) : null}
       <canvas
         ref={canvasRef}
+        role="img"
+        aria-label={ariaLabel}
         style={{
           display: 'block',
           width: '100%',
           height,
           cursor: isDragging
-            ? 'grabbing'
+            ? 'ns-resize'
             : editable && hoveredPoint?.readingId && selectedReadingIdSet.has(hoveredPoint.readingId)
               ? 'ns-resize'
               : editable && hoveredPoint?.readingId
                 ? 'pointer'
-                : 'grab',
-          touchAction: 'none'
+                : 'default',
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       />
       {hasWorkoutBand && workoutBandHeight > 0 ? (
         <div
@@ -2221,99 +2214,101 @@ export const GlucoseChart = ({
           ) : null}
         </div>
       ) : null}
-      <div
-        aria-label="Notes band"
-        onMouseMove={handleNoteBandMouseMove}
-        onMouseLeave={handleNoteBandMouseLeave}
-        style={{
-          position: 'absolute',
-          left: PADDING.left,
-          right: PADDING.right,
-          top: noteBandTop,
-          height: noteBandHeight,
-          borderRadius: 0,
-          background: isDark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(100, 116, 139, 0.08)',
-          border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(100, 116, 139, 0.18)'}`,
-          overflow: 'hidden',
-          zIndex: 6
-        }}
-      >
-        {assignedNoteItems.map((note) => {
-          const startX = getXForTimestamp(new Date(note.startAt).getTime());
-          const endX = getXForTimestamp(new Date(note.endAt).getTime());
-          const left = Math.max(0, startX - PADDING.left);
-          const right = Math.max(left + 12, endX - PADDING.left);
-          const width = Math.max(12, right - left);
-          const top = NOTE_BAND_PADDING_Y + note.lane * (NOTE_ROW_HEIGHT + NOTE_ROW_GAP);
-          const isSelected = selectedNoteId === note.id;
+      {hasNoteBand ? (
+        <div
+          aria-label="Notes band"
+          onMouseMove={handleNoteBandMouseMove}
+          onMouseLeave={handleNoteBandMouseLeave}
+          style={{
+            position: 'absolute',
+            left: PADDING.left,
+            right: PADDING.right,
+            top: noteBandTop,
+            height: noteBandHeight,
+            borderRadius: 0,
+            background: isDark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(100, 116, 139, 0.08)',
+            border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(100, 116, 139, 0.18)'}`,
+            overflow: 'hidden',
+            zIndex: 6
+          }}
+        >
+          {assignedNoteItems.map((note) => {
+            const startX = getXForTimestamp(new Date(note.startAt).getTime());
+            const endX = getXForTimestamp(new Date(note.endAt).getTime());
+            const left = Math.max(0, startX - PADDING.left);
+            const right = Math.max(left + 12, endX - PADDING.left);
+            const width = Math.max(12, right - left);
+            const top = NOTE_BAND_PADDING_Y + note.lane * (NOTE_ROW_HEIGHT + NOTE_ROW_GAP);
+            const isSelected = selectedNoteId === note.id;
 
-          return (
+            return (
+              <button
+                key={note.id}
+                type="button"
+                onClick={() => onNoteSelect?.(note)}
+                style={{
+                  position: 'absolute',
+                  left,
+                  top,
+                  width,
+                  height: NOTE_ROW_HEIGHT,
+                  borderRadius: 8,
+                  border: isSelected
+                    ? `1px solid ${isDark ? 'rgba(226, 232, 240, 0.75)' : 'rgba(51, 65, 85, 0.65)'}`
+                    : `1px solid ${isDark ? 'rgba(148, 163, 184, 0.25)' : 'rgba(100, 116, 139, 0.25)'}`,
+                  background: isSelected
+                    ? (isDark ? 'rgba(148, 163, 184, 0.34)' : 'rgba(148, 163, 184, 0.42)')
+                    : (isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(148, 163, 184, 0.24)'),
+                  color: 'var(--text)',
+                  padding: '0 10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  overflow: 'hidden',
+                  cursor: 'pointer'
+                }}
+              >
+                <span
+                  className="ui_caption"
+                  style={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'left',
+                    flex: 1
+                  }}
+                >
+                  {note.text}
+                </span>
+              </button>
+            );
+          })}
+          {hoveredNoteAddTimestampMs !== null && onNoteAddRequest ? (
             <button
-              key={note.id}
               type="button"
-              onClick={() => onNoteSelect?.(note)}
+              aria-label="Add note"
+              onClick={() => onNoteAddRequest(new Date(hoveredNoteAddTimestampMs).toISOString())}
               style={{
                 position: 'absolute',
-                left,
-                top,
-                width,
-                height: NOTE_ROW_HEIGHT,
-                borderRadius: 8,
-                border: isSelected
-                  ? `1px solid ${isDark ? 'rgba(226, 232, 240, 0.75)' : 'rgba(51, 65, 85, 0.65)'}`
-                  : `1px solid ${isDark ? 'rgba(148, 163, 184, 0.25)' : 'rgba(100, 116, 139, 0.25)'}`,
-                background: isSelected
-                  ? (isDark ? 'rgba(148, 163, 184, 0.34)' : 'rgba(148, 163, 184, 0.42)')
-                  : (isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(148, 163, 184, 0.24)'),
-                color: 'var(--text)',
-                padding: '0 10px',
-                display: 'flex',
+                left: clamp(getXForTimestamp(hoveredNoteAddTimestampMs) - PADDING.left - 12, 0, Math.max(0, chartWidth - 24)),
+                top: noteBandHeight - NOTE_BAND_PADDING_Y - NOTE_ROW_HEIGHT,
+                width: 24,
+                height: 24,
+                borderRadius: 999,
+                border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.42)' : 'rgba(100, 116, 139, 0.35)'}`,
+                background: isDark ? 'rgba(148, 163, 184, 0.16)' : 'rgba(148, 163, 184, 0.18)',
+                color: 'var(--text-soft)',
+                display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'flex-start',
-                overflow: 'hidden',
+                justifyContent: 'center',
                 cursor: 'pointer'
               }}
             >
-              <span
-                className="ui_caption"
-                style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  textAlign: 'left',
-                  flex: 1
-                }}
-              >
-                {note.text}
-              </span>
+              +
             </button>
-          );
-        })}
-        {hoveredNoteAddTimestampMs !== null && onNoteAddRequest ? (
-          <button
-            type="button"
-            aria-label="Add note"
-            onClick={() => onNoteAddRequest(new Date(hoveredNoteAddTimestampMs).toISOString())}
-            style={{
-              position: 'absolute',
-              left: clamp(getXForTimestamp(hoveredNoteAddTimestampMs) - PADDING.left - 12, 0, Math.max(0, chartWidth - 24)),
-              top: noteBandHeight - NOTE_BAND_PADDING_Y - NOTE_ROW_HEIGHT,
-              width: 24,
-              height: 24,
-              borderRadius: 999,
-              border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.42)' : 'rgba(100, 116, 139, 0.35)'}`,
-              background: isDark ? 'rgba(148, 163, 184, 0.16)' : 'rgba(148, 163, 184, 0.18)',
-              color: 'var(--text-soft)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer'
-            }}
-          >
-            +
-          </button>
-        ) : null}
-      </div>
+          ) : null}
+        </div>
+      ) : null}
       {(hoveredPoint || hoveredWorkouts.length > 0 || hoveredNotes.length > 0) && (
         <div
           className="rounded border border-border-strong bg-surface-strong"

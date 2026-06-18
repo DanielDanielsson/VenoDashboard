@@ -72,6 +72,7 @@ export const createTimeInRangePanelSettingsRegistration = (
 interface TimeInRangePanelProps {
   defaultLayout?: TimeInRangePanelLayout;
   dashboardRangeHours?: number;
+  panelId?: string;
   stats?: GlucoseStats | null;
   loading?: boolean;
   isDark?: boolean;
@@ -80,12 +81,13 @@ interface TimeInRangePanelProps {
 export const TimeInRangePanel = ({
   defaultLayout = 'overview',
   dashboardRangeHours = DEFAULT_DASHBOARD_RANGE_HOURS,
+  panelId = TIME_IN_RANGE_PANEL_ID,
   stats: providedStats,
   loading: providedLoading,
   isDark = true,
 }: TimeInRangePanelProps) => {
   const defaultSettings = useMemo(() => createDefaultSettings(defaultLayout), [defaultLayout]);
-  const [settings] = useDashboardPanelSettings(TIME_IN_RANGE_PANEL_ID, defaultSettings);
+  const [settings] = useDashboardPanelSettings(panelId, defaultSettings);
   const [fetchedStats, setFetchedStats] = useState<GlucoseStats | null>(null);
   const [isFetching, setIsFetching] = useState(providedStats === undefined);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

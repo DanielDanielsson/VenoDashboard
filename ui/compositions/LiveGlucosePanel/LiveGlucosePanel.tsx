@@ -384,11 +384,12 @@ export const createCurrentGlucosePanelSettingsRegistration = (): DashboardPanelS
 
 export const LiveGlucosePanel = ({
   enableStream = true,
+  panelId = CURRENT_GLUCOSE_PANEL_ID,
   twStyles,
   theme,
 }: LiveGlucosePanelProps): ReactElement => {
   const [settings] = useDashboardPanelSettings(
-    CURRENT_GLUCOSE_PANEL_ID,
+    panelId,
     DEFAULT_CURRENT_GLUCOSE_PANEL_SETTINGS,
   );
   const metadataVisibility = {

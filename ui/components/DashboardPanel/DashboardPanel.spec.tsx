@@ -16,6 +16,8 @@ describe('DashboardPanel', () => {
     expect(screen.getByText('Body')).toBeInTheDocument();
     expect(container.firstChild).toHaveClass('rounded-[5px]');
     expect(container.firstChild).not.toHaveClass('rounded-tr-none');
+    expect(screen.getByRole('heading', { name: 'Stats' }).parentElement).toHaveClass('h-12');
+    expect(screen.getByText('Body').parentElement).toHaveClass('p-6');
   });
 
   test('truncates long titles inside the header row', () => {
@@ -26,5 +28,16 @@ describe('DashboardPanel', () => {
     );
 
     expect(screen.getByRole('heading')).toHaveClass('min-w-0', 'flex-1', 'truncate');
+  });
+
+  test('allows panel body spacing to be overridden', () => {
+    render(
+      <DashboardPanel title="Stats" bodyClassName="p-0">
+        <p>Body</p>
+      </DashboardPanel>,
+    );
+
+    expect(screen.getByText('Body').parentElement).toHaveClass('p-0');
+    expect(screen.getByText('Body').parentElement).not.toHaveClass('p-6');
   });
 });

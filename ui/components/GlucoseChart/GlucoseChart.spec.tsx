@@ -87,7 +87,7 @@ describe('GlucoseChart', () => {
     });
 
     try {
-      render(
+      const { container } = render(
         <GlucoseChart
           data={[
             { timestamp: '2026-03-01T00:00:00.000Z', valueMmolL: 5.8, source: 'official' },
@@ -107,8 +107,11 @@ describe('GlucoseChart', () => {
       );
 
       expect(await screen.findByText('1k')).toBeInTheDocument();
-      expect(screen.getByText('2k')).toBeInTheDocument();
-      expect(screen.queryByText('1k total')).not.toBeInTheDocument();
+      const compactStepLabels = Array.from(container.querySelectorAll('.ui_chart_axis_unit'))
+        .map((node) => node.textContent?.trim())
+        .filter(Boolean);
+      expect(compactStepLabels.some((label) => label === '2k' || label === '2k total')).toBe(true);
+      expect(compactStepLabels).not.toContain('1k total');
     } finally {
       if (clientWidth) {
         Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
@@ -194,6 +197,334 @@ describe('GlucoseChart', () => {
     expect(screen.getByLabelText('Workouts band')).toHaveStyle({ borderRadius: '0px' });
     expect(screen.getByLabelText('Notes band')).toHaveStyle({ borderRadius: '0px' });
     expect(screen.queryByRole('button', { name: 'Add workout' })).not.toBeInTheDocument();
+  });
+
+  test('can render glucose only without workout or notes bands', () => {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    render(
+      <GlucoseChart
+        data={[
+          { timestamp: '2026-03-25T12:00:00.000Z', valueMmolL: 5.8, source: 'official' },
+          { timestamp: '2026-03-25T12:05:00.000Z', valueMmolL: 6.1, source: 'official' },
+        ]}
+        colorMode="gradient"
+        showWorkoutBand={false}
+        showNoteBand={false}
+      />,
+    );
+
+    expect(screen.queryByLabelText('Workouts band')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Notes band')).not.toBeInTheDocument();
+    expect(screen.queryByText('Workouts')).not.toBeInTheDocument();
+    expect(screen.queryByText('Notes')).not.toBeInTheDocument();
+  });
+
+  test('uses the available chart height for glucose only rendering', async () => {
+    const fillRects: Array<[number, number, number, number]> = [];
+    const recordingContext = new Proxy(
+      {},
+      {
+        get: (_target, key) => {
+          if (key === 'fillRect') {
+            return (...args: [number, number, number, number]) => {
+              fillRects.push(args);
+            };
+          }
+          if (key === 'measureText') {
+            return () => ({ width: 24 });
+          }
+          if (key === 'createLinearGradient') {
+            return () => ({
+              addColorStop: () => undefined
+            });
+          }
+          return () => undefined;
+        },
+        set: () => true,
+      },
+    );
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => recordingContext) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() {
+        return 900;
+      }
+    });
+
+    try {
+      render(
+        <GlucoseChart
+          data={[
+            { timestamp: '2026-03-25T12:00:00.000Z', valueMmolL: 5.8, source: 'official' },
+            { timestamp: '2026-03-25T12:05:00.000Z', valueMmolL: 6.1, source: 'official' },
+          ]}
+          colorMode="gradient"
+          height={640}
+          showWorkoutBand={false}
+          showNoteBand={false}
+          yMax={18}
+        />,
+      );
+
+      await waitFor(() => expect(fillRects).toContainEqual([48, 312, 828, 210]));
+    } finally {
+      if (clientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      } else {
+        delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      }
+    }
+  });
+
+  test('places midnight labels on day support lines and centers full dates between them', async () => {
+    const labels: Array<{ text: string; x: number; y: number }> = [];
+    const recordingContext = new Proxy(
+      {},
+      {
+        get: (_target, key) => {
+          if (key === 'fillText') {
+            return (text: string, x: number, y: number) => {
+              labels.push({ text, x, y });
+            };
+          }
+          if (key === 'measureText') {
+            return () => ({ width: 24 });
+          }
+          if (key === 'createLinearGradient') {
+            return () => ({
+              addColorStop: () => undefined
+            });
+          }
+          return () => undefined;
+        },
+        set: () => true,
+      },
+    );
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => recordingContext) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() {
+        return 900;
+      }
+    });
+
+    try {
+      const firstDayNoon = new Date(2026, 2, 25, 12).toISOString();
+      const secondDayMidnight = new Date(2026, 2, 26, 0).toISOString();
+      const secondDayNoon = new Date(2026, 2, 26, 12).toISOString();
+      const thirdDayMidnight = new Date(2026, 2, 27, 0).toISOString();
+      const thirdDayNoon = new Date(2026, 2, 27, 12).toISOString();
+
+      render(
+        <GlucoseChart
+          data={[
+            { timestamp: firstDayNoon, valueMmolL: 5.8, source: 'official' },
+            { timestamp: secondDayMidnight, valueMmolL: 6.0, source: 'official' },
+            { timestamp: secondDayNoon, valueMmolL: 6.1, source: 'official' },
+            { timestamp: thirdDayMidnight, valueMmolL: 6.2, source: 'official' },
+            { timestamp: thirdDayNoon, valueMmolL: 6.3, source: 'official' },
+          ]}
+          colorMode="gradient"
+          showWorkoutBand={false}
+          showNoteBand={false}
+        />,
+      );
+
+      const firstDateLabel = new Date(2026, 2, 25).toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      const secondDateLabel = new Date(2026, 2, 26).toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      const midnightLabel = new Date(2026, 2, 26).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      await waitFor(() => {
+        expect(labels).toEqual(expect.arrayContaining([
+          expect.objectContaining({ text: firstDateLabel, y: 376 }),
+          expect.objectContaining({ text: secondDateLabel, y: 376 }),
+          expect.objectContaining({ text: midnightLabel, y: 360 }),
+        ]));
+      });
+
+      const midnightPositions = new Set(
+        labels
+          .filter((label) => label.text === midnightLabel && label.y === 360)
+          .map((label) => label.x),
+      );
+      expect(midnightPositions.size).toBe(2);
+      expect(labels.find((label) => label.text === firstDateLabel)?.x).not.toBe(48);
+    } finally {
+      if (clientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      } else {
+        delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      }
+    }
+  });
+
+  test('splits date labels into two lines only when the full label does not fit', async () => {
+    const labels: Array<{ text: string; x: number; y: number }> = [];
+    const recordingContext = new Proxy(
+      {},
+      {
+        get: (_target, key) => {
+          if (key === 'fillText') {
+            return (text: string, x: number, y: number) => {
+              labels.push({ text, x, y });
+            };
+          }
+          if (key === 'measureText') {
+            return (text: string) => ({
+              width: text.includes('2026') && text !== '2026' ? 500 : 36,
+            });
+          }
+          if (key === 'createLinearGradient') {
+            return () => ({
+              addColorStop: () => undefined
+            });
+          }
+          return () => undefined;
+        },
+        set: () => true,
+      },
+    );
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => recordingContext) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() {
+        return 900;
+      }
+    });
+
+    try {
+      render(
+        <GlucoseChart
+          data={[
+            { timestamp: new Date(2026, 5, 7, 12).toISOString(), valueMmolL: 5.8, source: 'official' },
+            { timestamp: new Date(2026, 5, 8, 0).toISOString(), valueMmolL: 6.0, source: 'official' },
+            { timestamp: new Date(2026, 5, 8, 12).toISOString(), valueMmolL: 6.1, source: 'official' },
+          ]}
+          colorMode="gradient"
+          showWorkoutBand={false}
+          showNoteBand={false}
+        />,
+      );
+
+      const fullDateLabel = new Date(2026, 5, 7).toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      const dateLineOne = new Date(2026, 5, 7).toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric',
+      });
+      const dateLineTwo = new Date(2026, 5, 7).toLocaleDateString([], {
+        year: 'numeric',
+      });
+
+      await waitFor(() => {
+        expect(labels).toEqual(expect.arrayContaining([
+          expect.objectContaining({ text: dateLineOne, y: 376 }),
+          expect.objectContaining({ text: dateLineTwo, y: 388 }),
+        ]));
+      });
+
+      expect(labels.some((label) => label.text === fullDateLabel)).toBe(false);
+    } finally {
+      if (clientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      } else {
+        delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      }
+    }
+  });
+
+  test('does not draw overlapping time labels on dense ranges', async () => {
+    const labels: Array<{ text: string; x: number; y: number }> = [];
+    const recordingContext = new Proxy(
+      {},
+      {
+        get: (_target, key) => {
+          if (key === 'fillText') {
+            return (text: string, x: number, y: number) => {
+              labels.push({ text, x, y });
+            };
+          }
+          if (key === 'measureText') {
+            return (text: string) => ({
+              width: /^\d/.test(text) ? 180 : Math.max(24, text.length * 8),
+            });
+          }
+          if (key === 'createLinearGradient') {
+            return () => ({
+              addColorStop: () => undefined
+            });
+          }
+          return () => undefined;
+        },
+        set: () => true,
+      },
+    );
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => recordingContext) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    const clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() {
+        return 1800;
+      }
+    });
+
+    try {
+      render(
+        <GlucoseChart
+          data={[
+            { timestamp: new Date(2026, 5, 7, 12).toISOString(), valueMmolL: 5.8, source: 'official' },
+            { timestamp: new Date(2026, 5, 8, 12).toISOString(), valueMmolL: 6.1, source: 'official' },
+          ]}
+          colorMode="gradient"
+          showWorkoutBand={false}
+          showNoteBand={false}
+        />,
+      );
+
+      await waitFor(() => expect(labels.some((label) => label.y === 360)).toBe(true));
+
+      const uniqueTimeLabels = Array.from(
+        new Map(
+          labels
+            .filter((label) => label.y === 360)
+            .map((label) => [`${label.text}-${label.x}`, label]),
+        ).values(),
+      ).sort((left, right) => left.x - right.x);
+
+      for (let index = 1; index < uniqueTimeLabels.length; index += 1) {
+        const previousRight = uniqueTimeLabels[index - 1].x + 90;
+        const currentLeft = uniqueTimeLabels[index].x - 90;
+        expect(currentLeft - previousRight).toBeGreaterThanOrEqual(10);
+      }
+    } finally {
+      if (clientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+      } else {
+        delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+      }
+    }
   });
 
   test('renders workout session blocks with their display label', async () => {
@@ -534,7 +865,7 @@ describe('GlucoseChart', () => {
     }
   });
 
-  test('repositions note overlays during wheel zoom', async () => {
+  test('does not move note overlays on wheel input', async () => {
     HTMLCanvasElement.prototype.getContext = vi.fn(() => ctxProxy) as unknown as typeof HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getBoundingClientRect = vi.fn(() => ({
       x: 0,
@@ -566,7 +897,7 @@ describe('GlucoseChart', () => {
           noteData={[
             {
               id: 'note-1',
-              text: 'Zoom note',
+              text: 'Fixed note',
               startAt: '2026-03-25T12:15:00.000Z',
               endAt: '2026-03-25T12:30:00.000Z',
               timezone: 'Europe/Stockholm',
@@ -583,28 +914,35 @@ describe('GlucoseChart', () => {
         />,
       );
 
-      const noteButton = await screen.findByRole('button', { name: 'Zoom note' });
+      const noteButton = await screen.findByRole('button', { name: 'Fixed note' });
       const initialLeft = noteButton.style.left;
       const canvas = document.querySelector('canvas');
 
       expect(canvas).not.toBeNull();
 
-      const wheelEvent = new WheelEvent('wheel', {
+      const commandWheelEvent = new WheelEvent('wheel', {
         bubbles: true,
         cancelable: true,
         ctrlKey: true,
         deltaY: -120,
       });
-      Object.defineProperty(wheelEvent, 'offsetX', {
+      Object.defineProperty(commandWheelEvent, 'offsetX', {
         configurable: true,
         value: 450
       });
 
-      canvas!.dispatchEvent(wheelEvent);
-
-      await waitFor(() => {
-        expect(noteButton.style.left).not.toBe(initialLeft);
+      const horizontalWheelEvent = new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        deltaX: 120,
       });
+
+      canvas!.dispatchEvent(commandWheelEvent);
+      canvas!.dispatchEvent(horizontalWheelEvent);
+
+      expect(commandWheelEvent.defaultPrevented).toBe(false);
+      expect(horizontalWheelEvent.defaultPrevented).toBe(false);
+      expect(noteButton.style.left).toBe(initialLeft);
     } finally {
       if (clientWidth) {
         Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);

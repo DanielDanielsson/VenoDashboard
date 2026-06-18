@@ -2,6 +2,7 @@
 /* Do not edit manually — re-run: node scripts/generate-component-imports.mjs */
 
 @import "../../ui/components/DashboardPanel/dashboardPanel.css";
+@import "../../ui/components/DashboardPanelHeaderButton/dashboardPanelHeaderButton.css";
 @import "../../ui/components/DashboardTimeRangePicker/dashboardTimeRangePicker.css";
 @import "../../ui/components/HistogramChart/histogramChart.css";
 @import "../../ui/components/KeyboardKey/keyboardKey.css";

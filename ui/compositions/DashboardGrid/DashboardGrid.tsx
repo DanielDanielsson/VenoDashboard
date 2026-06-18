@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 import ReactGridLayout, { useContainerWidth, type Layout } from 'react-grid-layout';
 import { cloneReactGridLayoutItems, toReactGridLayoutItems } from '@/lib/dashboard/grid-layout';
 import type { DashboardTimeSettingsKind, DashboardType, GridLayoutKind, PanelKind } from '@/lib/dashboard/schema';
-import type { DashboardPanelCatalogEntry } from '@/lib/dashboard/panel-catalog';
+import { allowsMultiplePanelInstances, type DashboardPanelCatalogEntry } from '@/lib/dashboard/panel-catalog';
 import { Button } from '@ui/base/Button';
 import { Icon } from '@ui/base/Icon';
 import { DialogPanel } from '@ui/components/DialogPanel';
@@ -382,7 +382,7 @@ const getNextAddedPanelId = (
   entry: DashboardPanelCatalogEntry,
   elements: Record<string, PanelKind>,
 ): string => {
-  if (!entry.allowMultiple || !elements[entry.elementName]) {
+  if (!allowsMultiplePanelInstances(entry) || !elements[entry.elementName]) {
     return entry.elementName;
   }
 
@@ -404,6 +404,43 @@ const getNextAddedPanelNumericId = (elements: Record<string, PanelKind>): number
 
   return existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
 };
+
+const groupPanelCatalogEntries = (entries: DashboardPanelCatalogEntry[]) => {
+  const grouped = new Map<string, DashboardPanelCatalogEntry[]>();
+  const topLevel: DashboardPanelCatalogEntry[] = [];
+
+  for (const entry of entries) {
+    if (!entry.category) {
+      topLevel.push(entry);
+      continue;
+    }
+
+    const groupedEntries = grouped.get(entry.category.label) ?? [];
+    groupedEntries.push(entry);
+    grouped.set(entry.category.label, groupedEntries);
+  }
+
+  return {
+    groups: [...grouped.entries()].map(([label, entries]) => ({ label, entries })),
+    topLevel,
+  };
+};
+
+const AddPanelOption = ({
+  entry,
+  onAddPanel,
+}: {
+  entry: DashboardPanelCatalogEntry;
+  onAddPanel: (entry: DashboardPanelCatalogEntry) => void;
+}) => (
+  <button
+    type="button"
+    className="ui_caption rounded-[4px] border border-border px-3 py-2 text-left text-text-soft transition-colors hover:bg-surface-muted hover:text-text"
+    onClick={() => onAddPanel(entry)}
+  >
+    {entry.title}
+  </button>
+);
 
 export const DashboardGrid = ({
   layout,
@@ -476,9 +513,13 @@ export const DashboardGrid = ({
 
     return panelCatalogEntries.filter((entry) => (
       entry.compatibleDashboardTypes.includes(dashboardType) &&
-      (entry.allowMultiple || !currentGroups.has(entry.group))
+      (allowsMultiplePanelInstances(entry) || !currentGroups.has(entry.group))
     ));
   }, [dashboardType, isOwner, panelCatalogEntries, runtimeElements]);
+  const groupedPanelCatalogEntries = useMemo(
+    () => groupPanelCatalogEntries(availablePanelCatalogEntries),
+    [availablePanelCatalogEntries],
+  );
   const visibleChildren = useMemo(() => {
     const childItems = Children.toArray(children);
     const childrenByPanelId = new Map<string, ReactNode>();
@@ -742,10 +783,6 @@ export const DashboardGrid = ({
 
   function handleAddPanel(entry: DashboardPanelCatalogEntry) {
     const nextPanelId = getNextAddedPanelId(entry, runtimeElements);
-    const nextY = runtimeLayout.reduce(
-      (maxY, item) => Math.max(maxY, item.y + item.h),
-      0,
-    );
     const nextWidth = Math.min(gridConfig.cols, entry.defaultLayout.width);
     const nextHeight = getGridHeightForAspectRatio(
       nextWidth,
@@ -762,14 +799,17 @@ export const DashboardGrid = ({
       [nextPanelId]: nextPanel,
     }));
     setRuntimeLayout((current) => [
-      ...current,
       {
         i: nextPanelId,
         x: 0,
-        y: nextY,
+        y: 0,
         w: nextWidth,
         h: nextHeight,
       },
+      ...current.map((item) => ({
+        ...item,
+        y: item.y + nextHeight,
+      })),
     ]);
     setIsAddPanelDrawerOpen(false);
   }
@@ -1372,15 +1412,21 @@ export const DashboardGrid = ({
               >
                 {availablePanelCatalogEntries.length > 0 ? (
                   <div className="grid auto-rows-max content-start gap-2">
-                    {availablePanelCatalogEntries.map((entry) => (
-                      <button
-                        key={entry.group}
-                        type="button"
-                        className="ui_caption rounded-[4px] border border-border px-3 py-2 text-left text-text-soft transition-colors hover:bg-surface-muted hover:text-text"
-                        onClick={() => handleAddPanel(entry)}
+                    {groupedPanelCatalogEntries.groups.map((group) => (
+                      <section
+                        key={group.label}
+                        role="group"
+                        aria-label={group.label}
+                        className="grid gap-2"
                       >
-                        {entry.title}
-                      </button>
+                        <h3 className="ui_caption text-text">{group.label}</h3>
+                        {group.entries.map((entry) => (
+                          <AddPanelOption key={entry.group} entry={entry} onAddPanel={handleAddPanel} />
+                        ))}
+                      </section>
+                    ))}
+                    {groupedPanelCatalogEntries.topLevel.map((entry) => (
+                      <AddPanelOption key={entry.group} entry={entry} onAddPanel={handleAddPanel} />
                     ))}
                   </div>
                 ) : (

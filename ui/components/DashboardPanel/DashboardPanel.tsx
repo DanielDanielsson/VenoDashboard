@@ -12,6 +12,7 @@ export const DashboardPanel = ({
   children,
   headerRight,
   headerClassName,
+  bodyClassName,
   headerRightClassName,
   twStyles,
   theme,
@@ -25,7 +26,7 @@ export const DashboardPanel = ({
   >
     <header
       className={twMerge(
-        'dashboard-panel-drag-handle flex items-center justify-between gap-4 bg-dashboard-panel-header-bg px-6 py-4',
+        'dashboard-panel-drag-handle flex h-12 items-center justify-between gap-4 bg-dashboard-panel-header-bg px-6',
         headerClassName,
       )}
     >
@@ -38,7 +39,7 @@ export const DashboardPanel = ({
         </div>
       )}
     </header>
-    <div className="p-6">
+    <div className={twMerge('p-6', bodyClassName)}>
       {children}
     </div>
   </section>

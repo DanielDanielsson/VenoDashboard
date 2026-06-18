@@ -4,19 +4,20 @@ import {
 } from '@/lib/glucose/dashboard-service';
 import type { GlucoseApiResponse, GlucoseUpdatesResponse } from '@/lib/glucose/types';
 import {
-  pulseApiHealthPort,
-  pulseApiNotesPort,
-  pulseApiTandemPort,
-  pulseApiGlucosePort,
-  pulseApiWorkoutPort
+  venoApiHealthPort,
+  venoApiNotesPort,
+  venoApiTandemPort,
+  venoApiGlucosePort,
+  venoApiWorkoutPort
 } from '@/lib/glucose/dashboard-service';
 import type { TimeRange } from '@/lib/glucose/time-ranges';
-import { updateGlucoseCorrections } from '@/lib/pulse-api/glucose';
-import type { GlucoseCorrectionBatchPayload, GlucoseCorrectionBatchResponse } from '@/lib/pulse-api/types';
+import { updateGlucoseCorrections } from '@/lib/veno-api/glucose';
+import type { GlucoseCorrectionBatchPayload, GlucoseCorrectionBatchResponse } from '@/lib/veno-api/types';
 
 export type OpenDashboardGlucoseInput =
   | {
       range: TimeRange;
+      maxDataPoints?: number | null;
       now?: Date;
     }
   | {
@@ -24,6 +25,7 @@ export type OpenDashboardGlucoseInput =
         from: string;
         to: string;
       };
+      maxDataPoints?: number | null;
       now?: Date;
     };
 
@@ -56,6 +58,7 @@ export function createDashboardGlucoseWorkspace(
     if ('range' in input) {
       return {
         range: input.range,
+        maxDataPoints: input.maxDataPoints,
         now: input.now
       };
     }
@@ -63,6 +66,7 @@ export function createDashboardGlucoseWorkspace(
     return {
       from: input.window.from,
       to: input.window.to,
+      maxDataPoints: input.maxDataPoints,
       now: input.now
     };
   }
@@ -104,11 +108,11 @@ export function createDashboardGlucoseWorkspace(
 }
 
 export const dashboardGlucoseWorkspace = createDashboardGlucoseWorkspace({
-  glucosePort: pulseApiGlucosePort,
-  tandemPort: pulseApiTandemPort,
-  healthPort: pulseApiHealthPort,
-  workoutPort: pulseApiWorkoutPort,
-  notesPort: pulseApiNotesPort,
+  glucosePort: venoApiGlucosePort,
+  tandemPort: venoApiTandemPort,
+  healthPort: venoApiHealthPort,
+  workoutPort: venoApiWorkoutPort,
+  notesPort: venoApiNotesPort,
   correctionsPort: {
     apply: updateGlucoseCorrections
   }

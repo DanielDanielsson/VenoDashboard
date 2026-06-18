@@ -1,0 +1,31 @@
+@layer theme {
+    :root {
+        --color-dashboard-panel-header-button-bg: var(--color-base-paper-surface);
+        --color-dashboard-panel-header-button-bg-hover: var(--color-base-paper-surface-strong);
+        --color-dashboard-panel-header-button-border: var(--color-base-border-warm-subtle);
+        --color-dashboard-panel-header-button-border-hover: var(--color-base-border-warm-medium);
+        --color-dashboard-panel-header-button-ring: var(--color-base-accent-border-light);
+        --color-dashboard-panel-header-button-text: var(--color-base-text-warm-soft);
+        --color-dashboard-panel-header-button-text-hover: var(--color-base-text-warm-strong);
+    }
+
+    .theme-dark {
+        --color-dashboard-panel-header-button-bg: var(--color-base-night-surface-muted);
+        --color-dashboard-panel-header-button-bg-hover: var(--color-base-night-surface-muted);
+        --color-dashboard-panel-header-button-border: var(--color-base-border-cool-subtle);
+        --color-dashboard-panel-header-button-border-hover: var(--color-base-border-cool-strong);
+        --color-dashboard-panel-header-button-ring: var(--color-base-accent-border-dark);
+        --color-dashboard-panel-header-button-text: var(--color-base-white-muted);
+        --color-dashboard-panel-header-button-text-hover: var(--color-base-white-soft);
+    }
+}
+
+@theme inline {
+    --color-dashboard-panel-header-button-bg: var(--color-dashboard-panel-header-button-bg);
+    --color-dashboard-panel-header-button-bg-hover: var(--color-dashboard-panel-header-button-bg-hover);
+    --color-dashboard-panel-header-button-border: var(--color-dashboard-panel-header-button-border);
+    --color-dashboard-panel-header-button-border-hover: var(--color-dashboard-panel-header-button-border-hover);
+    --color-dashboard-panel-header-button-ring: var(--color-dashboard-panel-header-button-ring);
+    --color-dashboard-panel-header-button-text: var(--color-dashboard-panel-header-button-text);
+    --color-dashboard-panel-header-button-text-hover: var(--color-dashboard-panel-header-button-text-hover);
+}
