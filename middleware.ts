@@ -31,8 +31,8 @@ function applyNoIndexHeaders(response: NextResponse): void {
   response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noimageindex');
 }
 
-function isProtectedPath(pathname: string): boolean {
-  if (!pathname.startsWith('/dashboard')) {
+export function isProtectedPath(pathname: string): boolean {
+  if (pathname !== '/dashboard' && !pathname.startsWith('/dashboard/')) {
     return false;
   }
 
