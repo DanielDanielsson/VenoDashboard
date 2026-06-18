@@ -18,11 +18,11 @@ import {
   fetchAdminHealthSteps,
   fetchApiStatus,
   listApiKeys,
-} from '@/lib/pulse-api/client';
+} from '@/lib/veno-api/client';
 import {
   fetchTandemBasalHistory,
   fetchTandemEventHistory,
-} from '@/lib/pulse-api/glucose';
+} from '@/lib/veno-api/glucose';
 
 interface DashboardPageProps {
   params: Promise<{

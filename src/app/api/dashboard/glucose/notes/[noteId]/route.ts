@@ -3,8 +3,8 @@ import { getOwnerSession } from '@/lib/auth';
 import {
   deleteTimelineNote,
   updateTimelineNote
-} from '@/lib/pulse-api/timeline-notes';
-import type { TimelineNoteWritePayload } from '@/lib/pulse-api/types';
+} from '@/lib/veno-api/timeline-notes';
+import type { TimelineNoteWritePayload } from '@/lib/veno-api/types';
 
 interface RouteParams {
   params: Promise<{

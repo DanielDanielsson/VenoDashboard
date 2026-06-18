@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { fetchWithApiAuth } from '@/lib/pulse-api/auth-fetch';
+import { fetchWithApiAuth } from '@/lib/veno-api/auth-fetch';
 
-describe('pulse api auth fetch', () => {
+describe('veno api auth fetch', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();

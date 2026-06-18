@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
-import { PulseApiClientError, fetchConsumerProfile, updateConsumerProfile } from '@/lib/pulse-api/client';
-import type { ConsumerProfileUpdatePayload } from '@/lib/pulse-api/types';
+import { VenoApiClientError, fetchConsumerProfile, updateConsumerProfile } from '@/lib/veno-api/client';
+import type { ConsumerProfileUpdatePayload } from '@/lib/veno-api/types';
 
 function readTimezone(request: NextRequest): string | undefined {
   return request.headers.get('x-user-timezone') || undefined;
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const response = await fetchConsumerProfile(readTimezone(request));
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to load settings' } },
       { status }
@@ -37,7 +37,7 @@ export async function PUT(request: NextRequest) {
     const response = await updateConsumerProfile(payload, readTimezone(request));
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to update settings' } },
       { status }

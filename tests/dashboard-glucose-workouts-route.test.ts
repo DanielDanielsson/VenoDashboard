@@ -10,7 +10,7 @@ vi.mock('@/lib/auth', () => ({
   getOwnerSession
 }));
 
-vi.mock('@/lib/pulse-api/workouts', () => ({
+vi.mock('@/lib/veno-api/workouts', () => ({
   createManualWorkout,
   updateManualWorkout,
   deleteManualWorkout

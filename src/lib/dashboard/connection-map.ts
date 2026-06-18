@@ -1,4 +1,4 @@
-import type { ApiKeySummary, PulseApiSourceStatus, PulseApiStatusReport } from '@/lib/pulse-api/types';
+import type { ApiKeySummary, VenoApiSourceStatus, VenoApiStatusReport } from '@/lib/veno-api/types';
 
 export type ConnectionNodeState = 'live' | 'stale' | 'fault' | 'inactive';
 
@@ -113,7 +113,7 @@ function getFreshnessState(ageMinutes: number | null, thresholds: FreshnessThres
   return 'fault';
 }
 
-function getSourceState(source: PulseApiSourceStatus, thresholds: FreshnessThresholds = {
+function getSourceState(source: VenoApiSourceStatus, thresholds: FreshnessThresholds = {
   liveMaxMinutes: 20,
   staleMaxMinutes: 180,
 }): ConnectionNodeState {
@@ -178,7 +178,7 @@ function getAppState(ageMinutes: number | null, foundKey: boolean): ConnectionNo
 }
 
 export interface BuildConnectionMapInput {
-  report: PulseApiStatusReport;
+  report: VenoApiStatusReport;
   latestHealthStepBucketEnd: string | null;
   latestTandemActivityAt: string | null;
   apiKeys: ApiKeySummary[];

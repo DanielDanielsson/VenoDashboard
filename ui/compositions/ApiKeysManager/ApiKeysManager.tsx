@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { ApiKeySummary } from '@/lib/pulse-api/types';
-import { isSystemApiKeyName } from '@/lib/pulse-api/key-visibility';
+import type { ApiKeySummary } from '@/lib/veno-api/types';
+import { isSystemApiKeyName } from '@/lib/veno-api/key-visibility';
 import { useNotifications } from '@ui/compositions/NotificationsProvider';
 
 interface ApiKeysManagerProps {

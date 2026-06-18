@@ -7,9 +7,9 @@ import {
   getDexcomGatewayBaseUrl,
   getConsumerOrAdminApiToken,
   getStatusToken
-} from '@/lib/pulse-api/env';
+} from '@/lib/veno-api/env';
 
-describe('pulse api env helpers', () => {
+describe('veno api env helpers', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });

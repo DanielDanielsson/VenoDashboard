@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getApiAuthTokenCandidates, getApiBaseUrl } from '@/lib/pulse-api/env';
+import { getApiAuthTokenCandidates, getApiBaseUrl } from '@/lib/veno-api/env';
 import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 
 export const dynamic = 'force-dynamic';

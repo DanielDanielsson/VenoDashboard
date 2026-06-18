@@ -51,13 +51,13 @@ interface DashboardMetadataUpdatedDetail {
     icon?: PinnedDashboardNavigationItem['icon'];
   };
   preferences?: {
-    homeDashboardUid?: string;
+    homeDashboardUid?: string | null;
     pinnedDashboardUids?: string[];
   };
 }
 
 interface DashboardPreferencesUpdatedDetail {
-  homeDashboardUid?: string;
+  homeDashboardUid?: string | null;
   pinnedDashboardUids?: string[];
   dashboards?: PinnedDashboardNavigationItem[];
 }

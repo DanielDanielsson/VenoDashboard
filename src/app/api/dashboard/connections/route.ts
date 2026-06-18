@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { fetchAdminHealthSteps, fetchApiStatus, listApiKeys, PulseApiClientError } from '@/lib/pulse-api/client';
+import { fetchAdminHealthSteps, fetchApiStatus, listApiKeys, VenoApiClientError } from '@/lib/veno-api/client';
 import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 import {
   buildConnectionMapSnapshot,
   getLatestHealthStepBucketEnd,
   getLatestTandemActivityAt,
 } from '@/lib/dashboard/connection-map';
-import { fetchTandemBasalHistory, fetchTandemEventHistory } from '@/lib/pulse-api/glucose';
+import { fetchTandemBasalHistory, fetchTandemEventHistory } from '@/lib/veno-api/glucose';
 
 export async function GET(request: Request) {
   const rateLimit = applyRateLimit({
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(snapshot, { status: 200 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to load connections' } },
       { status },

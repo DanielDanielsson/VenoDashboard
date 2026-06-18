@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
 import {
-  PulseApiClientError,
+  VenoApiClientError,
   createDashboard,
   type DashboardCreatePayload
-} from '@/lib/pulse-api/client';
+} from '@/lib/veno-api/client';
 
 export async function POST(request: NextRequest) {
   const session = await getOwnerSession();
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const response = await createDashboard(payload);
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to create dashboard' } },
       { status },

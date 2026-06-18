@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
 import { dashboardGlucoseWorkspace } from '@/lib/glucose/dashboard-workspace';
-import type { GlucoseCorrectionBatchPayload } from '@/lib/pulse-api/types';
+import type { GlucoseCorrectionBatchPayload } from '@/lib/veno-api/types';
 
 export async function PUT(request: NextRequest) {
   const session = await getOwnerSession();

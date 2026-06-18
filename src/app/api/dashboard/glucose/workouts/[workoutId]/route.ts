@@ -3,8 +3,8 @@ import { getOwnerSession } from '@/lib/auth';
 import {
   deleteManualWorkout,
   updateManualWorkout
-} from '@/lib/pulse-api/workouts';
-import type { WorkoutWritePayload } from '@/lib/pulse-api/types';
+} from '@/lib/veno-api/workouts';
+import type { WorkoutWritePayload } from '@/lib/veno-api/types';
 
 interface RouteParams {
   params: Promise<{

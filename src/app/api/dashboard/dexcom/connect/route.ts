@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
-import { fetchDexcomConnectLocation } from '@/lib/pulse-api/client';
+import { fetchDexcomConnectLocation } from '@/lib/veno-api/client';
 
 export async function GET(request: NextRequest) {
   const origin = new URL(request.url).origin;

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PulseApiClientError, fetchApiStatus } from '@/lib/pulse-api/client';
+import { VenoApiClientError, fetchApiStatus } from '@/lib/veno-api/client';
 import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 
 export async function GET(request: Request) {
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     const report = await fetchApiStatus();
     return NextResponse.json(report, { status: 200 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to load status' } },
       { status }

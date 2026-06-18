@@ -7,7 +7,7 @@ import { SecondaryButton } from '@ui/components/SecondaryButton';
 import type {
   SharedTimerMutationResponse,
   SharedTimerListResponse,
-} from '@/lib/pulse-api/types';
+} from '@/lib/veno-api/types';
 import {
   DASHBOARD_TIMER_REMOVED_EVENT,
   DASHBOARD_TIMER_STARTED_EVENT,

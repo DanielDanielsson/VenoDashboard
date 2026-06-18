@@ -9,7 +9,7 @@ import type {
   ConsumerProfileResponse,
   NotificationEvent,
   SettingsProfileUpdatedPayload
-} from '@/lib/pulse-api/types';
+} from '@/lib/veno-api/types';
 
 interface SettingsFormProps {
   initialProfile: ConsumerProfile;

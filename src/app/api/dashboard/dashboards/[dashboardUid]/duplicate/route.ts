@@ -4,13 +4,13 @@ import { buildDashboardSettingsDocument } from '@/lib/dashboard/settings';
 import { loadDashboardResource } from '@/lib/dashboard/resources';
 import type { DashboardDefinition } from '@/lib/dashboard/schema';
 import {
-  PulseApiClientError,
+  VenoApiClientError,
   createDashboard,
   deleteDashboard,
   fetchDashboardList,
   saveDashboardSettings,
   updateDashboardMetadata,
-} from '@/lib/pulse-api/client';
+} from '@/lib/veno-api/client';
 
 interface RouteContext {
   params: Promise<{
@@ -118,7 +118,7 @@ export async function POST(_request: NextRequest, context: RouteContext) {
       }
     }
 
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to duplicate dashboard' } },
       { status },

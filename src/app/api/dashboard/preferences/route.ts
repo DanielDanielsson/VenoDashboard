@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
 import {
-  PulseApiClientError,
+  VenoApiClientError,
   saveDashboardPreferences,
   type DashboardPreferencesRecord
-} from '@/lib/pulse-api/client';
+} from '@/lib/veno-api/client';
 
 export async function PUT(request: NextRequest) {
   const session = await getOwnerSession();
@@ -18,7 +18,7 @@ export async function PUT(request: NextRequest) {
     const response = await saveDashboardPreferences(preferences);
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to save dashboard preferences' } },
       { status },

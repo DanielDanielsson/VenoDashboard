@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
-import { PulseApiClientError, fetchDashboardSettings, saveDashboardSettings } from '@/lib/pulse-api/client';
+import { VenoApiClientError, fetchDashboardSettings, saveDashboardSettings } from '@/lib/veno-api/client';
 import { buildDashboardSettingsDocument, type DashboardLayoutSaveInput } from '@/lib/dashboard/settings';
 import { loadDashboardResource } from '@/lib/dashboard/resources';
 import type { DashboardTimeSettingsKind, PanelKind } from '@/lib/dashboard/schema';
@@ -12,7 +12,7 @@ interface RouteContext {
 }
 
 function isNotFoundError(error: unknown): boolean {
-  return error instanceof PulseApiClientError
+  return error instanceof VenoApiClientError
     ? error.status === 404
     : typeof error === 'object' && error !== null && 'status' in error && error.status === 404;
 }
@@ -64,7 +64,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     });
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to save dashboard settings' } },
       { status },
@@ -84,7 +84,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     const response = await fetchDashboardSettings(dashboardUid);
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to load dashboard settings' } },
       { status },

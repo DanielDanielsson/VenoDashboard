@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
-import { getApiBaseUrl, getConsumerOrAdminApiToken } from '@/lib/pulse-api/env';
+import { getApiBaseUrl, getConsumerOrAdminApiToken } from '@/lib/veno-api/env';
 
 export const dynamic = 'force-dynamic';
 

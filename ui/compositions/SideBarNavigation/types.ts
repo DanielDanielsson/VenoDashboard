@@ -37,7 +37,7 @@ export interface SidebarCallToAction {
 export interface SideBarNavigationProps {
   isOwner?: boolean;
   pinnedDashboards?: PinnedDashboardNavigationItem[];
-  homeDashboardUid?: string;
+  homeDashboardUid?: string | null;
   currentUser?: SidebarUser;
   callsToAction?: ReadonlyArray<SidebarCallToAction>;
   initialCollapsed?: boolean;

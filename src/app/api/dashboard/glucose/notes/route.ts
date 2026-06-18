@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
-import { createTimelineNote } from '@/lib/pulse-api/timeline-notes';
-import type { TimelineNoteWritePayload } from '@/lib/pulse-api/types';
+import { createTimelineNote } from '@/lib/veno-api/timeline-notes';
+import type { TimelineNoteWritePayload } from '@/lib/veno-api/types';
 
 export async function POST(request: NextRequest) {
   const session = await getOwnerSession();

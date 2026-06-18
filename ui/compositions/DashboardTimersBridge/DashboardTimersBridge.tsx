@@ -6,7 +6,7 @@ import type {
   SharedTimerStreamConnectedPayload,
   TimerRemovedPayload,
   TimerStartedPayload
-} from '@/lib/pulse-api/types';
+} from '@/lib/veno-api/types';
 import { useNotifications } from '@ui/compositions/NotificationsProvider';
 import {
   DASHBOARD_TIMER_REMOVED_EVENT,

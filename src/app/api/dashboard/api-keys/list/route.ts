@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
-import { PulseApiClientError, listApiKeys } from '@/lib/pulse-api/client';
-import { isSystemApiKeyName } from '@/lib/pulse-api/key-visibility';
+import { VenoApiClientError, listApiKeys } from '@/lib/veno-api/client';
+import { isSystemApiKeyName } from '@/lib/veno-api/key-visibility';
 
 export async function GET() {
   const session = await getOwnerSession();
@@ -16,7 +16,7 @@ export async function GET() {
       { status: 200 }
     );
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to load API keys' } },
       { status }

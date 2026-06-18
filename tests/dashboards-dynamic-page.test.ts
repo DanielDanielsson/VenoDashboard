@@ -87,15 +87,15 @@ vi.mock('@/lib/glucose/dashboard-workspace', () => ({
   },
 }));
 
-vi.mock('@/lib/pulse-api/client', () => ({
+vi.mock('@/lib/veno-api/client', () => ({
   fetchAdminHealthSteps,
   fetchApiStatus,
   fetchConsumerProfile: vi.fn(),
   listApiKeys,
-  PulseApiClientError: class PulseApiClientError extends Error {},
+  VenoApiClientError: class VenoApiClientError extends Error {},
 }));
 
-vi.mock('@/lib/pulse-api/glucose', () => ({
+vi.mock('@/lib/veno-api/glucose', () => ({
   fetchTandemBasalHistory,
   fetchTandemEventHistory,
 }));

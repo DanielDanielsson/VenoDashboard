@@ -1,4 +1,4 @@
-import type { SharedTimer } from '@/lib/pulse-api/types';
+import type { SharedTimer } from '@/lib/veno-api/types';
 
 export const formatDurationLabel = (totalSeconds: number): string => {
   const seconds = Math.max(1, Math.round(totalSeconds));

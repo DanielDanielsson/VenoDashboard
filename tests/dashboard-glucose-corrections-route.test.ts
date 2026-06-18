@@ -15,7 +15,7 @@ vi.mock('@/lib/glucose/dashboard-workspace', () => ({
   }
 }));
 
-vi.mock('@/lib/pulse-api/glucose', () => ({
+vi.mock('@/lib/veno-api/glucose', () => ({
   updateGlucoseCorrections
 }));
 

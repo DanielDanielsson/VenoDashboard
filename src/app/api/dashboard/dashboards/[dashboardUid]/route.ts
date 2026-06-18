@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
 import {
-  PulseApiClientError,
+  VenoApiClientError,
   deleteDashboard,
   updateDashboardMetadata,
   type DashboardMetadataUpdatePayload
-} from '@/lib/pulse-api/client';
+} from '@/lib/veno-api/client';
 
 interface RouteContext {
   params: Promise<{
@@ -26,7 +26,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const response = await updateDashboardMetadata(dashboardUid, payload);
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to rename dashboard' } },
       { status },
@@ -46,7 +46,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     const response = await deleteDashboard(dashboardUid);
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to delete dashboard' } },
       { status },

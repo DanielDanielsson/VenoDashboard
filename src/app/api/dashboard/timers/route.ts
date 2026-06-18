@@ -3,9 +3,9 @@ import { getOwnerSession } from '@/lib/auth';
 import {
   createSharedTimerMutation,
   fetchSharedTimers,
-  PulseApiClientError
-} from '@/lib/pulse-api/client';
-import type { CreateSharedTimerPayload } from '@/lib/pulse-api/types';
+  VenoApiClientError
+} from '@/lib/veno-api/client';
+import type { CreateSharedTimerPayload } from '@/lib/veno-api/types';
 import { applyRateLimit, createRateLimitResponse, getClientIp } from '@/lib/security/rate-limit';
 
 export async function GET(request: Request) {
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     const response = await fetchSharedTimers();
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to load timers' } },
       { status }
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const response = await createSharedTimerMutation(payload);
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to create timer' } },
       { status }

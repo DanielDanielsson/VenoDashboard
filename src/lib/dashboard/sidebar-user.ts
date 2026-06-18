@@ -1,5 +1,5 @@
 import type { OwnerSession } from '@/lib/auth';
-import { fetchConsumerProfile } from '@/lib/pulse-api/client';
+import { fetchConsumerProfile } from '@/lib/veno-api/client';
 
 export interface SidebarUser {
   name: string;

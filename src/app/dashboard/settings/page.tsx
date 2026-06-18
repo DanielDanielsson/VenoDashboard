@@ -1,7 +1,7 @@
 import { DashboardErrorState } from '@ui/components/DashboardErrorState/DashboardErrorState';
 import { SettingsForm } from '@ui/compositions/SettingsForm/SettingsForm';
 import { requireOwnerSession } from '@/lib/auth';
-import { PulseApiClientError, fetchConsumerProfile } from '@/lib/pulse-api/client';
+import { VenoApiClientError, fetchConsumerProfile } from '@/lib/veno-api/client';
 
 export default async function DashboardSettingsPage() {
   await requireOwnerSession();
@@ -13,7 +13,7 @@ export default async function DashboardSettingsPage() {
     profile = response.profile;
   } catch (error) {
     message =
-      error instanceof PulseApiClientError
+      error instanceof VenoApiClientError
         ? error.message
         : error instanceof Error
           ? error.message

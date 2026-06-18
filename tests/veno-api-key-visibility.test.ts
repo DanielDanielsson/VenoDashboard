@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { isSystemApiKeyName } from '@/lib/pulse-api/key-visibility';
+import { isSystemApiKeyName } from '@/lib/veno-api/key-visibility';
 
 describe('system api key visibility', () => {
   test('detects system keys', () => {

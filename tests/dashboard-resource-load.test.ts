@@ -5,8 +5,8 @@ const mocks = vi.hoisted(() => ({
   fetchDashboardSettings: vi.fn(),
 }));
 
-vi.mock('@/lib/pulse-api/client', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/pulse-api/client')>();
+vi.mock('@/lib/veno-api/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/veno-api/client')>();
   return {
     ...actual,
     fetchDashboardResource: mocks.fetchDashboardResource,

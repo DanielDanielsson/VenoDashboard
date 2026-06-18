@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
-import { createManualWorkout } from '@/lib/pulse-api/workouts';
-import type { WorkoutWritePayload } from '@/lib/pulse-api/types';
+import { createManualWorkout } from '@/lib/veno-api/workouts';
+import type { WorkoutWritePayload } from '@/lib/veno-api/types';
 
 export async function POST(request: NextRequest) {
   const session = await getOwnerSession();

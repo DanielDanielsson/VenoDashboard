@@ -10,8 +10,8 @@ vi.mock('@/lib/auth', () => ({
   getOwnerSession,
 }));
 
-vi.mock('@/lib/pulse-api/client', () => ({
-  PulseApiClientError: class PulseApiClientError extends Error {
+vi.mock('@/lib/veno-api/client', () => ({
+  VenoApiClientError: class VenoApiClientError extends Error {
     status: number;
 
     constructor(status: number, message: string) {

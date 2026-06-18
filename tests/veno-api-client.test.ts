@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { compressTandemBasalHistory } from '@/lib/pulse-api/glucose';
+import { compressTandemBasalHistory } from '@/lib/veno-api/glucose';
 
-describe('pulse api client', () => {
+describe('veno api client', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
@@ -29,7 +29,7 @@ describe('pulse api client', () => {
       })
     );
 
-    const { fetchApiStatus } = await import('@/lib/pulse-api/client');
+    const { fetchApiStatus } = await import('@/lib/veno-api/client');
     const report = await fetchApiStatus();
 
     expect(report.official.stable).toBe(true);
@@ -55,7 +55,7 @@ describe('pulse api client', () => {
       })
     );
 
-    const { fetchDexcomConnectLocation } = await import('@/lib/pulse-api/client');
+    const { fetchDexcomConnectLocation } = await import('@/lib/veno-api/client');
     const location = await fetchDexcomConnectLocation();
 
     expect(location).toBe('https://glucose-nu.vercel.app/v3/oauth2/login?client_id=test');

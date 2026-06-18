@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import type { NotificationEvent } from '@/lib/pulse-api/types';
+import type { NotificationEvent } from '@/lib/veno-api/types';
 
 interface ConnectedEventPayload {
   cursor?: number | string | null;

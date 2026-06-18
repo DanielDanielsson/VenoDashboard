@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
-import { PulseApiClientError, createApiKey } from '@/lib/pulse-api/client';
+import { VenoApiClientError, createApiKey } from '@/lib/veno-api/client';
 
 export async function POST(request: NextRequest) {
   const session = await getOwnerSession();
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const response = await createApiKey(payload.name || '');
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to create API key' } },
       { status }

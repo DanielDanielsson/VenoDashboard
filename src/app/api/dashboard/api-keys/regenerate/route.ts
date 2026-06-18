@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSession } from '@/lib/auth';
-import { isSystemApiKeyName } from '@/lib/pulse-api/key-visibility';
-import { PulseApiClientError, createApiKey, listApiKeys, revokeApiKey } from '@/lib/pulse-api/client';
+import { isSystemApiKeyName } from '@/lib/veno-api/key-visibility';
+import { VenoApiClientError, createApiKey, listApiKeys, revokeApiKey } from '@/lib/veno-api/client';
 
 export async function POST(request: NextRequest) {
   const session = await getOwnerSession();
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ...created, warning }, { status: 200 });
   } catch (error) {
-    const status = error instanceof PulseApiClientError ? error.status : 502;
+    const status = error instanceof VenoApiClientError ? error.status : 502;
     return NextResponse.json(
       { error: { message: error instanceof Error ? error.message : 'Failed to regenerate API key' } },
       { status }

@@ -1,4 +1,4 @@
-import type { SharedTimer } from '@/lib/pulse-api/types';
+import type { SharedTimer } from '@/lib/veno-api/types';
 
 export const DASHBOARD_TIMERS_CONNECTED_EVENT = 'pulse-timers-connected';
 export const DASHBOARD_TIMER_STARTED_EVENT = 'pulse-timer-started';
