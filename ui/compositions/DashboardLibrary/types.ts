@@ -11,7 +11,7 @@ export interface DashboardMetadataSaveResult {
     version?: number;
   };
   preferences?: {
-    homeDashboardUid?: string;
+    homeDashboardUid?: string | null;
     pinnedDashboardUids?: string[];
     dashboardOrderUids?: string[];
   };

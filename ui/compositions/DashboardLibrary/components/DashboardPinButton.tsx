@@ -29,7 +29,7 @@ export const DashboardPinButton = ({
   setItems,
 }: {
   dashboard: DashboardLibraryItem;
-  homeDashboardUid: string;
+  homeDashboardUid: string | null;
   pinnedDashboardUids: string[];
   dashboardOrderUids: string[];
   isSaving: boolean;
@@ -66,10 +66,12 @@ export const DashboardPinButton = ({
 
       const payload = await response.json() as {
         preferences?: {
+          homeDashboardUid?: string | null;
           pinnedDashboardUids?: string[];
           dashboardOrderUids?: string[];
         };
       };
+      const savedHomeDashboardUid = payload.preferences?.homeDashboardUid ?? homeDashboardUid;
       const savedPinnedDashboardUids = new Set(payload.preferences?.pinnedDashboardUids ?? nextPinnedDashboardUids);
       runPreservingWindowScroll(() => {
         setItems((currentItems) => currentItems.map((item) => ({
@@ -77,7 +79,7 @@ export const DashboardPinButton = ({
           isPinned: savedPinnedDashboardUids.has(item.uid),
         })));
         dispatchDashboardPreferencesUpdated({
-          homeDashboardUid,
+          homeDashboardUid: savedHomeDashboardUid,
           pinnedDashboardUids: Array.from(savedPinnedDashboardUids),
           dashboards: [{
             uid: dashboard.uid,

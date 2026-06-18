@@ -63,7 +63,7 @@ export const DashboardLibrary = ({ dashboards, isOwner }: DashboardLibraryProps)
   const initialSettingsDashboardUidRef = useRef<string | null>(searchParams.get(DASHBOARD_SETTINGS_PARAM));
 
   const homeDashboardUid = useMemo(
-    () => items.find((dashboard) => dashboard.isHome)?.uid ?? items[0]?.uid ?? '',
+    () => items.find((dashboard) => dashboard.isHome)?.uid ?? items[0]?.uid ?? null,
     [items],
   );
   const pinnedDashboardUids = useMemo(
@@ -109,7 +109,7 @@ export const DashboardLibrary = ({ dashboards, isOwner }: DashboardLibraryProps)
 
       const payload = await response.json() as {
         preferences?: {
-          homeDashboardUid?: string;
+          homeDashboardUid?: string | null;
           pinnedDashboardUids?: string[];
           dashboardOrderUids?: string[];
         };

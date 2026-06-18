@@ -124,7 +124,7 @@ export const applyDashboardMetadataSaveResult = (
 
 export const getDashboardPreferencePayload = (items: DashboardLibraryItem[]) => {
   return {
-    homeDashboardUid: items.find((dashboard) => dashboard.isHome)?.uid ?? items[0]?.uid ?? '',
+    homeDashboardUid: items.find((dashboard) => dashboard.isHome)?.uid ?? items[0]?.uid ?? null,
     pinnedDashboardUids: items.filter((dashboard) => dashboard.isPinned).map((dashboard) => dashboard.uid),
     dashboardOrderUids: items.map((dashboard) => dashboard.uid),
   };
@@ -229,7 +229,7 @@ export const dispatchDashboardMetadataUpdated = (
 };
 
 export const dispatchDashboardPreferencesUpdated = (preferences: {
-  homeDashboardUid?: string;
+  homeDashboardUid?: string | null;
   pinnedDashboardUids?: string[];
   dashboards?: Array<{
     uid: string;

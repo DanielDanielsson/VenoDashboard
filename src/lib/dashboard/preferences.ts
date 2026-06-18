@@ -1,7 +1,7 @@
-import { fetchDashboardPreferences } from '@/lib/pulse-api/client';
+import { fetchDashboardPreferences } from '@/lib/veno-api/client';
 
 export interface LoadedDashboardPreferences {
-  homeDashboardUid: string;
+  homeDashboardUid: string | null;
   pinnedDashboardUids: string[];
   dashboardOrderUids: string[];
   source: 'api';

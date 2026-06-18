@@ -122,6 +122,20 @@ describe('DashboardLibrary', () => {
     expect(within(library).getByText('Pinned')).toBeInTheDocument();
   });
 
+  test('renders an empty owner library with only dashboard creation available', () => {
+    render(
+      <NotificationsProvider>
+        <DashboardLibrary dashboards={[]} isOwner />
+      </NotificationsProvider>,
+    );
+
+    const library = screen.getByRole('list', { name: 'Dashboards' });
+
+    expect(within(library).queryByRole('listitem')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create dashboard' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Open .* dashboard/ })).not.toBeInTheDocument();
+  });
+
   test('admin users can pin and unpin dashboards with notifications', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({

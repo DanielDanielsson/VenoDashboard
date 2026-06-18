@@ -60,7 +60,7 @@ export const DashboardHomeConfirmationDialog = ({
 
       const payload = await response.json() as {
         preferences?: {
-          homeDashboardUid?: string;
+          homeDashboardUid?: string | null;
           pinnedDashboardUids?: string[];
           dashboardOrderUids?: string[];
         };

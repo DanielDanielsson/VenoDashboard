@@ -6,5 +6,9 @@ export const dynamic = 'force-dynamic';
 export default async function HomePage() {
   const preferences = await loadDashboardPreferences();
 
+  if (!preferences.homeDashboardUid) {
+    redirect('/dashboards');
+  }
+
   redirect(`/dashboards/${encodeURIComponent(preferences.homeDashboardUid)}`);
 }

@@ -95,7 +95,7 @@ export interface DashboardLibraryViewProps {
   settledDashboardUid: string | null;
   dropTarget: DashboardDropTarget | null;
   isSavingOrder: boolean;
-  homeDashboardUid: string;
+  homeDashboardUid: string | null;
   pinnedDashboardUids: string[];
   dashboardOrderUids: string[];
   pendingDirtyAction: { type: string } | null;

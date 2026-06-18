@@ -36,7 +36,7 @@ function isProtectedPath(pathname: string): boolean {
     return false;
   }
 
-  return pathname !== '/dashboard' && pathname !== '/dashboard/statistics' && pathname !== '/dashboard/about';
+  return pathname !== '/dashboard' && pathname !== '/dashboard/about';
 }
 
 export function isAllowedPath(pathname: string): boolean {

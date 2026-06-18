@@ -41,23 +41,32 @@ describe('home dashboard routing', () => {
     expect(redirect).toHaveBeenCalledWith('/dashboards/statistics');
   });
 
-  test('redirects the legacy statistics route to the selected home dashboard with query params', async () => {
+  test('redirects to the dashboard library when no home dashboard exists', async () => {
     loadDashboardPreferences.mockResolvedValueOnce({
-      homeDashboardUid: 'training',
+      homeDashboardUid: null,
       pinnedDashboardUids: [],
       source: 'api',
     });
-    const { default: DashboardStatisticsPage } = await import('@/app/dashboard/statistics/page');
+    const { default: HomePage } = await import('@/app/page');
 
-    await DashboardStatisticsPage({
-      searchParams: Promise.resolve({
-        from: 'now-3d',
-        to: 'now',
-        timezone: 'browser',
-      }),
-    });
+    await HomePage();
 
-    expect(redirect).toHaveBeenCalledWith('/dashboards/training?from=now-3d&to=now&timezone=browser');
     expect(loadDashboardPreferences).toHaveBeenCalled();
+    expect(redirect).toHaveBeenCalledWith('/dashboards');
   });
+
+  test('redirects the legacy dashboard route to the dashboard library when no home dashboard exists', async () => {
+    loadDashboardPreferences.mockResolvedValueOnce({
+      homeDashboardUid: null,
+      pinnedDashboardUids: [],
+      source: 'api',
+    });
+    const { default: DashboardPage } = await import('@/app/dashboard/page');
+
+    await DashboardPage();
+
+    expect(loadDashboardPreferences).toHaveBeenCalled();
+    expect(redirect).toHaveBeenCalledWith('/dashboards');
+  });
+
 });

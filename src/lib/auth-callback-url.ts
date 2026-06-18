@@ -39,10 +39,6 @@ export function getLoginCloseUrl(callbackUrl: string | undefined): string {
   const normalizedUrl = readLocalPath(callbackUrl, PUBLIC_DASHBOARD_FALLBACK_URL);
   const url = new URL(normalizedUrl, LOCAL_URL_ORIGIN);
 
-  if (url.pathname === '/dashboard/statistics') {
-    return PUBLIC_DASHBOARD_FALLBACK_URL;
-  }
-
   if (
     url.pathname === '/dashboard'
     || url.pathname === '/'

@@ -22,8 +22,8 @@ describe('NavigationLink', () => {
 
   test('renders the icon when provided', () => {
     const { container } = render(
-      <NavigationLink href="/dashboard/statistics" icon="activity">
-        Statistics
+      <NavigationLink href="/dashboards/training" icon="activity">
+        Training
       </NavigationLink>,
     );
 
