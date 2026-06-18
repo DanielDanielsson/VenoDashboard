@@ -110,52 +110,27 @@ const getCoverageDurationMs = (items: ChartPoint[]): number => {
 };
 
 const buildLineSegments = (points: Array<PlotPoint | null>): string[] => {
-  const paths: string[] = [];
-  let current: PlotPoint[] = [];
+  const connectedPoints = points.filter((point): point is PlotPoint => point !== null);
 
-  for (const point of points) {
-    if (!point) {
-      if (current.length >= 2) {
-        paths.push(current.map((item, index) => `${index === 0 ? 'M' : 'L'} ${item.x} ${item.y}`).join(' '));
-      }
-      current = [];
-      continue;
-    }
-
-    current.push(point);
+  if (connectedPoints.length < 2) {
+    return [];
   }
 
-  if (current.length >= 2) {
-    paths.push(current.map((item, index) => `${index === 0 ? 'M' : 'L'} ${item.x} ${item.y}`).join(' '));
-  }
-
-  return paths;
+  return [connectedPoints.map((item, index) => `${index === 0 ? 'M' : 'L'} ${item.x} ${item.y}`).join(' ')];
 };
 
 const buildBandSegments = (
   upper: Array<PlotPoint | null>,
   lower: Array<PlotPoint | null>
 ): string[] => {
-  const paths: string[] = [];
-  let upperSegment: PlotPoint[] = [];
-  let lowerSegment: PlotPoint[] = [];
+  const upperSegment: PlotPoint[] = [];
+  const lowerSegment: PlotPoint[] = [];
 
   for (let index = 0; index < upper.length; index += 1) {
     const upperPoint = upper[index];
     const lowerPoint = lower[index];
 
     if (!upperPoint || !lowerPoint) {
-      if (upperSegment.length >= 2 && lowerSegment.length >= 2) {
-        const upperPath = upperSegment.map((point, segmentIndex) => `${segmentIndex === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
-        const lowerPath = [...lowerSegment]
-          .reverse()
-          .map((point) => `L ${point.x} ${point.y}`)
-          .join(' ');
-        paths.push(`${upperPath} ${lowerPath} Z`);
-      }
-
-      upperSegment = [];
-      lowerSegment = [];
       continue;
     }
 
@@ -163,16 +138,17 @@ const buildBandSegments = (
     lowerSegment.push(lowerPoint);
   }
 
-  if (upperSegment.length >= 2 && lowerSegment.length >= 2) {
-    const upperPath = upperSegment.map((point, segmentIndex) => `${segmentIndex === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
-    const lowerPath = [...lowerSegment]
-      .reverse()
-      .map((point) => `L ${point.x} ${point.y}`)
-      .join(' ');
-    paths.push(`${upperPath} ${lowerPath} Z`);
+  if (upperSegment.length < 2 || lowerSegment.length < 2) {
+    return [];
   }
 
-  return paths;
+  const upperPath = upperSegment.map((point, segmentIndex) => `${segmentIndex === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+  const lowerPath = [...lowerSegment]
+    .reverse()
+    .map((point) => `L ${point.x} ${point.y}`)
+    .join(' ');
+
+  return [`${upperPath} ${lowerPath} Z`];
 };
 
 export const GlucoseAgpChart = ({ data, height = 320, yMax = 25 }: GlucoseAgpChartProps) => {

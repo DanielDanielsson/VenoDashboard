@@ -230,7 +230,7 @@ vi.mock('@ui/components/GlucoseStatRing', () => ({
   )
 }));
 
-vi.mock('@ui/components/GlucoseAgpChart', () => ({
+vi.mock('@ui/components/GlucoseAgpChart/GlucoseAgpChart', () => ({
   GlucoseAgpChart: () => <div>AGP chart</div>
 }));
 
