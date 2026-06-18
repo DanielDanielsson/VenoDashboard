@@ -98,6 +98,98 @@ Troubleshooting:
 - For easy switching, keep the prod values first in `.env.local` and place a local override block with the same keys at the end.
 - In Next.js env loading, the last duplicate key wins. Comment out the local override block to go back to prod.
 
+## Local Development
+
+Use this path when you want `VenoDashboard` on `3001` talking to local `VenoAPI` on `3101`.
+
+### 1. Check Docker
+
+Start Docker Desktop first. After OS updates, this is the most common missing step.
+
+```bash
+docker info
+```
+
+If Docker Desktop was just opened and the CLI still cannot connect, wait until the socket exists:
+
+```bash
+test -S "$HOME/.docker/run/docker.sock"
+```
+
+### 2. Start VenoAPI
+
+From the sibling `VenoAPI` repo:
+
+```bash
+cd /Users/danieldanielsson/code/privat/PulseGlucose/VenoAPI
+docker compose up -d
+```
+
+Verify the routes that the dashboard needs:
+
+```bash
+curl -fsS 'http://127.0.0.1:3101/api/status?format=json' >/dev/null
+curl -fsS 'http://127.0.0.1:3101/api/v1/dashboards' >/dev/null
+curl -fsS 'http://127.0.0.1:3101/api/v1/dashboard-preferences' >/dev/null
+```
+
+If the status route works but either dashboard route returns `404`, rebuild the API image:
+
+```bash
+docker compose up -d --build api
+```
+
+### 3. Check dashboard env
+
+Local dashboard mode needs these values at the end of `.env.local` so they override prod defaults:
+
+```env
+NEXT_PUBLIC_SITE_URL=http://localhost:3001
+PULSE_API_BASE_URL=http://127.0.0.1:3101
+DEXCOM_GATEWAY_BASE_URL=http://127.0.0.1:3101
+ADMIN_BEARER_TOKEN=replace_with_local_api_admin_bearer_token
+```
+
+### 4. Start VenoDashboard
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3001
+```
+
+If `npm` is missing after an OS update, restore your Node manager shell setup or run with an explicit Node path. In Codex, the bundled runtime can be used like this:
+
+```bash
+export PATH=/Users/danieldanielsson/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH
+node scripts/generate-component-imports.mjs
+node node_modules/next/dist/bin/next dev -p 3001
+```
+
+For a detached local session:
+
+```bash
+screen -dmS veno-dashboard zsh -lc 'cd /Users/danieldanielsson/code/privat/PulseGlucose/VenoDashboard && export PATH=/Users/danieldanielsson/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH && node scripts/generate-component-imports.mjs && node node_modules/next/dist/bin/next dev -p 3001'
+screen -r veno-dashboard
+```
+
+Stop the detached session:
+
+```bash
+screen -S veno-dashboard -X quit
+```
+
+### 5. Verify dashboard
+
+```bash
+curl -I -fsS http://127.0.0.1:3001
+curl -fsS http://127.0.0.1:3001/api/dashboard/status >/dev/null
+```
+
 ## Docker
 
 - `docker build -t veno-dashboard .`

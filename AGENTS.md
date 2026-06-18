@@ -181,18 +181,20 @@ Canonical routes and files:
 
 1. `/dashboards` is the dashboard library page.
 2. `/dashboards/[dashboardUid]` is the canonical route for viewing a dashboard.
-3. `/dashboard` and `/dashboard/statistics` are compatibility paths only. Do not add new dashboard behavior there.
-4. dashboard ids such as `overview` or `statistics` are API data, not frontend special cases.
-5. `src/app/dashboards/layout.tsx` and `src/app/dashboard/layout.tsx` both load `loadDashboardLibrary()` and pass pinned dashboards into `SideBarNavigation`.
-6. `ui/compositions/SideBarNavigation/SideBarNavigation.tsx` owns the left navigation dashboards accordion.
-7. `ui/compositions/DashboardLibrary/DashboardLibrary.tsx` owns dashboard create, pin, unpin, and the library row settings accordion.
-8. `src/lib/dashboard/library.ts` merges the dashboard list with dashboard preferences.
-9. `src/lib/dashboard/preferences.ts` loads home and pinned dashboard preferences.
-10. `src/lib/dashboard/resources.ts` loads a dashboard resource, applies API metadata over persisted layout settings, and redirects renamed dashboard aliases.
-11. `src/lib/dashboard/metadata.ts` owns dashboard metadata description types and plain text extraction.
-12. `src/lib/dashboard/panel-catalog.ts` is the source of truth for add panel options, default panel definitions, default layout, and dashboard type compatibility.
-13. `ui/compositions/DashboardLibrary/DashboardMetadataSettings.tsx` owns dashboard name and description editing inside the library accordion.
-14. `ui/compositions/DashboardLibrary/utils.ts` owns metadata draft normalization, semantic dirty checks, description serialization, and optimistic save result merging.
+3. `/dashboard` is a compatibility path only. Do not add new dashboard behavior there.
+4. dashboard ids are API data, not frontend special cases.
+5. `src/app/dashboards/page.tsx` is the only page that renders `DashboardLibrary`.
+6. `src/app/dashboards/layout.tsx` owns the shell for the dashboard library and canonical dashboard pages.
+7. `src/app/dashboard/layout.tsx` is the legacy `/dashboard` subtree shell for compatibility and admin pages, not a dashboard library owner.
+8. `ui/compositions/SideBarNavigation/SideBarNavigation.tsx` owns the left navigation dashboards accordion.
+9. `ui/compositions/DashboardLibrary/DashboardLibrary.tsx` owns dashboard create, pin, unpin, and the library row settings accordion.
+10. `src/lib/dashboard/library.ts` merges the dashboard list with dashboard preferences.
+11. `src/lib/dashboard/preferences.ts` loads home and pinned dashboard preferences.
+12. `src/lib/dashboard/resources.ts` loads a dashboard resource, applies API metadata over persisted layout settings, and redirects renamed dashboard aliases.
+13. `src/lib/dashboard/metadata.ts` owns dashboard metadata description types and plain text extraction.
+14. `src/lib/dashboard/panel-catalog.ts` is the source of truth for add panel options, default panel definitions, default layout, and dashboard type compatibility.
+15. `ui/compositions/DashboardLibrary/DashboardMetadataSettings.tsx` owns dashboard name and description editing inside the library accordion.
+16. `ui/compositions/DashboardLibrary/utils.ts` owns metadata draft normalization, semantic dirty checks, description serialization, and optimistic save result merging.
 
 Dashboard type rules:
 
@@ -243,10 +245,13 @@ Pinned and home dashboard rules:
 
 1. public visitors can view dashboards and pinned navigation links
 2. only admins can create, delete, pin, unpin, or set home dashboards
-3. after a successful pin, unpin, or home preference save, call `router.refresh()` so server layouts reload the left navigation
-4. dashboard deletion is API owned, and the frontend must not hardcode undeletable dashboard ids
-5. do not show inline explanatory text for mutation restrictions; use disabled controls and notification feedback for mutation outcomes
-6. pinned dashboards should appear under the Dashboards accordion in the left navigation
+3. an empty dashboard library is valid and should still show dashboard creation for admins
+4. if no home dashboard exists, `/` and `/dashboard` should redirect to `/dashboards`
+5. the first created dashboard should become the home dashboard through the API response and persisted preferences
+6. after a successful dashboard create, pin, unpin, or home preference save, call `router.refresh()` so server layouts reload the left navigation
+7. dashboard deletion is API owned, and the frontend must not hardcode undeletable dashboard ids
+8. do not show inline explanatory text for mutation restrictions; use disabled controls and notification feedback for mutation outcomes
+9. pinned dashboards should appear under the Dashboards accordion in the left navigation
 
 Mutation feedback rules:
 
@@ -267,11 +272,10 @@ Reusable UI rules learned from dashboard management:
 Middleware currently allows public access only to:
 
 1. `/dashboard`
-2. `/dashboard/statistics`
-3. `/dashboard/about`
-4. `/login`
-5. `/api/dashboard/*`
-6. static assets and framework routes
+2. `/dashboard/about`
+3. `/login`
+4. `/api/dashboard/*`
+5. static assets and framework routes
 
 Everything else under `/dashboard` is protected and requires admin sign in.
 
@@ -299,8 +303,8 @@ The normal pattern is:
 
 Key files:
 
-1. `src/lib/pulse-api/client.ts`
-2. `src/lib/pulse-api/glucose.ts`
+1. `src/lib/veno-api/client.ts`
+2. `src/lib/veno-api/glucose.ts`
 3. `src/lib/glucose/dashboard-data.ts`
 
 Important current behavior:

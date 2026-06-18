@@ -41,6 +41,16 @@ Panel registries:
 2. `ui/compositions/GlucoseAnalysisView/GlucoseAnalysisView.tsx`
 3. `ui/compositions/GlucoseAnalysisView/TimeRangeDashboardRegistry.tsx`
 
+Optimized glucose readings path:
+
+1. `ui/compositions/DexcomGlucoseReadingsPanel/DexcomGlucoseReadingsPanel.tsx`
+2. `src/app/api/dashboard/glucose/readings-series/route.ts`
+3. `src/lib/veno-api/glucose.ts`
+4. VenoAPI `api/v1/glucose/readings-series.ts`
+5. VenoAPI `src/lib/glucose/readings-series.ts`
+6. VenoAPI `src/lib/series/resolution.ts`
+7. VenoAPI `src/lib/series/timestamp-series.ts`
+
 ## Current Panels
 
 Live dashboard panels:
@@ -55,9 +65,10 @@ Time range dashboard panels:
 1. `panel-average-glucose`, group `veno.average-glucose`, rendered inside `GlucoseAnalysisView`
 2. `panel-time-in-range`, group `veno.time-in-range`, component `TimeInRangePanel`
 3. `panel-workout-types`, group `veno.workout-types`, component `WorkoutTypePanel`
-4. `panel-glucose-timeline`, group `veno.glucose-timeline`, rendered inside `GlucoseAnalysisView`
-5. `panel-agp`, group `veno.glucose-agp`, rendered inside `GlucoseAnalysisView`
-6. addable text panels, group `veno.text`, component `TextPanel`
+4. `panel-dexcom-glucose-readings`, group `veno.dexcom-glucose-readings`, component `DexcomGlucoseReadingsPanel`
+5. `panel-glucose-timeline`, group `veno.glucose-timeline`, rendered inside `GlucoseAnalysisView`
+6. `panel-agp`, group `veno.glucose-agp`, rendered inside `GlucoseAnalysisView`
+7. addable text panels, group `veno.text`, component `TextPanel`
 
 Reusable chart components:
 
@@ -68,6 +79,8 @@ Reusable chart components:
 5. `ui/components/GlucoseAgpChart`
 
 Panel specific data shaping should live beside the panel when possible. Current examples are `ui/compositions/TimeInRangePanel/timeInRangeChart.ts` and `ui/compositions/WorkoutTypePanel/workoutTypeChart.ts`.
+
+`GlucoseChart` can render a glucose only chart by passing `showWorkoutBand={false}` and `showNoteBand={false}`. Use this for panels like glucose readings that should not reserve space for workout or note bands.
 
 ## Panel Anatomy
 
@@ -81,8 +94,9 @@ Every persisted panel has these parts:
 6. a registry entry that maps the group to rendered React content
 7. optional settings stored in `panel.spec.vizConfig.spec.options`
 8. optional group keyed settings editor registration for the shared right side settings drawer
+9. optional catalog `category` metadata when the add panel drawer should group entries, such as device panels
 
-`parseDashboardDefinition` fills missing `data`, `options`, and `fieldConfig` defaults. Do not rely on that as an excuse to create incomplete hand written definitions when adding dashboard seed or migration data.
+`parseDashboardDefinition` fills missing `data`, `options`, and `fieldConfig` defaults. Do not rely on that as an excuse to create incomplete hand written definitions when adding VenoAPI migration or dashboard data.
 
 ## Dashboard Types
 
@@ -102,11 +116,13 @@ Rules:
 
 Database ownership rules:
 
-1. all dashboard definitions, including `overview` and `statistics`, are loaded from VenoAPI/database records at runtime
+1. all dashboard definitions are loaded from VenoAPI/database records at runtime
 2. do not add local dashboard JSON definitions or registry fallbacks
 3. if a dashboard resource cannot be loaded, treat it as a data or environment problem
-4. compatibility routes such as `/dashboards/overview` may remain, but they must load database dashboard records by uid
-5. test fixtures may define local dashboard objects, but app code must not use them as runtime defaults
+4. the dashboard library may be empty, and `/` plus `/dashboard` should redirect to `/dashboards` when no home dashboard exists
+5. the first created dashboard should become the home dashboard through VenoAPI preferences
+6. dashboard ids are API data, not frontend special cases
+7. test fixtures may define local dashboard objects, but app code must not use them as runtime defaults
 
 Shared panel rules:
 
@@ -123,14 +139,15 @@ Follow this order.
 2. Check if an existing panel or reusable chart component can be reused.
 3. Create the rendering composition under `ui/compositions/<PanelName>/` when the panel has its own reusable surface.
 4. Keep large data shaping helpers beside the composition.
-5. Add or update database seed or migration data only if the panel should ship on an existing dashboard.
+5. Add or update VenoAPI migration or API owned dashboard data only if the panel should ship on an existing dashboard.
 6. Add the panel element under `spec.elements`.
 7. Add the layout item under `spec.layout.spec.items`.
-8. Add a `DASHBOARD_PANEL_CATALOG` entry with `id`, `elementName`, `title`, `group`, `compatibleDashboardTypes`, `allowMultiple`, `defaultLayout`, and `defaultDefinition`.
-9. Register the group in the correct panel registry.
-10. If the panel has settings, add one group keyed settings registration for its `vizConfig.group`.
-11. Render through `DashboardDefinitionRenderer`.
-12. Add focused tests for schema, catalog, registry, rendering, and settings behavior as applicable.
+8. Add a `DASHBOARD_PANEL_CATALOG` entry with `id`, `elementName`, `title`, `group`, `compatibleDashboardTypes`, `defaultLayout`, and `defaultDefinition`.
+9. Omit `allowMultiple` unless the panel must explicitly block multiple instances. Omitted means multiple instances are allowed.
+10. Register the group in the correct panel registry.
+11. If the panel has settings, add one group keyed settings registration for its `vizConfig.group`.
+12. Render through `DashboardDefinitionRenderer`.
+13. Add focused tests for schema, catalog, registry, rendering, and settings behavior as applicable.
 
 Do not hardcode dashboard grid JSX in page components.
 
@@ -170,8 +187,9 @@ Known settings:
 1. `panel-time-in-range` stores `layout`
 2. `panel-glucose-timeline` stores `colorMode` and `yAxisMax`
 3. AGP currently reuses the glucose timeline `yAxisMax` setting
-4. `panel-current-glucose` stores `contentAlignment`, `colorMode`, unit, and information label visibility
-5. text panels store rich text content under `content`
+4. `panel-dexcom-glucose-readings` stores `colorMode` and `yAxisMax`
+5. `panel-current-glucose` stores `contentAlignment`, `colorMode`, unit, and information label visibility
+6. text panels store rich text content under `content`
 
 Settings registry rules:
 
@@ -180,6 +198,8 @@ Settings registry rules:
 3. one settings registration should support every instance of that panel group
 4. use panel id only when reading or writing current values through `useDashboardPanelSettings(panelId, defaultSettings)`
 5. adding another instance of a panel must not require adding another settings registry key
+6. registry render functions should pass the runtime `panelId` into components that read panel settings
+7. avoid hardcoded settings ids inside panel components except as backward compatible default props
 
 Text panel rules:
 
@@ -285,6 +305,23 @@ Rules:
 5. timer stream ownership stays in `DashboardTimersBridge`
 6. `SharedTimersPanel` reacts to shared browser timer events instead of opening its own `EventSource`
 
+Optimized glucose readings rules:
+
+1. `DexcomGlucoseReadingsPanel` uses local `/api/dashboard/glucose/readings-series`
+2. the local dashboard route proxies VenoAPI `/api/v1/glucose/readings-series`
+3. panel requests should send the dashboard `from` and `to` window from `GlucoseAnalysisView`
+4. panel requests should set `maxDataPoints` from measured panel width so large ranges do not overfetch
+5. refetch optimized readings when the dashboard refresh revision changes
+6. refetch after a panel becomes materially wider, but avoid refetching only because it got narrower
+7. VenoAPI returns `meta.resolution.mode` as `raw` or `reduced`
+8. VenoAPI reduced mode should preserve first, last, minimum, and maximum excursion points per bucket
+9. reduced points should not keep `readingId`, because corrected reading edits need raw points
+10. correction UI should only enable when the viewer is owner and `meta.capabilities.correctionsAllowed` is true
+11. VenoAPI currently allows corrections only for raw ranges up to 12 hours
+12. the dashboard proxy may fall back to existing history only when the optimized VenoAPI route is missing with 404
+13. do not duplicate the optimized series reducer in the dashboard unless the API route is intentionally unavailable
+14. tests should cover raw mode, reduced mode, invalid resolution params, fallback behavior, and correction capability gating
+
 ## Testing Expectations
 
 At minimum, cover the behavior changed by the panel.
@@ -299,8 +336,11 @@ Useful tests:
 6. `ui/compositions/DashboardDefinitionRenderer/DashboardGridRuntime.spec.tsx`
 7. `ui/compositions/DashboardGrid/DashboardGrid.spec.tsx`
 8. `ui/compositions/DashboardViewPanelUrlStateBridge/DashboardViewPanelUrlStateBridge.spec.tsx`
-9. the colocated panel spec
-10. `tests/e2e/dashboard-architecture.spec.ts` when the visible dashboard flow changes
+9. `ui/compositions/GlucoseAnalysisView/TimeRangeDashboardRegistry.spec.tsx`
+10. `tests/dashboard-glucose-readings-series-route.test.ts` for optimized glucose readings route changes
+11. the colocated panel spec
+12. VenoAPI `test/glucose-readings-series.test.ts` when optimized glucose series behavior changes
+13. `tests/e2e/dashboard-architecture.spec.ts` when the visible dashboard flow changes
 
 Test these cases when relevant:
 
@@ -318,6 +358,9 @@ Test these cases when relevant:
 12. aspect ratio resizing does not run on narrow non draggable layouts
 13. multi instance panels create unique element keys such as `panel-text`, `panel-text-2`, and `panel-text-3`
 14. multiple instances of one panel group can edit and save settings independently
+15. registry rendered panels receive the runtime `panelId`
+16. optimized glucose readings request the selected time window and a width based `maxDataPoints`
+17. reduced glucose readings do not open correction editing
 
 ## Red Flags
 
@@ -337,3 +380,7 @@ Stop and rethink if the change does any of these:
 12. changes panel layout from settings without using the shared grid layout path
 13. stores rich text panel content as raw HTML
 14. keys settings editor registrations by element id instead of panel group
+15. reads panel settings through a hardcoded element id when the panel can have multiple instances
+16. fetches VenoAPI directly from a browser panel
+17. enables glucose correction editing for reduced series data
+18. fetches full glucose history for a dense panel when the optimized readings series route should be used
