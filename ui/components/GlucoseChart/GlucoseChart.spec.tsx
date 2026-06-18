@@ -82,7 +82,7 @@ describe('GlucoseChart', () => {
     Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
       configurable: true,
       get() {
-        return 900;
+        return 840;
       }
     });
 
